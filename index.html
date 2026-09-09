@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Fitness Workout Tracker - Madison Memorial HS</title>
+  <style>
+    :root {
+      --spartan-green: #004B23;
+      --spartan-gold: #FFC72C;
+      --spartan-dark: #002B14;
+      --bg: #F4F7F5;
+      --surface: #FFFFFF;
+      --text-dark: #1E293B;
+      --border: #CBD5E1;
+      --subtle: #64748B;
+      --grid-border: #CBD5E1;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text-dark);
+      margin: 0;
+      padding: 0;
+    }
+
+    .header-banner {
+      background: var(--spartan-green);
+      color: white;
+      padding: 20px;
+      text-align: center;
+      border-bottom: 5px solid var(--spartan-gold);
+    }
+    .header-banner h1 { margin: 0; font-size: 1.8rem; }
+    .header-banner p { margin: 5px 0 0 0; color: var(--spartan-gold); font-weight: bold; }
+
+    .app-container { max-width: 1080px; margin: 20px auto; padding: 0 15px; }
+
+    .main-nav { display: flex; gap: 10px; margin-bottom: 20px; }
+    .main-nav-btn {
+      flex: 1; padding: 14px; background: #E2E8F0;
+      border: 2px solid var(--spartan-green); border-radius: 8px; font-weight: bold;
+      cursor: pointer; font-size: 1rem; color: var(--spartan-green);
+      transition: all 0.2s ease; text-align: center;
+    }
+    .main-nav-btn.active {
+      background: var(--spartan-green); color: white;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .card {
+      background: var(--surface); padding: 25px; border-radius: 12px;
+      border: 1px solid var(--border); box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+    }
+
+    /* LEARNING TARGET BANNER (STUDENT VIEW) */
+    .learning-target-banner {
+      background: #FEF3C7;
+      border-left: 6px solid var(--spartan-gold);
+      padding: 15px 20px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .learning-target-banner h4 { margin: 0 0 5px 0; color: #92400E; text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.5px; }
+    .learning-target-banner p { margin: 0; color: #78350F; font-weight: 600; font-size: 1.05rem; }
+
+    .sub-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--border); margin-bottom: 20px; padding-bottom: 10px; }
+    .sub-tab-btn {
+      padding: 10px 18px; background: #F1F5F9; border: 1px solid var(--border);
+      border-radius: 6px; font-weight: 600; cursor: pointer; color: var(--subtle); font-size: 0.95rem;
+    }
+    .sub-tab-btn.active {
+      background: var(--spartan-green); color: white; border-color: var(--spartan-green);
+    }
+
+    .form-group { margin-bottom: 18px; }
+    label { display: block; font-weight: 700; margin-bottom: 6px; font-size: 0.95rem; color: var(--spartan-dark); }
+    input, select, textarea {
+      width: 100%; padding: 12px; border: 1px solid var(--border);
+      border-radius: 8px; box-sizing: border-box; font-size: 1rem;
+    }
+
+    .flex-row { display: flex; gap: 12px; }
+    .flex-row > div { flex: 1; }
+
+    .btn {
+      padding: 12px 18px; border-radius: 8px; border: none;
+      font-weight: bold; cursor: pointer; font-size: 1rem; transition: background 0.2s;
+    }
+    .btn-primary { background: var(--spartan-green); color: white; }
+    .btn-primary:hover { background: var(--spartan-dark); }
+    .btn-secondary { background: var(--spartan-gold); color: #000; }
+    .btn-danger { background: #EF4444; color: white; padding: 6px 12px; font-size: 0.85rem; }
+
+    /* SPREADSHEET STYLING */
+    .spreadsheet-container {
+      overflow-x: auto;
+      border: 2px solid var(--spartan-green);
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      margin-top: 15px;
+    }
+    .spreadsheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      background: #FFFFFF;
+    }
+    .spreadsheet-table th {
+      background: #003619;
+      color: #FFFFFF;
+      text-transform: uppercase;
+      font-size: 0.8rem;
+      letter-spacing: 0.5px;
+      padding: 10px;
+      border: 1px solid #002210;
+      text-align: left;
+    }
+    .spreadsheet-table td {
+      padding: 0;
+      border: 1px solid var(--grid-border);
+    }
+    .spreadsheet-table tr:nth-child(even) { background: #F8FAFC; }
+
+    .sheet-input, .sheet-select {
+      width: 100%; height: 100%; padding: 10px; border: none;
+      background: transparent; font-family: inherit; font-size: 0.9rem;
+      box-sizing: border-box; outline: none;
+    }
+    .sheet-input:focus, .sheet-select:focus {
+      background: #FEF9C3; box-shadow: inset 0 0 0 2px var(--spartan-green);
+    }
+
+    .tag-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .tag {
+      background: #E2E8F0; padding: 6px 12px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    }
+    .tag:hover { background: var(--spartan-gold); }
+
+    /* MODAL STYLES */
+    .modal {
+      display: none; position: fixed; z-index: 100; left: 0; top: 0;
+      width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);
+      justify-content: center; align-items: center;
+    }
+    .modal-content {
+      background: white; padding: 25px; border-radius: 12px;
+      max-width: 550px; width: 90%; border: 3px solid var(--spartan-green); position: relative;
+    }
+    .close-modal { position: absolute; right: 20px; top: 15px; font-size: 24px; cursor: pointer; font-weight: bold; }
+
+    /* MANDATORY TARGET GATE MODAL */
+    #targetGateModal {
+      display: flex; position: fixed; z-index: 999; left: 0; top: 0;
+      width: 100%; height: 100%; background-color: rgba(0,0,0,0.85);
+      backdrop-filter: blur(4px); justify-content: center; align-items: center;
+    }
+    .target-gate-card {
+      background: white; padding: 35px; border-radius: 16px;
+      max-width: 600px; width: 90%; border: 4px solid var(--spartan-gold);
+      box-shadow: 0 10px 25px rgba(0,0,0,0.3); text-align: center;
+    }
+
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- MANDATORY LEARNING TARGET GATE MODAL -->
+  <div id="targetGateModal">
+    <div class="target-gate-card">
+      <div style="background: var(--spartan-green); color: white; padding: 8px 16px; border-radius: 20px; display: inline-block; font-weight: bold; font-size: 0.85rem; text-transform: uppercase; margin-bottom: 15px;">
+        🎯 Daily / Weekly Learning Focus
+      </div>
+      <h2 style="margin: 0 0 10px 0; color: var(--spartan-dark);">Welcome to Physical Education</h2>
+      <p style="color: var(--subtle); margin-bottom: 20px;">Review the teacher learning objective below before accessing your workout tracker:</p>
+      
+      <div style="background: #F8FAFC; border: 2px solid var(--spartan-green); padding: 20px; border-radius: 10px; text-align: left; margin-bottom: 25px;">
+        <h4 style="margin: 0 0 8px 0; color: var(--spartan-green);">LEARNING TARGET:</h4>
+        <p id="gateTargetText" style="margin: 0 0 15px 0; font-size: 1.1rem; font-weight: 600; color: #1E293B;">Loading target...</p>
+        
+        <h4 style="margin: 0 0 8px 0; color: var(--spartan-green);">SUCCESS CRITERIA:</h4>
+        <p id="gateCriteriaText" style="margin: 0; font-size: 0.95rem; color: #475569;">Loading criteria...</p>
+      </div>
+
+      <button class="btn btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; background: var(--spartan-green);" onclick="acknowledgeTarget()">
+        ✓ I Acknowledge & Understand Target
+      </button>
+    </div>
+  </div>
+
+  <div class="header-banner">
+    <h1>Personal Fitness Workout Tracker</h1>
+    <p>Madison Memorial High School PE Department</p>
+  </div>
+
+  <div class="app-container">
+
+    <div class="main-nav">
+      <button class="main-nav-btn active" onclick="switchRole('studentView', event)">Student View</button>
+      <button class="main-nav-btn" onclick="switchRole('teacherView', event)">Teacher Dashboard</button>
+    </div>
+
+    <!-- STUDENT VIEW -->
+    <div id="studentView">
+      
+      <!-- ACTIVE LEARNING TARGET BANNER -->
+      <div class="learning-target-banner">
+        <h4>🎯 Today's Active Learning Target</h4>
+        <p id="activeTargetBannerText">Loading learning target...</p>
+      </div>
+
+      <div class="card">
+        <div class="flex-row">
+          <div class="form-group">
+            <label for="studentName">Student Full Name:</label>
+            <input type="text" id="studentName" placeholder="e.g., Alex Smith" oninput="updateStudentContext()">
+          </div>
+          <div class="form-group">
+            <label for="workoutDate">Default Entry Date:</label>
+            <input type="date" id="workoutDate">
+          </div>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" onclick="switchStudentTab('tab1', event)">Tab 1: Program Builder</button>
+          <button class="sub-tab-btn" onclick="switchStudentTab('tab2', event)">Tab 2: Interactive Spreadsheet</button>
+          <button class="sub-tab-btn" onclick="switchStudentTab('tab3', event)">Tab 3: Workout History</button>
+        </div>
+
+        <!-- TAB 1 BUILDER -->
+        <div id="tab1" class="student-tab">
+          <h3>Create & Preview Exercise</h3>
+
+          <div class="form-group">
+            <label for="targetArea">1. Select Target Area:</label>
+            <select id="targetArea" onchange="handleTargetAreaChange()">
+              <option value="">-- Choose Muscle Group --</option>
+              <option value="upper">Upper Body</option>
+              <option value="lower">Lower Body</option>
+              <option value="core">Core</option>
+            </select>
+          </div>
+
+          <div class="form-group hidden" id="exerciseGroup">
+            <label for="exerciseSelect">2. Choose Exercise:</label>
+            <select id="exerciseSelect" onchange="handleExerciseSelect()"></select>
+            <button type="button" id="previewBtn" class="btn btn-secondary hidden" style="margin-top: 10px;" onclick="openModal()">
+              ▶ View Video & Form Cues
+            </button>
+          </div>
+
+          <div class="form-group hidden" id="fitnessGroup">
+            <label for="fitnessComponent">3. Component of Fitness Focused On:</label>
+            <select id="fitnessComponent">
+              <option value="">-- Select Fitness Component --</option>
+              <option value="Muscular Strength">Muscular Strength</option>
+              <option value="Muscular Endurance">Muscular Endurance</option>
+              <option value="Cardiovascular Endurance">Cardiovascular Endurance</option>
+              <option value="Flexibility">Flexibility</option>
+            </select>
+          </div>
+
+          <button id="addToRoutineBtn" class="btn btn-primary hidden" style="width: 100%;" onclick="addToRoutine()">Save Exercise to My Routine</button>
+
+          <div id="routineSavedBox" class="hidden" style="margin-top: 20px;">
+            <h4>Your Saved Routine Exercises (Click to add row to Tab 2 Spreadsheet):</h4>
+            <div id="routineTags" class="tag-container"></div>
+          </div>
+        </div>
+
+        <!-- TAB 2 DIRECTLY EDITABLE SPREADSHEET -->
+        <div id="tab2" class="student-tab hidden">
+          <h3>Interactive Daily Workout Spreadsheet</h3>
+          <p style="color: var(--subtle); font-size: 0.9rem;">Click directly into any cell below to type or update your activity. Changes save automatically.</p>
+
+          <div class="spreadsheet-container">
+            <table class="spreadsheet-table">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">Date</th>
+                  <th>Exercise Name</th>
+                  <th style="width: 180px;">Fitness Component</th>
+                  <th style="width: 80px;">Sets</th>
+                  <th style="width: 110px;">Reps / Time</th>
+                  <th style="width: 120px;">Weight (lbs)</th>
+                  <th style="width: 50px; text-align: center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="editableSheetBody">
+                <!-- Dynamic spreadsheet rows -->
+              </tbody>
+            </table>
+          </div>
+
+          <div style="margin-top: 15px; display: flex; gap: 10px;">
+            <button class="btn btn-primary" onclick="addBlankSpreadsheetRow()">+ Add Blank Row</button>
+          </div>
+        </div>
+
+        <!-- TAB 3 HISTORY -->
+        <div id="tab3" class="student-tab hidden">
+          <h3>All Past Workouts Summary</h3>
+          <div class="spreadsheet-container">
+            <table class="spreadsheet-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Exercise</th>
+                  <th>Component</th>
+                  <th>Sets</th>
+                  <th>Reps / Time</th>
+                  <th>Weight (lbs)</th>
+                </tr>
+              </thead>
+              <tbody id="historyTable">
+                <tr><td colspan="6" style="text-align:center; color: var(--subtle); padding: 15px;">Enter student name above to view historical summary.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TEACHER DASHBOARD -->
+    <div id="teacherView" class="hidden">
+      <div class="card">
+        <h2>Teacher Dashboard</h2>
+
+        <!-- TEACHER LEARNING TARGET CONTROL PANEL -->
+        <div style="background: #ECFDF5; border: 2px solid var(--spartan-green); padding: 20px; border-radius: 10px; margin-bottom: 25px;">
+          <h3 style="margin-top:0; color: var(--spartan-dark);">Set Class Learning Target & Success Criteria</h3>
+          <div class="form-group">
+            <label for="teacherTargetInput">Current Learning Target (Shown to all students):</label>
+            <input type="text" id="teacherTargetInput" placeholder="e.g., Today I am learning to apply progressive overload principles using dumbbells.">
+          </div>
+          <div class="form-group">
+            <label for="teacherCriteriaInput">Success Criteria:</label>
+            <textarea id="teacherCriteriaInput" rows="2" placeholder="e.g., I can log 3 full sets of an exercise while maintaining proper form cues."></textarea>
+          </div>
+          <button class="btn btn-primary" onclick="updateTeacherTarget()">Update Target for Students</button>
+        </div>
+
+        <div class="sub-tabs">
+          <button class="sub-tab-btn active" onclick="switchTeacherTab('classOverviewTab', event)">Entire Class Progress</button>
+          <button class="sub-tab-btn" onclick="switchTeacherTab('individualStudentTab', event)">Individual Student Progress</button>
+        </div>
+
+        <!-- TEACHER TAB 1 -->
+        <div id="classOverviewTab" class="teacher-tab">
+          <div class="flex-row" style="margin-bottom: 20px;">
+            <div class="card" style="background: #E0F2FE; text-align: center; margin-bottom: 0;">
+              <h2 id="totalStudentsCount">0</h2>
+              <p style="margin: 0; font-weight: bold;">Active Students</p>
+            </div>
+            <div class="card" style="background: #DCFCE7; text-align: center; margin-bottom: 0;">
+              <h2 id="totalWorkoutsCount">0</h2>
+              <p style="margin: 0; font-weight: bold;">Entries Logged</p>
+            </div>
+          </div>
+
+          <h3>Class-Wide Activity Spreadsheet</h3>
+          <div class="spreadsheet-container">
+            <table class="spreadsheet-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Student</th>
+                  <th>Exercise</th>
+                  <th>Fitness Component</th>
+                  <th>Sets</th>
+                  <th>Reps / Secs</th>
+                  <th>Weight</th>
+                </tr>
+              </thead>
+              <tbody id="classLogTable">
+                <tr><td colspan="7" style="text-align:center; padding: 15px;">No workout entries recorded across class.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- TEACHER TAB 2 -->
+        <div id="individualStudentTab" class="teacher-tab hidden">
+          <div class="form-group" style="max-width: 400px;">
+            <label for="teacherStudentDropdown">Select Student Name:</label>
+            <select id="teacherStudentDropdown" onchange="renderTeacherIndividualView()">
+              <option value="">-- Choose Student --</option>
+            </select>
+          </div>
+
+          <h3>Student Activity Spreadsheet</h3>
+          <div class="spreadsheet-container">
+            <table class="spreadsheet-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Exercise</th>
+                  <th>Component</th>
+                  <th>Sets</th>
+                  <th>Reps / Secs</th>
+                  <th>Weight</th>
+                </tr>
+              </thead>
+              <tbody id="individualStudentTable">
+                <tr><td colspan="6" style="text-align:center; padding: 15px;">Select a student from the dropdown above.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div id="videoModal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal" onclick="closeModal()">&times;</span>
+      <h3 id="modalExerciseTitle">Exercise Name</h3>
+      <div style="text-align: center; margin: 15px 0;">
+        <a id="modalVideoLink" href="https://www.youtube.com" target="_blank" class="btn btn-secondary" style="display: inline-block; text-decoration: none;">
+          ▶ Open YouTube Demonstration
+        </a>
+      </div>
+      <h4>Technique & Form Cues:</h4>
+      <p id="modalCuesText" style="line-height: 1.5; color: #334155;"></p>
+    </div>
+  </div>
+
+  <script>
+    const exerciseLibrary = {
+      upper: [
+        { name: "Barbell Bench Press", cues: "Eyes under bar, arch upper back slightly, touch sternum, press feet to floor.", video: "https://www.youtube.com/results?search_query=barbell+bench+press+form" },
+        { name: "Barbell Overhead Press", cues: "Squeeze glutes, brace core, press bar overhead vertically.", video: "https://www.youtube.com/results?search_query=barbell+overhead+press+form" },
+        { name: "Dumbbell Bench Press", cues: "Keep wrists stacked over elbows, lower weights with control.", video: "https://www.youtube.com/results?search_query=dumbbell+bench+press" },
+        { name: "Dumbbell Bicep Curls", cues: "Keep elbows pinned to ribs, squeeze bicep at top.", video: "https://www.youtube.com/results?search_query=dumbbell+bicep+curls" },
+        { name: "TRX Low Row", cues: "Keep body in plank, pull chest to handles.", video: "https://www.youtube.com/results?search_query=trx+low+row" },
+        { name: "Push-Ups", cues: "Body in rigid plank, lower chest to floor.", video: "https://www.youtube.com/results?search_query=push+ups+form" }
+      ],
+      lower: [
+        { name: "Barbell Back Squat", cues: "Bar on upper traps, squat below parallel.", video: "https://www.youtube.com/results?search_query=barbell+back+squat" },
+        { name: "Dumbbell Goblet Squat", cues: "Hold dumbbell at chest, squat deep.", video: "https://www.youtube.com/results?search_query=dumbbell+goblet+squat" },
+        { name: "Kettlebell Swings", cues: "Hinge at hips, snap hips forward explosively.", video: "https://www.youtube.com/results?search_query=kettlebell+swing" },
+        { name: "Plyo Box Jumps", cues: "Soft landing in quarter squat, step down.", video: "https://www.youtube.com/results?search_query=plyo+box+jumps" }
+      ],
+      core: [
+        { name: "Forearm Plank", cues: "Elbows under shoulders, pull belly button to spine.", video: "https://www.youtube.com/results?search_query=forearm+plank" },
+        { name: "Medicine Ball Russian Twists", cues: "V-sit position, rotate shoulders and ball side to side.", video: "https://www.youtube.com/results?search_query=medicine+ball+russian+twist" },
+        { name: "Hanging Knee Raises", cues: "Hang from rack bar, raise knees toward chest.", video: "https://www.youtube.com/results?search_query=hanging+knee+raises" }
+      ]
+    };
+
+    // Local Storage Data Structures
+    let allLogs = JSON.parse(localStorage.getItem('mmhs_pe_logs_v2')) || [];
+    let studentRoutines = JSON.parse(localStorage.getItem('mmhs_pe_routines_v2')) || {};
+    let currentTarget = JSON.parse(localStorage.getItem('mmhs_pe_target')) || {
+      target: "Demonstrate proper form cues and safety protocols across chosen weightroom equipment.",
+      criteria: "I can identify form cues, execute 3 sets per exercise, and accurately record my data in the spreadsheet."
+    };
+
+    window.onload = function() {
+      document.getElementById('workoutDate').value = new Date().toISOString().split('T')[0];
+      loadLearningTargets();
+    };
+
+    // Initialize Learning Targets
+    function loadLearningTargets() {
+      document.getElementById('gateTargetText').textContent = currentTarget.target;
+      document.getElementById('gateCriteriaText').textContent = currentTarget.criteria;
+      document.getElementById('activeTargetBannerText').textContent = currentTarget.target;
+      document.getElementById('teacherTargetInput').value = currentTarget.target;
+      document.getElementById('teacherCriteriaInput').value = currentTarget.criteria;
+    }
+
+    function acknowledgeTarget() {
+      document.getElementById('targetGateModal').classList.add('hidden');
+    }
+
+    function updateTeacherTarget() {
+      const targetVal = document.getElementById('teacherTargetInput').value.trim();
+      const criteriaVal = document.getElementById('teacherCriteriaInput').value.trim();
+
+      if(!targetVal || !criteriaVal) {
+        alert("Please enter both a learning target and success criteria.");
+        return;
+      }
+
+      currentTarget = { target: targetVal, criteria: criteriaVal };
+      localStorage.setItem('mmhs_pe_target', JSON.stringify(currentTarget));
+      loadLearningTargets();
+      alert("Learning target updated for all students!");
+    }
+
+    function saveData() {
+      localStorage.setItem('mmhs_pe_logs_v2', JSON.stringify(allLogs));
+      localStorage.setItem('mmhs_pe_routines_v2', JSON.stringify(studentRoutines));
+    }
+
+    function switchRole(roleId, evt) {
+      document.getElementById('studentView').classList.add('hidden');
+      document.getElementById('teacherView').classList.add('hidden');
+      document.querySelectorAll('.main-nav-btn').forEach(btn => btn.classList.remove('active'));
+
+      document.getElementById(roleId).classList.remove('hidden');
+      evt.currentTarget.classList.add('active');
+
+      if(roleId === 'teacherView') renderTeacherDashboard();
+    }
+
+    function switchStudentTab(tabId, evt) {
+      document.querySelectorAll('.student-tab').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('#studentView .sub-tab-btn').forEach(b => b.classList.remove('active'));
+
+      document.getElementById(tabId).classList.remove('hidden');
+      if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+      }
+    }
+
+    function switchTeacherTab(tabId, evt) {
+      document.querySelectorAll('.teacher-tab').forEach(t => t.classList.add('hidden'));
+      document.querySelectorAll('#teacherView .sub-tab-btn').forEach(b => b.classList.remove('active'));
+
+      document.getElementById(tabId).classList.remove('hidden');
+      if (evt && evt.currentTarget) {
+        evt.currentTarget.classList.add('active');
+      }
+    }
+
+    function handleTargetAreaChange() {
+      const area = document.getElementById('targetArea').value;
+      const exerciseSelect = document.getElementById('exerciseSelect');
+      const exerciseGroup = document.getElementById('exerciseGroup');
+
+      exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
+      document.getElementById('previewBtn').classList.add('hidden');
+      document.getElementById('fitnessGroup').classList.add('hidden');
+      document.getElementById('addToRoutineBtn').classList.add('hidden');
+
+      if (area && exerciseLibrary[area]) {
+        exerciseLibrary[area].forEach(ex => {
+          const opt = document.createElement('option');
+          opt.value = ex.name;
+          opt.textContent = ex.name;
+          exerciseSelect.appendChild(opt);
+        });
+        exerciseGroup.classList.remove('hidden');
+      } else {
+        exerciseGroup.classList.add('hidden');
+      }
+    }
+
+    function handleExerciseSelect() {
+      const exName = document.getElementById('exerciseSelect').value;
+      if (exName) {
+        document.getElementById('previewBtn').classList.remove('hidden');
+        document.getElementById('fitnessGroup').classList.remove('hidden');
+        document.getElementById('addToRoutineBtn').classList.remove('hidden');
+      }
+    }
+
+    function openModal() {
+      const area = document.getElementById('targetArea').value;
+      const name = document.getElementById('exerciseSelect').value;
+      const ex = exerciseLibrary[area]?.find(e => e.name === name);
+
+      if (ex) {
+        document.getElementById('modalExerciseTitle').textContent = ex.name;
+        document.getElementById('modalCuesText').textContent = ex.cues;
+        document.getElementById('modalVideoLink').href = ex.video;
+        document.getElementById('videoModal').style.display = 'flex';
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('videoModal').style.display = 'none';
+    }
+
+    function addToRoutine() {
+      const name = document.getElementById('studentName').value.trim();
+      const exName = document.getElementById('exerciseSelect').value;
+      const comp = document.getElementById('fitnessComponent').value;
+
+      if (!name) { alert("Please enter your student name at top!"); return; }
+      if (!exName || !comp) { alert("Complete all dropdown choices!"); return; }
+
+      if (!studentRoutines[name]) studentRoutines[name] = [];
+      studentRoutines[name].push({ exercise: exName, component: comp });
+
+      saveData();
+      renderRoutineTags(name);
+      alert(`${exName} added to your routine!`);
+    }
+
+    function renderRoutineTags(name) {
+      const box = document.getElementById('routineSavedBox');
+      const container = document.getElementById('routineTags');
+      container.innerHTML = '';
+
+      if (studentRoutines[name] && studentRoutines[name].length > 0) {
+        box.classList.remove('hidden');
+        studentRoutines[name].forEach(item => {
+          const tag = document.createElement('span');
+          tag.className = 'tag';
+          tag.textContent = `+ ${item.exercise} (${item.component})`;
+          tag.onclick = () => {
+            addBlankSpreadsheetRow(item.exercise, item.component);
+            const tab2Btn = document.querySelectorAll('#studentView .sub-tab-btn')[1];
+            switchStudentTab('tab2', { currentTarget: tab2Btn });
+          };
+          container.appendChild(tag);
+        });
+      } else {
+        box.classList.add('hidden');
+      }
+    }
+
+    // --- TAB 2 SPREADSHEET ENGINE ---
+    function addBlankSpreadsheetRow(exerciseName = '', componentName = 'Muscular Endurance') {
+      const name = document.getElementById('studentName').value.trim();
+      const defaultDate = document.getElementById('workoutDate').value;
+
+      if (!name) {
+        alert("Please enter a Student Full Name at the top first!");
+        return;
+      }
+
+      const newEntry = {
+        id: Date.now() + Math.random(),
+        student: name,
+        date: defaultDate,
+        exercise: exerciseName,
+        component: componentName,
+        sets: 3,
+        reps: 10,
+        weight: 0
+      };
+
+      allLogs.unshift(newEntry);
+      saveData();
+      renderStudentSpreadsheet(name);
+    }
+
+    function updateSpreadsheetCell(id, field, value) {
+      const entry = allLogs.find(l => l.id == id);
+      if (entry) {
+        entry[field] = value;
+        saveData();
+        renderTeacherDashboard();
+      }
+    }
+
+    function deleteSpreadsheetRow(id) {
+      allLogs = allLogs.filter(l => l.id != id);
+      saveData();
+      const name = document.getElementById('studentName').value.trim();
+      renderStudentSpreadsheet(name);
+    }
+
+    function renderStudentSpreadsheet(name) {
+      const sheetBody = document.getElementById('editableSheetBody');
+      const historyTbody = document.getElementById('historyTable');
+
+      sheetBody.innerHTML = '';
+      historyTbody.innerHTML = '';
+
+      if (!name) {
+        sheetBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color: var(--subtle);">Enter a student name above to open their interactive spreadsheet.</td></tr>';
+        historyTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color: var(--subtle);">No historical workouts found.</td></tr>';
+        return;
+      }
+
+      const studentLogs = allLogs.filter(l => l.student.toLowerCase() === name.toLowerCase());
+
+      if (studentLogs.length === 0) {
+        sheetBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color: var(--subtle);">No rows in spreadsheet yet. Click "+ Add Blank Row" or pick an exercise in Tab 1!</td></tr>';
+        historyTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color: var(--subtle);">No past workouts logged.</td></tr>';
+        return;
+      }
+
+      studentLogs.forEach(log => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><input type="date" class="sheet-input" value="${log.date}" onchange="updateSpreadsheetCell(${log.id}, 'date', this.value)"></td>
+          <td><input type="text" class="sheet-input" placeholder="e.g. Squats" value="${log.exercise}" onchange="updateSpreadsheetCell(${log.id}, 'exercise', this.value)"></td>
+          <td>
+            <select class="sheet-select" onchange="updateSpreadsheetCell(${log.id}, 'component', this.value)">
+              <option value="Muscular Strength" ${log.component === 'Muscular Strength' ? 'selected' : ''}>Muscular Strength</option>
+              <option value="Muscular Endurance" ${log.component === 'Muscular Endurance' ? 'selected' : ''}>Muscular Endurance</option>
+              <option value="Cardiovascular Endurance" ${log.component === 'Cardiovascular Endurance' ? 'selected' : ''}>Cardiovascular Endurance</option>
+              <option value="Flexibility" ${log.component === 'Flexibility' ? 'selected' : ''}>Flexibility</option>
+            </select>
+          </td>
+          <td><input type="number" class="sheet-input" value="${log.sets}" onchange="updateSpreadsheetCell(${log.id}, 'sets', this.value)"></td>
+          <td><input type="text" class="sheet-input" value="${log.reps}" onchange="updateSpreadsheetCell(${log.id}, 'reps', this.value)"></td>
+          <td><input type="number" class="sheet-input" value="${log.weight}" onchange="updateSpreadsheetCell(${log.id}, 'weight', this.value)"></td>
+          <td style="text-align: center;"><button class="btn btn-danger" onclick="deleteSpreadsheetRow(${log.id})">✕</button></td>
+        `;
+        sheetBody.appendChild(tr);
+
+        historyTbody.innerHTML += `<tr>
+          <td style="padding: 10px;"><strong>${log.date}</strong></td>
+          <td style="padding: 10px;">${log.exercise || 'Unspecified'}</td>
+          <td style="padding: 10px;">${log.component}</td>
+          <td style="padding: 10px;">${log.sets} sets</td>
+          <td style="padding: 10px;">${log.reps} reps/secs</td>
+          <td style="padding: 10px;">${log.weight} lbs</td>
+        </tr>`;
+      });
+    }
+
+    function updateStudentContext() {
+      const name = document.getElementById('studentName').value.trim();
+      renderRoutineTags(name);
+      renderStudentSpreadsheet(name);
+    }
+
+    // --- TEACHER DASHBOARD LOGIC ---
+    function renderTeacherDashboard() {
+      const studentsSet = new Set(allLogs.map(l => l.student.trim()));
+      document.getElementById('totalStudentsCount').textContent = studentsSet.size;
+      document.getElementById('totalWorkoutsCount').textContent = allLogs.length;
+
+      const dropdown = document.getElementById('teacherStudentDropdown');
+      dropdown.innerHTML = '<option value="">-- Choose Student --</option>';
+      studentsSet.forEach(student => {
+        const opt = document.createElement('option');
+        opt.value = student;
+        opt.textContent = student;
+        dropdown.appendChild(opt);
+      });
+
+      const classTbody = document.getElementById('classLogTable');
+      classTbody.innerHTML = '';
+
+      if (allLogs.length === 0) {
+        classTbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 15px;">No workout entries recorded across class.</td></tr>';
+        return;
+      }
+
+      allLogs.forEach(log => {
+        classTbody.innerHTML += `<tr>
+          <td style="padding: 10px;">${log.date}</td>
+          <td style="padding: 10px;"><strong>${log.student}</strong></td>
+          <td style="padding: 10px;">${log.exercise || 'Unspecified'}</td>
+          <td style="padding: 10px;">${log.component}</td>
+          <td style="padding: 10px;">${log.sets}</td>
+          <td style="padding: 10px;">${log.reps}</td>
+          <td style="padding: 10px;">${log.weight} lbs</td>
+        </tr>`;
+      });
+    }
+
+    function renderTeacherIndividualView() {
+      const selectedStudent = document.getElementById('teacherStudentDropdown').value;
+      const tbody = document.getElementById('individualStudentTable');
+      tbody.innerHTML = '';
+
+      if (!selectedStudent) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Select a student from the dropdown above.</td></tr>';
+        return;
+      }
+
+      const filteredLogs = allLogs.filter(l => l.student === selectedStudent);
+
+      if (filteredLogs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">No workouts logged for this student.</td></tr>';
+        return;
+      }
+
+      filteredLogs.forEach(log => {
+        tbody.innerHTML += `<tr>
+          <td style="padding: 10px;">${log.date}</td>
+          <td style="padding: 10px;">${log.exercise || 'Unspecified'}</td>
+          <td style="padding: 10px;">${log.component}</td>
+          <td style="padding: 10px;">${log.sets} sets</td>
+          <td style="padding: 10px;">${log.reps} reps/secs</td>
+          <td style="padding: 10px;">${log.weight} lbs</td>
+        </tr>`;
+      });
+    }
+  </script>
+</body>
+</html>
