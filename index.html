@@ -16,8 +16,10 @@
       --text: #0F172A;            /* Dark Charcoal / Near Black Text */
       --subtle: #475569;          /* Medium Dark Grey for Labels/Subtitles */
       --border: #CBD5E1;          /* Crisp Border Grey */
-      --danger: #DC2626;          /* Red Action / Delete */
+      --danger: #DC2626;          /* Red Action / Alert */
+      --danger-bg: #FEE2E2;       /* Soft Red Highlight */
       --success: #16A34A;         /* Success Green */
+      --success-bg: #DCFCE7;      /* Soft Green Highlight */
     }
 
     * {
@@ -100,6 +102,7 @@
       border-bottom: 2px solid var(--border);
       margin-bottom: 20px;
       padding-bottom: 8px;
+      flex-wrap: wrap;
     }
 
     .sub-tab-btn {
@@ -246,6 +249,65 @@
       color: #FFFFFF;
     }
 
+    /* PROGRESS & REQUIREMENTS WIDGET STYLES */
+    .req-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .req-card {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border: 1px solid var(--border);
+    }
+
+    .req-card.missing {
+      background-color: var(--danger-bg);
+      border-color: var(--danger);
+      color: #991B1B;
+    }
+
+    .req-card.complete {
+      background-color: var(--success-bg);
+      border-color: var(--success);
+      color: #166534;
+    }
+
+    .progress-bar-container {
+      width: 100%;
+      height: 16px;
+      background-color: #E2E8F0;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      width: 0%;
+      background-color: var(--primary);
+      transition: width 0.3s ease-in-out;
+    }
+
+    /* MASTER WORKOUT PLANNER GRID */
+    .ab-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+    }
+
+    .completed-row {
+      background-color: #F0FDF4 !important;
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -325,10 +387,41 @@
       </div>
     </div>
 
+    <!-- PE BALANCE & PROGRESS BAR CARD -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <h3 style="margin: 0; color: var(--primary);">📋 Routine Balance & Program Requirements</h3>
+        <span id="progressPercentText" style="font-weight: 700; color: var(--primary);">0% Complete</span>
+      </div>
+      <p style="margin: 5px 0 10px 0; font-size: 0.85rem; color: var(--subtle);">
+        Your overall plan (A Day + B Day) requires a minimum of <strong>3 Upper Body, 3 Lower Body, and 3 Core exercises</strong>.
+      </p>
+      
+      <div class="progress-bar-container">
+        <div id="progressBarFill" class="progress-bar-fill"></div>
+      </div>
+
+      <div class="req-grid">
+        <div id="reqUpper" class="req-card missing">
+          <span>Upper Body (Min 3):</span>
+          <span id="countUpper">0 / 3 ❌</span>
+        </div>
+        <div id="reqLower" class="req-card missing">
+          <span>Lower Body (Min 3):</span>
+          <span id="countLower">0 / 3 ❌</span>
+        </div>
+        <div id="reqCore" class="req-card missing">
+          <span>Core (Min 3):</span>
+          <span id="countCore">0 / 3 ❌</span>
+        </div>
+      </div>
+    </div>
+
     <div class="sub-tabs">
       <button class="sub-tab-btn active" onclick="switchStudentTab('tab1', event)">1. Build Routine & Library</button>
-      <button class="sub-tab-btn" onclick="switchStudentTab('tab2', event)">2. Interactive Log Spreadsheet</button>
-      <button class="sub-tab-btn" onclick="switchStudentTab('tab3', event)">3. Past Workout History</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tab3', event)">2. Master A/B Workout Plan</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tab2', event)">3. Spreadsheet Log</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tab4', event)">4. History Log</button>
     </div>
 
     <!-- TAB 1: BUILD ROUTINE -->
@@ -352,6 +445,14 @@
 
         <button id="previewBtn" class="btn btn-secondary hidden" onclick="openModal()" style="margin-bottom: 15px;">🔍 View Exercise Form Cues & Video</button>
 
+        <div id="workoutDayGroup" class="form-group hidden">
+          <label for="workoutDaySelect">Assign to Workout Day:</label>
+          <select id="workoutDaySelect">
+            <option value="A">Workout A</option>
+            <option value="B">Workout B</option>
+          </select>
+        </div>
+
         <div id="fitnessGroup" class="form-group hidden">
           <label for="fitnessComponent">Target Fitness Component:</label>
           <select id="fitnessComponent">
@@ -362,12 +463,64 @@
           </select>
         </div>
 
-        <button id="addToRoutineBtn" class="btn btn-primary hidden" onclick="addToRoutine()">+ Add to My Daily Routine</button>
+        <button id="addToRoutineBtn" class="btn btn-primary hidden" onclick="addToRoutine()">+ Add to Routine</button>
 
         <div id="routineSavedBox" class="hidden" style="margin-top: 20px;">
-          <h4>Your Selected Routine Items:</h4>
-          <p style="font-size: 0.85rem; color: var(--subtle);">Click any tag below to populate a row in your spreadsheet.</p>
+          <h4>Your Saved Exercises:</h4>
+          <p style="font-size: 0.85rem; color: var(--subtle);">Click any tag below to send directly to your active spreadsheet.</p>
           <div id="routineTags" class="tag-container"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: NEW FULL MASTER A/B WORKOUT PLANNER -->
+    <div id="tab3" class="student-tab hidden">
+      <div class="card">
+        <h3>Full Master Workout Plan (A/B Schedule)</h3>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          View and edit your complete routine. Check the box when completed today, or update your targets on the fly!
+        </p>
+        
+        <div class="ab-grid">
+          <!-- A DAY COLUMN -->
+          <div>
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px;">🅰️ Workout A</h4>
+            <div style="overflow-x: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Done</th>
+                    <th>Exercise</th>
+                    <th>Sets</th>
+                    <th>Reps</th>
+                    <th>Lbs</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="workoutATable"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- B DAY COLUMN -->
+          <div>
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px;">🅱️ Workout B</h4>
+            <div style="overflow-x: auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Done</th>
+                    <th>Exercise</th>
+                    <th>Sets</th>
+                    <th>Reps</th>
+                    <th>Lbs</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="workoutBTable"></tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -400,8 +553,8 @@
       </div>
     </div>
 
-    <!-- TAB 3: PAST WORKOUT HISTORY -->
-    <div id="tab3" class="student-tab hidden">
+    <!-- TAB 4: PAST WORKOUT HISTORY -->
+    <div id="tab4" class="student-tab hidden">
       <div class="card">
         <h3>Logged Activity History</h3>
         <div style="overflow-x: auto;">
@@ -572,7 +725,7 @@
   // Local Storage Data Structures
   let allLogs = JSON.parse(localStorage.getItem('mmhs_pe_logs_v2')) || [];
   let studentRoutines = JSON.parse(localStorage.getItem('mmhs_pe_routines_v2')) || {};
-  let studentAccounts = JSON.parse(localStorage.getItem('mmhs_pe_accounts_v1')) || {}; // Stores { studentName: password }
+  let studentAccounts = JSON.parse(localStorage.getItem('mmhs_pe_accounts_v1')) || {};
   let teacherPassword = localStorage.getItem('mmhs_pe_teacher_pw') || "Spartans123";
 
   let activeStudent = null;
@@ -584,6 +737,7 @@
   window.onload = function() {
     document.getElementById('workoutDate').value = new Date().toISOString().split('T')[0];
     loadLearningTargets();
+    updateProgressUI();
   };
 
   function loadLearningTargets() {
@@ -615,7 +769,6 @@
     const formattedName = nameInput.toLowerCase();
 
     if (studentAccounts[formattedName]) {
-      // Account exists, prompt for password
       const inputPw = prompt(`Welcome back, ${nameInput}! Please enter your password/PIN:`);
       if (inputPw === studentAccounts[formattedName]) {
         activeStudent = nameInput;
@@ -625,7 +778,6 @@
         alert("Incorrect password! Access denied.");
       }
     } else {
-      // Account registration
       const newPw = prompt(`Creating new account for ${nameInput}. Set a password or PIN:`);
       if (newPw && newPw.trim() !== '') {
         studentAccounts[formattedName] = newPw.trim();
@@ -714,6 +866,7 @@
 
     exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
     document.getElementById('previewBtn').classList.add('hidden');
+    document.getElementById('workoutDayGroup').classList.add('hidden');
     document.getElementById('fitnessGroup').classList.add('hidden');
     document.getElementById('addToRoutineBtn').classList.add('hidden');
 
@@ -734,6 +887,7 @@
     const exName = document.getElementById('exerciseSelect').value;
     if (exName) {
       document.getElementById('previewBtn').classList.remove('hidden');
+      document.getElementById('workoutDayGroup').classList.remove('hidden');
       document.getElementById('fitnessGroup').classList.remove('hidden');
       document.getElementById('addToRoutineBtn').classList.remove('hidden');
     }
@@ -760,15 +914,75 @@
     if (!activeStudent) { alert("Please log in with your name and password first!"); return; }
     const exName = document.getElementById('exerciseSelect').value;
     const comp = document.getElementById('fitnessComponent').value;
+    const area = document.getElementById('targetArea').value;
+    const day = document.getElementById('workoutDaySelect').value;
 
-    if (!exName || !comp) { alert("Complete all dropdown choices!"); return; }
+    if (!exName || !comp || !area) { alert("Complete all dropdown choices!"); return; }
 
     if (!studentRoutines[activeStudent]) studentRoutines[activeStudent] = [];
-    studentRoutines[activeStudent].push({ exercise: exName, component: comp });
+
+    const newItem = {
+      id: Date.now() + Math.random(),
+      exercise: exName,
+      component: comp,
+      area: area,
+      day: day,
+      sets: 3,
+      reps: 10,
+      weight: 0,
+      done: false
+    };
+
+    studentRoutines[activeStudent].push(newItem);
 
     saveData();
-    renderRoutineTags(activeStudent);
-    alert(`${exName} added to your routine!`);
+    updateStudentContext();
+    alert(`${exName} added to Workout ${day}!`);
+  }
+
+  // --- PROGRESS BAR & REQUIREMENTS ENGINE ---
+  function updateProgressUI() {
+    if (!activeStudent || !studentRoutines[activeStudent]) {
+      setRequirementState('Upper', 0);
+      setRequirementState('Lower', 0);
+      setRequirementState('Core', 0);
+      updateProgressBar(0);
+      return;
+    }
+
+    const items = studentRoutines[activeStudent];
+    const upperCount = items.filter(i => i.area === 'upper').length;
+    const lowerCount = items.filter(i => i.area === 'lower').length;
+    const coreCount = items.filter(i => i.area === 'core').length;
+
+    setRequirementState('Upper', upperCount);
+    setRequirementState('Lower', lowerCount);
+    setRequirementState('Core', coreCount);
+
+    const targetUpper = Math.min(upperCount, 3);
+    const targetLower = Math.min(lowerCount, 3);
+    const targetCore = Math.min(coreCount, 3);
+
+    const pct = Math.round(((targetUpper + targetLower + targetCore) / 9) * 100);
+    updateProgressBar(pct);
+  }
+
+  function setRequirementState(type, count) {
+    const card = document.getElementById(`req${type}`);
+    const countLabel = document.getElementById(`count${type}`);
+
+    if (count >= 3) {
+      card.className = 'req-card complete';
+      countLabel.textContent = `${count} / 3 ✔️`;
+    } else {
+      card.className = 'req-card missing';
+      countLabel.textContent = `${count} / 3 ❌`;
+    }
+  }
+
+  function updateProgressBar(percentage) {
+    document.getElementById('progressBarFill').style.width = `${percentage}%`;
+    document.getElementById('progressPercentText').textContent = `${percentage}% Requirements Met`;
   }
 
   function renderRoutineTags(name) {
@@ -781,17 +995,89 @@
       studentRoutines[name].forEach(item => {
         const tag = document.createElement('span');
         tag.className = 'tag';
-        tag.textContent = `+ ${item.exercise} (${item.component})`;
+        tag.textContent = `[${item.day || 'A'}] ${item.exercise} (${item.component})`;
         tag.onclick = () => {
           addBlankSpreadsheetRow(item.exercise, item.component);
-          const tab2Btn = document.querySelectorAll('#studentView .sub-tab-btn')[1];
-          switchStudentTab('tab2', { currentTarget: tab2Btn });
+          const tabSpreadsheetBtn = document.querySelectorAll('#studentView .sub-tab-btn')[2];
+          switchStudentTab('tab2', { currentTarget: tabSpreadsheetBtn });
         };
         container.appendChild(tag);
       });
     } else {
       box.classList.add('hidden');
     }
+  }
+
+  // --- MASTER A/B WORKOUT PLANNER RENDERER ---
+  function renderMasterPlanner(name) {
+    const aTable = document.getElementById('workoutATable');
+    const bTable = document.getElementById('workoutBTable');
+
+    aTable.innerHTML = '';
+    bTable.innerHTML = '';
+
+    if (!name || !studentRoutines[name] || studentRoutines[name].length === 0) {
+      const emptyRow = '<tr><td colspan="6" style="text-align:center; color: var(--subtle); padding:10px;">No exercises added yet.</td></tr>';
+      aTable.innerHTML = emptyRow;
+      bTable.innerHTML = emptyRow;
+      return;
+    }
+
+    const aItems = studentRoutines[name].filter(i => (i.day || 'A') === 'A');
+    const bItems = studentRoutines[name].filter(i => i.day === 'B');
+
+    renderPlanRows(aItems, aTable);
+    renderPlanRows(bItems, bTable);
+  }
+
+  function renderPlanRows(items, tbody) {
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--subtle); padding:10px;">No exercises assigned.</td></tr>';
+      return;
+    }
+
+    items.forEach(item => {
+      const tr = document.createElement('tr');
+      if (item.done) tr.className = 'completed-row';
+
+      tr.innerHTML = `
+        <td style="text-align: center;">
+          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleExerciseDone(${item.id})">
+        </td>
+        <td><strong>${item.exercise}</strong></td>
+        <td><input type="number" class="sheet-input" value="${item.sets || 3}" onchange="updateRoutineField(${item.id}, 'sets', this.value)" style="width:50px;"></td>
+        <td><input type="text" class="sheet-input" value="${item.reps || 10}" onchange="updateRoutineField(${item.id}, 'reps', this.value)" style="width:50px;"></td>
+        <td><input type="number" class="sheet-input" value="${item.weight || 0}" onchange="updateRoutineField(${item.id}, 'weight', this.value)" style="width:60px;"></td>
+        <td style="text-align: center;"><button class="btn btn-danger" onclick="deleteRoutineItem(${item.id})">✕</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function toggleExerciseDone(id) {
+    if (!activeStudent || !studentRoutines[activeStudent]) return;
+    const item = studentRoutines[activeStudent].find(i => i.id == id);
+    if (item) {
+      item.done = !item.done;
+      saveData();
+      renderMasterPlanner(activeStudent);
+    }
+  }
+
+  function updateRoutineField(id, field, value) {
+    if (!activeStudent || !studentRoutines[activeStudent]) return;
+    const item = studentRoutines[activeStudent].find(i => i.id == id);
+    if (item) {
+      item[field] = value;
+      saveData();
+    }
+  }
+
+  function deleteRoutineItem(id) {
+    if (!activeStudent || !studentRoutines[activeStudent]) return;
+    studentRoutines[activeStudent] = studentRoutines[activeStudent].filter(i => i.id != id);
+    saveData();
+    updateStudentContext();
   }
 
   // --- SPREADSHEET ENGINE ---
@@ -893,7 +1179,9 @@
 
   function updateStudentContext() {
     renderRoutineTags(activeStudent);
+    renderMasterPlanner(activeStudent);
     renderStudentSpreadsheet(activeStudent);
+    updateProgressUI();
   }
 
   // --- TEACHER DASHBOARD LOGIC ---
