@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MMHS PE - Weightroom Workout & Learning Tracker</title>
+  <title>Memorial PE Workout Tracker</title>
   <style>
     :root {
       /* SPARTAN GREEN THEME COLOR PALETTE */
@@ -362,7 +362,7 @@
 
 <div class="container">
   <header>
-    <h1>MMHS PE Weightroom Log</h1>
+    <h1>Memorial PE Workout Tracker</h1>
     <div class="nav-tabs">
       <button class="main-nav-btn active" onclick="switchRole('studentView', event)">Student Workspace</button>
       <button class="main-nav-btn" onclick="switchRole('teacherView', event)">Teacher Dashboard</button>
@@ -758,6 +758,7 @@
   let teacherPassword = localStorage.getItem('mmhs_pe_teacher_pw') || "Spartans123";
 
   let activeStudent = null;
+  let activeSheetRows = [];
   let currentTarget = JSON.parse(localStorage.getItem('mmhs_pe_target')) || {
     target: "Demonstrate proper form cues and safety protocols across chosen weightroom equipment.",
     criteria: "I can identify form cues, execute 3 sets per exercise, and accurately record my data in the spreadsheet."
@@ -818,6 +819,17 @@
         alert("Password creation canceled.");
       }
     }
+  }
+
+  function updateStudentContext() {
+    if (!activeStudent) return;
+    if (!studentRoutines[activeStudent]) {
+      studentRoutines[activeStudent] = { A: [], B: [] };
+    }
+    renderRoutineTags();
+    renderABTables();
+    renderHistoryTable();
+    updateProgressUI();
   }
 
   function switchRole(roleId, evt) {
@@ -913,26 +925,34 @@
   }
 
   function handleExerciseSelect() {
-    const exName = document.getElementById('exerciseSelect').value;
-    if (exName) {
+    const selectedEx = document.getElementById('exerciseSelect').value;
+    if (selectedEx) {
       document.getElementById('previewBtn').classList.remove('hidden');
       document.getElementById('workoutDayGroup').classList.remove('hidden');
       document.getElementById('fitnessGroup').classList.remove('hidden');
       document.getElementById('addToRoutineBtn').classList.remove('hidden');
+    } else {
+      document.getElementById('previewBtn').classList.add('hidden');
+      document.getElementById('workoutDayGroup').classList.add('hidden');
+      document.getElementById('fitnessGroup').classList.add('hidden');
+      document.getElementById('addToRoutineBtn').classList.add('hidden');
     }
   }
 
-  function openModal() {
+  function getSelectedExerciseObj() {
     const area = document.getElementById('targetArea').value;
-    const name = document.getElementById('exerciseSelect').value;
-    const ex = exerciseLibrary[area]?.find(e => e.name === name);
+    const exName = document.getElementById('exerciseSelect').value;
+    if (!area || !exName) return null;
+    return exerciseLibrary[area].find(e => e.name === exName);
+  }
 
-    if (ex) {
-      document.getElementById('modalExerciseTitle').textContent = ex.name;
-      document.getElementById('modalCuesText').textContent = ex.cues;
-      document.getElementById('modalVideoLink').href = ex.video;
-      document.getElementById('videoModal').style.display = 'flex';
-    }
+  function openModal() {
+    const ex = getSelectedExerciseObj();
+    if (!ex) return;
+    document.getElementById('modalExerciseTitle').textContent = ex.name;
+    document.getElementById('modalCuesText').textContent = ex.cues;
+    document.getElementById('modalVideoLink').href = ex.video;
+    document.getElementById('videoModal').style.display = 'flex';
   }
 
   function closeModal() {
@@ -940,357 +960,384 @@
   }
 
   function addToRoutine() {
-    if (!activeStudent) { alert("Please log in with your name and password first!"); return; }
-    const exName = document.getElementById('exerciseSelect').value;
-    const comp = document.getElementById('fitnessComponent').value;
-    const area = document.getElementById('targetArea').value;
-    const day = document.getElementById('workoutDaySelect').value;
-
-    if (!exName || !comp || !area) { alert("Complete all dropdown choices!"); return; }
-
-    if (!studentRoutines[activeStudent]) studentRoutines[activeStudent] = [];
-
-    const newItem = {
-      id: Date.now() + Math.random(),
-      exercise: exName,
-      component: comp,
-      area: area,
-      day: day,
-      sets: 3,
-      reps: 10,
-      weight: 0,
-      done: false
-    };
-
-    studentRoutines[activeStudent].push(newItem);
-
-    saveData();
-    updateStudentContext();
-    alert(`${exName} added to Workout ${day}!`);
-  }
-
-  // --- REVISED PROGRESS BAR & SPECIFIC REQUIREMENTS ENGINE ---
-  function updateProgressUI() {
-    if (!activeStudent || !studentRoutines[activeStudent]) {
-      setRequirementCard('ALower', 0, 4);
-      setRequirementCard('ACore', 0, 2);
-      setRequirementCard('BUpper', 0, 4);
-      setRequirementCard('BCore', 0, 2);
-      updateProgressBar(0);
+    if (!activeStudent) {
+      alert("Please log in or register your student name first!");
       return;
     }
 
-    const items = studentRoutines[activeStudent];
+    const exName = document.getElementById('exerciseSelect').value;
+    const targetArea = document.getElementById('targetArea').value;
+    const day = document.getElementById('workoutDaySelect').value;
+    const component = document.getElementById('fitnessComponent').value;
 
-    // Calculate exact requirement counts
-    const aLowerCount = items.filter(i => (i.day || 'A') === 'A' && i.area === 'lower').length;
-    const aCoreCount  = items.filter(i => (i.day || 'A') === 'A' && i.area === 'core').length;
-    const bUpperCount = items.filter(i => i.day === 'B' && i.area === 'upper').length;
-    const bCoreCount  = items.filter(i => i.day === 'B' && i.area === 'core').length;
+    if (!exName) return;
 
-    setRequirementCard('ALower', aLowerCount, 4);
-    setRequirementCard('ACore', aCoreCount, 2);
-    setRequirementCard('BUpper', bUpperCount, 4);
-    setRequirementCard('BCore', bCoreCount, 2);
-
-    // Calculate weighted total progress percentage (Target = 12 total items)
-    const validALower = Math.min(aLowerCount, 4);
-    const validACore  = Math.min(aCoreCount, 2);
-    const validBUpper = Math.min(bUpperCount, 4);
-    const validBCore  = Math.min(bCoreCount, 2);
-
-    const totalValidExercises = validALower + validACore + validBUpper + validBCore;
-    const pct = Math.round((totalValidExercises / 12) * 100);
-    
-    updateProgressBar(pct);
-  }
-
-  function setRequirementCard(reqKey, currentCount, targetCount) {
-    const card = document.getElementById(`req${reqKey}`);
-    const countLabel = document.getElementById(`count${reqKey}`);
-
-    if (currentCount >= targetCount) {
-      card.className = 'req-card complete';
-      countLabel.textContent = `${currentCount} / ${targetCount} ✔️`;
-    } else {
-      card.className = 'req-card missing';
-      countLabel.textContent = `${currentCount} / ${targetCount} ❌`;
+    if (!studentRoutines[activeStudent]) {
+      studentRoutines[activeStudent] = { A: [], B: [] };
     }
+
+    const exists = studentRoutines[activeStudent][day].some(e => e.name === exName);
+    if (exists) {
+      alert(`${exName} is already in Workout ${day}!`);
+      return;
+    }
+
+    studentRoutines[activeStudent][day].push({
+      name: exName,
+      area: targetArea,
+      component: component,
+      sets: 3,
+      reps: 10,
+      weight: 0
+    });
+
+    saveData();
+    renderRoutineTags();
+    renderABTables();
+    updateProgressUI();
+    alert(`Added ${exName} to Workout ${day}!`);
   }
 
-  function updateProgressBar(percentage) {
-    document.getElementById('progressBarFill').style.width = `${percentage}%`;
-    document.getElementById('progressPercentText').textContent = `${percentage}% Requirements Met`;
+  function removeExerciseFromRoutine(day, index) {
+    if (!activeStudent || !studentRoutines[activeStudent]) return;
+    const item = studentRoutines[activeStudent][day][index];
+    const exerciseName = item ? item.name : 'this exercise';
+
+    // Popup confirmation before deleting exercise
+    const confirmed = confirm(`Are you sure you want to remove "${exerciseName}" from Workout ${day}?`);
+    if (!confirmed) return;
+
+    studentRoutines[activeStudent][day].splice(index, 1);
+    saveData();
+    renderRoutineTags();
+    renderABTables();
+    updateProgressUI();
   }
 
-  function renderRoutineTags(name) {
+  function renderRoutineTags() {
     const box = document.getElementById('routineSavedBox');
     const container = document.getElementById('routineTags');
     container.innerHTML = '';
 
-    if (name && studentRoutines[name] && studentRoutines[name].length > 0) {
-      box.classList.remove('hidden');
-      studentRoutines[name].forEach(item => {
-        const tag = document.createElement('span');
-        tag.className = 'tag';
-        tag.textContent = `[${item.day || 'A'}] ${item.exercise} (${item.component})`;
-        tag.onclick = () => {
-          addBlankSpreadsheetRow(item.exercise, item.component);
-          const tabSpreadsheetBtn = document.querySelectorAll('#studentView .sub-tab-btn')[2];
-          switchStudentTab('tab2', { currentTarget: tabSpreadsheetBtn });
-        };
-        container.appendChild(tag);
-      });
-    } else {
+    if (!activeStudent || !studentRoutines[activeStudent]) {
       box.classList.add('hidden');
-    }
-  }
-
-  // --- MASTER A/B WORKOUT PLANNER RENDERER ---
-  function renderMasterPlanner(name) {
-    const aTable = document.getElementById('workoutATable');
-    const bTable = document.getElementById('workoutBTable');
-
-    aTable.innerHTML = '';
-    bTable.innerHTML = '';
-
-    if (!name || !studentRoutines[name] || studentRoutines[name].length === 0) {
-      const emptyRow = '<tr><td colspan="6" style="text-align:center; color: var(--subtle); padding:10px;">No exercises added yet.</td></tr>';
-      aTable.innerHTML = emptyRow;
-      bTable.innerHTML = emptyRow;
       return;
     }
 
-    const aItems = studentRoutines[name].filter(i => (i.day || 'A') === 'A');
-    const bItems = studentRoutines[name].filter(i => i.day === 'B');
-
-    renderPlanRows(aItems, aTable);
-    renderPlanRows(bItems, bTable);
-  }
-
-  function renderPlanRows(items, tbody) {
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--subtle); padding:10px;">No exercises assigned.</td></tr>';
+    const allEx = [...studentRoutines[activeStudent].A, ...studentRoutines[activeStudent].B];
+    if (allEx.length === 0) {
+      box.classList.add('hidden');
       return;
     }
 
-    items.forEach(item => {
+    box.classList.remove('hidden');
+    allEx.forEach(ex => {
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = ex.name;
+      tag.onclick = () => sendToSpreadsheet(ex);
+      container.appendChild(tag);
+    });
+  }
+
+  function sendToSpreadsheet(ex) {
+    const dateVal = document.getElementById('workoutDate').value || new Date().toISOString().split('T')[0];
+    activeSheetRows.push({
+      date: dateVal,
+      exercise: ex.name,
+      component: ex.component || 'Muscular Strength',
+      sets: ex.sets || 3,
+      reps: ex.reps || 10,
+      weight: ex.weight || 0
+    });
+    renderSpreadsheet();
+    switchStudentTab('tab2');
+  }
+
+  function renderABTables() {
+    const aBody = document.getElementById('workoutATable');
+    const bBody = document.getElementById('workoutBTable');
+    aBody.innerHTML = '';
+    bBody.innerHTML = '';
+
+    if (!activeStudent || !studentRoutines[activeStudent]) return;
+
+    // Render A Table
+    studentRoutines[activeStudent].A.forEach((ex, idx) => {
       const tr = document.createElement('tr');
-      if (item.done) tr.className = 'completed-row';
-
       tr.innerHTML = `
-        <td style="text-align: center;">
-          <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleExerciseDone(${item.id})">
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleABComplete(this)"></td>
+        <td><strong>${ex.name}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${ex.area.toUpperCase()}</span></td>
+        <td><input type="number" class="sheet-input" value="${ex.sets}" onchange="updateABVal('A', ${idx}, 'sets', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${ex.reps}" onchange="updateABVal('A', ${idx}, 'reps', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${ex.weight}" onchange="updateABVal('A', ${idx}, 'weight', this.value)"></td>
+        <td><button class="btn btn-danger" onclick="removeExerciseFromRoutine('A', ${idx})">✕</button></td>
+      `;
+      aBody.appendChild(tr);
+    });
+
+    // Render B Table
+    studentRoutines[activeStudent].B.forEach((ex, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleABComplete(this)"></td>
+        <td><strong>${ex.name}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${ex.area.toUpperCase()}</span></td>
+        <td><input type="number" class="sheet-input" value="${ex.sets}" onchange="updateABVal('B', ${idx}, 'sets', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${ex.reps}" onchange="updateABVal('B', ${idx}, 'reps', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${ex.weight}" onchange="updateABVal('B', ${idx}, 'weight', this.value)"></td>
+        <td><button class="btn btn-danger" onclick="removeExerciseFromRoutine('B', ${idx})">✕</button></td>
+      `;
+      bBody.appendChild(tr);
+    });
+  }
+
+  function toggleABComplete(cb) {
+    const row = cb.closest('tr');
+    if (cb.checked) {
+      row.classList.add('completed-row');
+    } else {
+      row.classList.remove('completed-row');
+    }
+  }
+
+  function updateABVal(day, idx, key, val) {
+    if (!activeStudent || !studentRoutines[activeStudent]) return;
+    studentRoutines[activeStudent][day][idx][key] = parseFloat(val) || 0;
+    saveData();
+  }
+
+  function addBlankSpreadsheetRow() {
+    const dateVal = document.getElementById('workoutDate').value || new Date().toISOString().split('T')[0];
+    activeSheetRows.push({
+      date: dateVal,
+      exercise: "",
+      component: "Muscular Strength",
+      sets: 3,
+      reps: 10,
+      weight: 0
+    });
+    renderSpreadsheet();
+  }
+
+  function removeSpreadsheetRow(index) {
+    const rowItem = activeSheetRows[index];
+    const rowName = (rowItem && rowItem.exercise) ? `"${rowItem.exercise}"` : 'this row';
+
+    // Popup confirmation before deleting row from active spreadsheet
+    const confirmed = confirm(`Are you sure you want to delete ${rowName} from your spreadsheet?`);
+    if (!confirmed) return;
+
+    activeSheetRows.splice(index, 1);
+    renderSpreadsheet();
+  }
+
+  function renderSpreadsheet() {
+    const tbody = document.getElementById('editableSheetBody');
+    tbody.innerHTML = '';
+
+    activeSheetRows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="date" class="sheet-input" value="${row.date}" onchange="updateSheetRow(${idx}, 'date', this.value)"></td>
+        <td><input type="text" class="sheet-input" placeholder="Exercise name..." value="${row.exercise}" onchange="updateSheetRow(${idx}, 'exercise', this.value)"></td>
+        <td>
+          <select class="sheet-select" onchange="updateSheetRow(${idx}, 'component', this.value)">
+            <option value="Muscular Strength" ${row.component === 'Muscular Strength' ? 'selected' : ''}>Muscular Strength</option>
+            <option value="Muscular Endurance" ${row.component === 'Muscular Endurance' ? 'selected' : ''}>Muscular Endurance</option>
+            <option value="Cardiovascular Endurance" ${row.component === 'Cardiovascular Endurance' ? 'selected' : ''}>Cardiovascular Endurance</option>
+            <option value="Flexibility" ${row.component === 'Flexibility' ? 'selected' : ''}>Flexibility</option>
+          </select>
         </td>
-        <td><strong>${item.exercise}</strong> <br><small style="color:var(--subtle);">${item.area.toUpperCase()}</small></td>
-        <td><input type="number" class="sheet-input" value="${item.sets || 3}" onchange="updateRoutineField(${item.id}, 'sets', this.value)" style="width:50px;"></td>
-        <td><input type="text" class="sheet-input" value="${item.reps || 10}" onchange="updateRoutineField(${item.id}, 'reps', this.value)" style="width:50px;"></td>
-        <td><input type="number" class="sheet-input" value="${item.weight || 0}" onchange="updateRoutineField(${item.id}, 'weight', this.value)" style="width:60px;"></td>
-        <td style="text-align: center;"><button class="btn btn-danger" onclick="deleteRoutineItem(${item.id})">✕</button></td>
+        <td><input type="number" class="sheet-input" value="${row.sets}" onchange="updateSheetRow(${idx}, 'sets', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${row.reps}" onchange="updateSheetRow(${idx}, 'reps', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${row.weight}" onchange="updateSheetRow(${idx}, 'weight', this.value)"></td>
+        <td>
+          <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.8rem;" onclick="logSheetRow(${idx})">Save Log</button>
+          <button class="btn btn-danger" onclick="removeSpreadsheetRow(${idx})">✕</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  function toggleExerciseDone(id) {
-    if (!activeStudent || !studentRoutines[activeStudent]) return;
-    const item = studentRoutines[activeStudent].find(i => i.id == id);
-    if (item) {
-      item.done = !item.done;
-      saveData();
-      renderMasterPlanner(activeStudent);
-    }
+  function updateSheetRow(idx, key, val) {
+    if (!activeSheetRows[idx]) return;
+    activeSheetRows[idx][key] = val;
   }
 
-  function updateRoutineField(id, field, value) {
-    if (!activeStudent || !studentRoutines[activeStudent]) return;
-    const item = studentRoutines[activeStudent].find(i => i.id == id);
-    if (item) {
-      item[field] = value;
-      saveData();
-    }
-  }
-
-  function deleteRoutineItem(id) {
-    if (!activeStudent || !studentRoutines[activeStudent]) return;
-    studentRoutines[activeStudent] = studentRoutines[activeStudent].filter(i => i.id != id);
-    saveData();
-    updateStudentContext();
-  }
-
-  // --- SPREADSHEET ENGINE ---
-  function addBlankSpreadsheetRow(exerciseName = '', componentName = 'Muscular Endurance') {
+  function logSheetRow(idx) {
     if (!activeStudent) {
-      alert("Please log in with your name and password first!");
+      alert("Please log in as a student to save log entries!");
       return;
     }
-    const defaultDate = document.getElementById('workoutDate').value;
 
-    const newEntry = {
-      id: Date.now() + Math.random(),
+    const r = activeSheetRows[idx];
+    if (!r.exercise || r.exercise.trim() === '') {
+      alert("Please enter an exercise name before saving.");
+      return;
+    }
+
+    const entry = {
+      id: Date.now(),
       student: activeStudent,
-      date: defaultDate,
-      exercise: exerciseName,
-      component: componentName,
-      sets: 3,
-      reps: 10,
-      weight: 0
+      date: r.date,
+      exercise: r.exercise,
+      component: r.component,
+      sets: r.sets,
+      reps: r.reps,
+      weight: r.weight
     };
 
-    allLogs.unshift(newEntry);
+    allLogs.push(entry);
     saveData();
-    renderStudentSpreadsheet(activeStudent);
+
+    activeSheetRows.splice(idx, 1);
+    renderSpreadsheet();
+    renderHistoryTable();
+    alert(`Logged ${entry.exercise} to your permanent history!`);
   }
 
-  function updateSpreadsheetCell(id, field, value) {
-    const entry = allLogs.find(l => l.id == id);
-    if (entry) {
-      if (entry.student !== activeStudent) {
-        alert("Unauthorized action!");
-        return;
-      }
-      entry[field] = value;
-      saveData();
-    }
-  }
+  function renderHistoryTable() {
+    const tbody = document.getElementById('historyTable');
+    tbody.innerHTML = '';
 
-  function deleteSpreadsheetRow(id) {
-    const entry = allLogs.find(l => l.id == id);
-    if (entry && entry.student === activeStudent) {
-      allLogs = allLogs.filter(l => l.id != id);
-      saveData();
-      renderStudentSpreadsheet(activeStudent);
-    }
-  }
-
-  function renderStudentSpreadsheet(name) {
-    const sheetBody = document.getElementById('editableSheetBody');
-    const historyTbody = document.getElementById('historyTable');
-
-    sheetBody.innerHTML = '';
-    historyTbody.innerHTML = '';
-
-    if (!name || name !== activeStudent) {
-      sheetBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color: var(--subtle);">Log in above to open your interactive spreadsheet.</td></tr>';
-      historyTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color: var(--subtle);">Log in above to view your workout history.</td></tr>';
+    if (!activeStudent) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--subtle);">Log in to see your history.</td></tr>';
       return;
     }
 
-    const studentLogs = allLogs.filter(l => l.student.toLowerCase() === name.toLowerCase());
-
-    if (studentLogs.length === 0) {
-      sheetBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:15px; color: var(--subtle);">No entries yet. Click "+ Add Blank Row" or pick an exercise in Tab 1!</td></tr>';
-      historyTbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:15px; color: var(--subtle);">No past workouts logged.</td></tr>';
+    const myLogs = allLogs.filter(l => l.student.toLowerCase() === activeStudent.toLowerCase());
+    if (myLogs.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color: var(--subtle);">No workout history found.</td></tr>';
       return;
     }
 
-    studentLogs.forEach(log => {
+    myLogs.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(l => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="date" class="sheet-input" value="${log.date}" onchange="updateSpreadsheetCell(${log.id}, 'date', this.value)"></td>
-        <td><input type="text" class="sheet-input" placeholder="e.g. Squats" value="${log.exercise}" onchange="updateSpreadsheetCell(${log.id}, 'exercise', this.value)"></td>
-        <td>
-          <select class="sheet-select" onchange="updateSpreadsheetCell(${log.id}, 'component', this.value)">
-            <option value="Muscular Strength" ${log.component === 'Muscular Strength' ? 'selected' : ''}>Muscular Strength</option>
-            <option value="Muscular Endurance" ${log.component === 'Muscular Endurance' ? 'selected' : ''}>Muscular Endurance</option>
-            <option value="Cardiovascular Endurance" ${log.component === 'Cardiovascular Endurance' ? 'selected' : ''}>Cardiovascular Endurance</option>
-            <option value="Flexibility" ${log.component === 'Flexibility' ? 'selected' : ''}>Flexibility</option>
-          </select>
-        </td>
-        <td><input type="number" class="sheet-input" value="${log.sets}" onchange="updateSpreadsheetCell(${log.id}, 'sets', this.value)"></td>
-        <td><input type="text" class="sheet-input" value="${log.reps}" onchange="updateSpreadsheetCell(${log.id}, 'reps', this.value)"></td>
-        <td><input type="number" class="sheet-input" value="${log.weight}" onchange="updateSpreadsheetCell(${log.id}, 'weight', this.value)"></td>
-        <td style="text-align: center;"><button class="btn btn-danger" onclick="deleteSpreadsheetRow(${log.id})">✕</button></td>
+        <td>${l.date}</td>
+        <td><strong>${l.exercise}</strong></td>
+        <td>${l.component}</td>
+        <td>${l.sets}</td>
+        <td>${l.reps}</td>
+        <td>${l.weight} lbs</td>
       `;
-      sheetBody.appendChild(tr);
-
-      historyTbody.innerHTML += `<tr>
-        <td style="padding: 10px;"><strong>${log.date}</strong></td>
-        <td style="padding: 10px;">${log.exercise || 'Unspecified'}</td>
-        <td style="padding: 10px;">${log.component}</td>
-        <td style="padding: 10px;">${log.sets} sets</td>
-        <td style="padding: 10px;">${log.reps} reps/secs</td>
-        <td style="padding: 10px;">${log.weight} lbs</td>
-      </tr>`;
+      tbody.appendChild(tr);
     });
   }
 
-  function updateStudentContext() {
-    renderRoutineTags(activeStudent);
-    renderMasterPlanner(activeStudent);
-    renderStudentSpreadsheet(activeStudent);
-    updateProgressUI();
+  function updateProgressUI() {
+    if (!activeStudent || !studentRoutines[activeStudent]) {
+      resetRequirementsUI();
+      return;
+    }
+
+    const r = studentRoutines[activeStudent];
+    const aLower = r.A.filter(e => e.area === 'lower').length;
+    const aCore = r.A.filter(e => e.area === 'core').length;
+    const bUpper = r.B.filter(e => e.area === 'upper').length;
+    const bCore = r.B.filter(e => e.area === 'core').length;
+
+    // Update Counts & Badges
+    updateReqCard('reqALower', 'countALower', aLower, 4, '🅰️ Workout A Lower Body');
+    updateReqCard('reqACore', 'countACore', aCore, 2, '🅰️ Workout A Core');
+    updateReqCard('reqBUpper', 'countBUpper', bUpper, 4, '🅱️ Workout B Upper Body');
+    updateReqCard('reqBCore', 'countBCore', bCore, 2, '🅱️ Workout B Core');
+
+    // Calculate percentage (Total target = 4 + 2 + 4 + 2 = 12 items maxed)
+    const totalMet = Math.min(aLower, 4) + Math.min(aCore, 2) + Math.min(bUpper, 4) + Math.min(bCore, 2);
+    const pct = Math.round((totalMet / 12) * 100);
+
+    document.getElementById('progressBarFill').style.width = pct + '%';
+    document.getElementById('progressPercentText').textContent = pct + '% Requirements Complete';
+  }
+
+  function updateReqCard(cardId, countId, current, target, label) {
+    const card = document.getElementById(cardId);
+    const countSpan = document.getElementById(countId);
+
+    if (current >= target) {
+      card.className = 'req-card complete';
+      countSpan.textContent = `${current} / ${target} ✅`;
+    } else {
+      card.className = 'req-card missing';
+      countSpan.textContent = `${current} / ${target} ❌`;
+    }
+  }
+
+  function resetRequirementsUI() {
+    updateReqCard('reqALower', 'countALower', 0, 4, '🅰️ Workout A Lower Body');
+    updateReqCard('reqACore', 'countACore', 0, 2, '🅰️ Workout A Core');
+    updateReqCard('reqBUpper', 'countBUpper', 0, 4, '🅱️ Workout B Upper Body');
+    updateReqCard('reqBCore', 'countBCore', 0, 2, '🅱️ Workout B Core');
+    document.getElementById('progressBarFill').style.width = '0%';
+    document.getElementById('progressPercentText').textContent = '0% Requirements Complete';
   }
 
   // --- TEACHER DASHBOARD LOGIC ---
   function renderTeacherDashboard() {
-    const classLogTable = document.getElementById('classLogTable');
-    const dropdown = document.getElementById('teacherStudentDropdown');
-
-    const studentNames = [...new Set(allLogs.map(l => l.student.trim()).filter(Boolean))];
-
-    document.getElementById('totalStudentsCount').textContent = studentNames.length;
+    const uniqueStudents = [...new Set(allLogs.map(l => l.student.toLowerCase()))];
+    document.getElementById('totalStudentsCount').textContent = uniqueStudents.length;
     document.getElementById('totalWorkoutsCount').textContent = allLogs.length;
 
-    classLogTable.innerHTML = '';
+    // Class Logs Table
+    const classTable = document.getElementById('classLogTable');
+    classTable.innerHTML = '';
+    
     if (allLogs.length === 0) {
-      classLogTable.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 15px;">No workout entries recorded across class.</td></tr>';
+      classTable.innerHTML = '<tr><td colspan="7" style="text-align:center;">No student logs available.</td></tr>';
     } else {
-      allLogs.forEach(log => {
+      allLogs.slice().reverse().forEach(l => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td style="padding: 10px;"><strong>${log.date}</strong></td>
-          <td style="padding: 10px;">${log.student}</td>
-          <td style="padding: 10px;">${log.exercise || 'Unspecified'}</td>
-          <td style="padding: 10px;">${log.component}</td>
-          <td style="padding: 10px;">${log.sets}</td>
-          <td style="padding: 10px;">${log.reps}</td>
-          <td style="padding: 10px;">${log.weight} lbs</td>
+          <td>${l.date}</td>
+          <td><strong>${l.student}</strong></td>
+          <td>${l.exercise}</td>
+          <td>${l.component}</td>
+          <td>${l.sets}</td>
+          <td>${l.reps}</td>
+          <td>${l.weight} lbs</td>
         `;
-        classLogTable.appendChild(tr);
+        classTable.appendChild(tr);
       });
     }
 
+    // Populate Student Dropdown for Inspection
+    const dropdown = document.getElementById('teacherStudentDropdown');
     dropdown.innerHTML = '<option value="">-- Choose Student --</option>';
-    studentNames.forEach(name => {
+    
+    Object.keys(studentAccounts).forEach(s => {
       const opt = document.createElement('option');
-      opt.value = name;
-      opt.textContent = name;
+      opt.value = s;
+      opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
       dropdown.appendChild(opt);
     });
-
-    renderTeacherIndividualView();
   }
 
   function renderTeacherIndividualView() {
-    const selectedStudent = document.getElementById('teacherStudentDropdown').value;
-    const individualTable = document.getElementById('individualStudentTable');
+    const student = document.getElementById('teacherStudentDropdown').value;
+    const tbody = document.getElementById('individualStudentTable');
+    tbody.innerHTML = '';
 
-    individualTable.innerHTML = '';
+    if (!student) return;
 
-    if (!selectedStudent) {
-      individualTable.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">Select a student from the dropdown above.</td></tr>';
-      return;
-    }
-
-    const filtered = allLogs.filter(l => l.student.toLowerCase() === selectedStudent.toLowerCase());
-
+    const filtered = allLogs.filter(l => l.student.toLowerCase() === student.toLowerCase());
     if (filtered.length === 0) {
-      individualTable.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 15px;">No logged activities found for this student.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No records for this student.</td></tr>';
       return;
     }
 
-    filtered.forEach(log => {
+    filtered.sort((a,b) => new Date(b.date) - new Date(a.date)).forEach(l => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td style="padding: 10px;"><strong>${log.date}</strong></td>
-        <td style="padding: 10px;">${log.exercise || 'Unspecified'}</td>
-        <td style="padding: 10px;">${log.component}</td>
-        <td style="padding: 10px;">${log.sets} sets</td>
-        <td style="padding: 10px;">${log.reps} reps/secs</td>
-        <td style="padding: 10px;">${log.weight} lbs</td>
+        <td>${l.date}</td>
+        <td><strong>${l.exercise}</strong></td>
+        <td>${l.component}</td>
+        <td>${l.sets}</td>
+        <td>${l.reps}</td>
+        <td>${l.weight} lbs</td>
       `;
-      individualTable.appendChild(tr);
+      tbody.appendChild(tr);
     });
   }
 </script>
