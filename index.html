@@ -742,7 +742,7 @@
   // TEACHER ACCESS CODE
   let teacherPassword = "Spartans123";
 
-  // EXPANDED EXERCISE DATABASE WITH DIRECT YOUTUBE SHORTS LINKS FOR PROPER FORM
+  // EXPANDED EXERCISE DATABASE WITH SPLIT LOWER BODY AND CORE CATEGORIES
   const exerciseDB = {
     upper: {
       deltoids: {
@@ -828,45 +828,72 @@
         }
       },
       hamstrings: {
-        name: "Hamstrings & Glutes",
+        name: "Hamstrings",
         exercises: {
           "Romanian Deadlift (RDL)": { cues: "Hinge at hips, push glutes back, maintain flat spine, lower bar to shins.", video: "https://www.youtube.com/shorts/JCXUYuzwNrM" },
           "Lying Leg Curl Machine": { cues: "Keep hips pressed into pad, curl heels toward glutes smoothly.", video: "https://www.youtube.com/shorts/1Tq3QdIUuHs" },
-          "Barbell Hip Thrust": { cues: "Upper back against bench, drive through heels to lift hips fully at top.", video: "https://www.youtube.com/shorts/LM8X3r_A4a8" },
           "Glute Ham Raise (GHR)": { cues: "Keep hips straight, lower body forward under control, flex hamstrings to lift.", video: "https://www.youtube.com/shorts/5wW0E3c1A8g" },
           "Seated Leg Curl": { cues: "Secure thigh pad tightly, pull heels back under seat completely.", video: "https://www.youtube.com/shorts/0333O334-aA" },
-          "Conventional Barbell Deadlift": { cues: "Feet hip-width, grip bar, drop hips, lift bar keeping it close to body.", video: "https://www.youtube.com/shorts/AweC3UaM14A" },
           "Single-Leg Romanian Deadlift": { cues: "Balance on one leg, hinge forward extending opposite leg straight back.", video: "https://www.youtube.com/shorts/7X1134L4L2o" },
-          "Kettlebell Swings": { cues: "Hinge at hips to swing kettlebell between legs, snap hips forward to drive up.", video: "https://www.youtube.com/shorts/s3Y3RkS2zCg" },
-          "Cable Pull-Through": { cues: "Face away from cable, reach between legs, drive hips forward to stand.", video: "https://www.youtube.com/shorts/A-0_z-7Wp2A" },
-          "Glute Kickbacks": { cues: "Attach cable ankle strap, extend leg straight back squeezing glute at top.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
-          "Good Mornings": { cues: "Bar rest on upper back, hinge at waist with soft knees until torso is near parallel.", video: "https://www.youtube.com/shorts/114A_9W7J3A" },
-          "Reverse Hyperextension": { cues: "Lie torso on pad, raise legs behind until hips are extended.", video: "https://www.youtube.com/shorts/7A-89Gk2A0A" },
+          "Good Mornings": { cues: "Bar rests on upper back, hinge at waist with soft knees until torso is near parallel.", video: "https://www.youtube.com/shorts/114A_9W7J3A" },
           "Nordic Hamstring Curl": { cues: "Ankles secured, lower body forward slowly resisting gravity with hamstrings.", video: "https://www.youtube.com/shorts/7S-0149021A" },
+          "Kettlebell Swings": { cues: "Hinge at hips to swing kettlebell between legs, snap hips forward to drive up.", video: "https://www.youtube.com/shorts/s3Y3RkS2zCg" }
+        }
+      },
+      glutes: {
+        name: "Glutes",
+        exercises: {
+          "Barbell Hip Thrust": { cues: "Upper back against bench, drive through heels to lift hips fully at top.", video: "https://www.youtube.com/shorts/LM8X3r_A4a8" },
+          "Glute Kickbacks": { cues: "Attach cable ankle strap, extend leg straight back squeezing glute at top.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
+          "Single-Leg Hip Thrust": { cues: "Balance on one foot on ground, lift hips driving through heel.", video: "https://www.youtube.com/shorts/3-A05-9_Kk8" },
+          "Cable Pull-Through": { cues: "Face away from cable, reach between legs, drive hips forward to stand.", video: "https://www.youtube.com/shorts/A-0_z-7Wp2A" },
           "Dumbbell Sumo Deadlift": { cues: "Wide stance, hold dumbbell vertically, lower weight between feet.", video: "https://www.youtube.com/shorts/43p-203859A" },
-          "Single-Leg Hip Thrust": { cues: "Balance on one foot on ground, lift hips driving through heel.", video: "https://www.youtube.com/shorts/3-A05-9_Kk8" }
+          "Conventional Barbell Deadlift": { cues: "Feet hip-width, grip bar, drop hips, lift bar keeping it close to body.", video: "https://www.youtube.com/shorts/AweC3UaM14A" }
+        }
+      },
+      gastrocnemius: {
+        name: "Gastrocnemius (Calves)",
+        exercises: {
+          "Standing Calf Raise": { cues: "Keep knees straight, press up onto toes fully, lower heels below platform level.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
+          "Seated Calf Raise": { cues: "Pad resting on knees, raise heels high focusing on full squeeze at peak.", video: "https://www.youtube.com/shorts/Jbyj-UORkeA" },
+          "Donkey Calf Raise": { cues: "Hinge forward at waist, lift heels up targeting gastrocnemius with straight legs.", video: "https://www.youtube.com/shorts/N344C1_c0P4" },
+          "Single-Leg Calf Raise": { cues: "Balance on one foot on edge of step, rise onto toes slowly.", video: "https://www.youtube.com/shorts/K6D_sB22x0w" },
+          "Leg Press Calf Press": { cues: "Place balls of feet on bottom edge of sled, extend ankles forward.", video: "https://www.youtube.com/shorts/N_2q_Z4-07I" }
         }
       }
     },
     core: {
       abdominals: {
-        name: "Abdominals & Core",
+        name: "Abdominals",
         exercises: {
           "Plank": { cues: "Maintain straight line from head to heels, brace core, avoid sagging hips.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
           "Hanging Leg Raise": { cues: "Hang from bar, raise legs to 90 degrees without using swinging momentum.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
           "Ab Wheel Rollout": { cues: "Kneel on floor, roll wheel forward keeping lower back rounded slightly.", video: "https://www.youtube.com/shorts/3X_5B334X-A" },
-          "Russian Twists": { cues: "Balance on glutes, twist torso side to side touching weight to floor.", video: "https://www.youtube.com/shorts/3p2W5S354_k" },
-          "Cable Woodchoppers": { cues: "Pull cable diagonally across body while rotating torso and bracing core.", video: "https://www.youtube.com/shorts/9-2A8G80554" },
           "Decline Sit-Ups": { cues: "Secure feet on decline bench, sit up fully pulling chest to knees.", video: "https://www.youtube.com/shorts/4-2S550211k" },
           "Bicycle Crunches": { cues: "Alternate elbow to opposite knee while extending opposite leg straight out.", video: "https://www.youtube.com/shorts/8-1718-4a9I" },
-          "Side Plank": { cues: "Elbow under shoulder, stack feet, lift hips high off ground.", video: "https://www.youtube.com/shorts/K2VljzD1A38" },
-          "Mountain Climbers": { cues: "In high plank position, drive knees rapidly toward chest alternating legs.", video: "https://www.youtube.com/shorts/zT-9L3k8K38" },
           "Deadbug": { cues: "Lie on back with legs/arms up, slowly lower opposite arm and leg together.", video: "https://www.youtube.com/shorts/g_BYB0X0210" },
-          "Bird Dog": { cues: "On all fours, extend opposite arm and leg simultaneously while bracing core.", video: "https://www.youtube.com/shorts/39328470_21" },
           "Cable Crunch": { cues: "Kneel below cable pulley, crunch torso downward bringing elbows to knees.", video: "https://www.youtube.com/shorts/2_72183_994" },
           "V-Ups": { cues: "Lie flat, lift legs and upper body simultaneously to touch toes at peak.", video: "https://www.youtube.com/shorts/iP2003A-K30" },
-          "Flutter Kicks": { cues: "Lie flat, lift legs slightly off floor, kick up and down in rapid motion.", video: "https://www.youtube.com/shorts/4X-2342-901" },
-          "Pallof Press": { cues: "Hold cable at chest while standing sideways to stack, press straight out.", video: "https://www.youtube.com/shorts/9X_902A_334" }
+          "Flutter Kicks": { cues: "Lie flat, lift legs slightly off floor, kick up and down in rapid motion.", video: "https://www.youtube.com/shorts/4X-2342-901" }
+        }
+      },
+      obliques: {
+        name: "Obliques",
+        exercises: {
+          "Russian Twists": { cues: "Balance on glutes, twist torso side to side touching weight to floor.", video: "https://www.youtube.com/shorts/3p2W5S354_k" },
+          "Cable Woodchoppers": { cues: "Pull cable diagonally across body while rotating torso and bracing core.", video: "https://www.youtube.com/shorts/9-2A8G80554" },
+          "Side Plank": { cues: "Elbow under shoulder, stack feet, lift hips high off ground.", video: "https://www.youtube.com/shorts/K2VljzD1A38" },
+          "Pallof Press": { cues: "Hold cable at chest while standing sideways to stack, press straight out.", video: "https://www.youtube.com/shorts/9X_902A_334" },
+          "Dumbbell Side Bends": { cues: "Hold dumbbell in one hand, tilt torso sideways, pull back up using obliques.", video: "https://www.youtube.com/shorts/1199341-2A1" }
+        }
+      },
+      lowerBack: {
+        name: "Lower Back (Erector Spinae)",
+        exercises: {
+          "Hyper-Extensions (Back Extensions)": { cues: "Lock feet on bench, lower upper body, raise back until aligned with legs.", video: "https://www.youtube.com/shorts/440-2A_0199" },
+          "Bird Dog": { cues: "On all fours, extend opposite arm and leg simultaneously while bracing core.", video: "https://www.youtube.com/shorts/39328470_21" },
+          "Supermans": { cues: "Lie face down, lift chest and thighs simultaneously off floor.", video: "https://www.youtube.com/shorts/z6Pz32-0941" },
+          "Reverse Hyperextension": { cues: "Lie torso on pad, raise legs behind until hips are extended.", video: "https://www.youtube.com/shorts/7A-89Gk2A0A" }
         }
       }
     }
@@ -886,8 +913,17 @@
     let today = new Date().toISOString().split('T')[0];
     document.getElementById('workoutDate').value = today;
     document.getElementById('activeTargetBannerText').innerText = currentLearningTarget;
+    
+    // Trigger Learning Target Pop-Up each time the site loads
+    showTargetModal();
+
     updateKPIs();
   };
+
+  function showTargetModal() {
+    document.getElementById('targetModalBody').innerText = currentLearningTarget;
+    document.getElementById('targetModal').classList.remove('hidden');
+  }
 
   function switchRole(role, evt) {
     document.querySelectorAll('.main-nav-btn').forEach(b => b.classList.remove('active'));
