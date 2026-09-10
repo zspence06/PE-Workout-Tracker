@@ -818,534 +818,566 @@
           "Romanian Deadlift (RDL)": { cues: "Slight bend in knees, hinge at hips pushing tailbone back, feel hamstring stretch.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" },
           "Lying Leg Curl Machine": { cues: "Keep hips flat against pad, curl heels toward glutes.", video: "https://www.youtube.com/results?search_query=lying+leg+curl+form" },
           "Standing Calf Raise": { cues: "Push through toes for full extension at top, lower down into deep stretch.", video: "https://www.youtube.com/results?search_query=standing+calf+raise+form" },
-          "Barbell Glute Bridge": { cues: "Lie flat on floor, drive hips upward holding weighted bar across pelvis.", video: "https://www.youtube.com/results?search_query=barbell+glute+bridge+form" },
-          "Cable Glute Kickback": { cues: "Attach cuff to ankle, extend leg straight back using glute drive.", video: "https://www.youtube.com/results?search_query=cable+glute+kickback+form" },
-          "Seated Leg Curl Machine": { cues: "Adjust thigh pad securely, pull handles and curl heels under seat.", video: "https://www.youtube.com/results?search_query=seated+leg+curl+form" }
+          "Barbell Glute Bridges": { cues: "Lie flat on back, drive hips upward squeezing glutes at full extension.", video: "https://www.youtube.com/results?search_query=barbell+glute+bridges+form" },
+          "Seated Leg Curl Machine": { cues: "Adjust pad snug on thighs, flex knees pulling heels toward seat.", video: "https://www.youtube.com/results?search_query=seated+leg+curl+form" },
+          "Seated Calf Raise Machine": { cues: "Lower heels down fully for stretch, drive up onto balls of feet.", video: "https://www.youtube.com/results?search_query=seated+calf+raise+form" },
+          "Cable Glute Kickbacks": { cues: "Attach cuff to ankle, kick leg back while maintaining flat back.", video: "https://www.youtube.com/results?search_query=cable+glute+kickbacks+form" }
         }
       }
     },
     core: {
-      abdominals: {
+      abs: {
         name: "Abdominals & Obliques",
         exercises: {
-          "Plank Hold": { cues: "Maintain straight line from head to heels, brace core, do not sag hips.", video: "https://www.youtube.com/results?search_query=plank+hold+form" },
-          "Hanging Leg Raise": { cues: "Hang from bar, raise legs to 90 degrees without swinging.", video: "https://www.youtube.com/results?search_query=hanging+leg+raise+form" },
-          "Russian Twists": { cues: "Sit at angle, rotate shoulders and hands side-to-side controlling motion.", video: "https://www.youtube.com/results?search_query=russian+twists+form" },
-          "Ab Wheel Rollout": { cues: "Kneel down, roll wheel forward keeping core hollow and back protected.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollout+form" },
-          "Bicycle Crunches": { cues: "Alternate elbow to opposite knee while extending opposite leg out.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" },
-          "Cable Rope Crunch": { cues: "Kneel below high pulley, flex spine pulling elbows towards thighs.", video: "https://www.youtube.com/results?search_query=cable+rope+crunch+form" },
-          "Side Plank": { cues: "Support weight on one forearm, stack feet, align hips straight.", video: "https://www.youtube.com/results?search_query=side+plank+form" }
+          "Hanging Leg Raises": { cues: "Grip bar overhead, raise legs to hip level without swinging torso.", video: "https://www.youtube.com/results?search_query=hanging+leg+raises+form" },
+          "Plank Hold": { cues: "Maintain straight line from head to heels, brace core, avoid arching low back.", video: "https://www.youtube.com/results?search_query=plank+hold+form" },
+          "Ab Wheel Rollouts": { cues: "Kneel down, roll wheel out while bracing core, pull back using abdominals.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollouts+form" },
+          "Cable Woodchoppers": { cues: "Rotate torso smoothly across body, drive movement from core rather than arms.", video: "https://www.youtube.com/results?search_query=cable+woodchoppers+form" },
+          "Russian Twists": { cues: "Balance on glutes, rotate shoulders side to side with control.", video: "https://www.youtube.com/results?search_query=russian+twists+form" },
+          "Bicycle Crunches": { cues: "Alternate opposite elbow to opposite knee, extending trailing leg long.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" },
+          "Mountain Climbers": { cues: "Drive knees to chest rapidly from high plank, keeping hips level.", video: "https://www.youtube.com/results?search_query=mountain+climbers+form" },
+          "Decline Crunches": { cues: "Secure feet on decline bench, flex abs to lift shoulders toward knees.", video: "https://www.youtube.com/results?search_query=decline+crunches+form" }
         }
       }
     }
   };
 
   // APP STATE
-  let currentUser = "";
-  let learningTarget = "Demonstrate correct execution of multi-joint lifts and track performance metrics accurately.";
-  let selectedMuscleGroupKey = "";
-  let activeTabRole = "studentView";
+  let currentStudent = "";
+  let currentArea = "";
+  let currentMuscleGroup = "";
+  let currentSelectedExercise = "";
+  let learningTarget = "Focus on explosive power, controlled lowering phases, and full range of motion.";
 
-  // LOCAL STORAGE INITIALIZATION
-  let db = JSON.parse(localStorage.getItem('memorialPE_DB')) || {
-    users: {},
-    allLogs: []
+  let studentData = {
+    routine: [],      // Saved exercise library
+    workoutA: [],     // Master Workout A items
+    workoutB: [],     // Master Workout B items
+    activeSheet: [],  // Editable spreadsheet rows
+    history: []       // Completed historical logs
   };
 
-  function saveDB() {
-    localStorage.setItem('memorialPE_DB', JSON.stringify(db));
-  }
+  // INITIALIZATION
+  window.addEventListener("DOMContentLoaded", () => {
+    // Set default date to today
+    document.getElementById("workoutDate").value = new Date().toISOString().split("T")[0];
+    
+    // Load Learning Target
+    const savedTarget = localStorage.getItem("pe_learning_target");
+    if (savedTarget) {
+      learningTarget = savedTarget;
+    }
+    updateTargetUI();
 
-  // INITIAL SETUP ON PAGE LOAD
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('workoutDate').value = new Date().toISOString().split('T')[0];
-    updateLearningTargetUI();
-    checkDailyLearningTargetPopup();
+    // Check saved session
+    const savedStudent = localStorage.getItem("pe_current_student");
+    if (savedStudent) {
+      document.getElementById("studentName").value = savedStudent;
+      loginStudent();
+    } else {
+      showTargetModal();
+    }
   });
 
-  // DAILY LEARNING TARGET POPUP LOGIC
-  function checkDailyLearningTargetPopup() {
-    const today = new Date().toISOString().split('T')[0];
-    const lastShownDate = localStorage.getItem('memorialPE_targetLastShownDate');
+  // LEARNING TARGET FUNCTIONS
+  function updateTargetUI() {
+    document.getElementById("activeTargetBannerText").innerText = learningTarget;
+    document.getElementById("targetModalBody").innerText = learningTarget;
+  }
 
-    if (lastShownDate !== today) {
-      document.getElementById('targetModalBody').innerText = learningTarget;
-      document.getElementById('targetModal').classList.remove('hidden');
-      localStorage.setItem('memorialPE_targetLastShownDate', today);
-    }
+  function showTargetModal() {
+    document.getElementById("targetModal").classList.remove("hidden");
   }
 
   function closeTargetModal() {
-    document.getElementById('targetModal').classList.add('hidden');
+    document.getElementById("targetModal").classList.add("hidden");
   }
 
-  // ROLE & TAB SWITCHING
-  function switchRole(role, event) {
-    if (role === 'teacherView') {
-      const enteredPass = prompt("Enter Teacher Password:");
-      if (enteredPass !== teacherPassword) {
-        alert("Incorrect password. Access denied.");
+  function updateLearningTarget() {
+    const input = document.getElementById("newLearningTarget").value.trim();
+    if (!input) return alert("Please enter a valid learning target.");
+    learningTarget = input;
+    localStorage.setItem("pe_learning_target", learningTarget);
+    updateTargetUI();
+    document.getElementById("newLearningTarget").value = "";
+    alert("Learning target updated for all students!");
+  }
+
+  // LOGIN & DATA STORAGE
+  function loginStudent() {
+    const nameInput = document.getElementById("studentName").value.trim();
+    if (!nameInput) return alert("Please enter a student name.");
+
+    currentStudent = nameInput;
+    localStorage.setItem("pe_current_student", currentStudent);
+
+    // Load Student Specific Data
+    const storedData = localStorage.getItem("pe_data_" + currentStudent.toLowerCase());
+    if (storedData) {
+      studentData = JSON.parse(storedData);
+    } else {
+      studentData = { routine: [], workoutA: [], workoutB: [], activeSheet: [], history: [] };
+    }
+
+    renderSavedRoutine();
+    renderMasterWorkouts();
+    renderSpreadsheet();
+    renderHistory();
+    updateRequirements();
+    updateTeacherDashboard();
+  }
+
+  function saveData() {
+    if (!currentStudent) return;
+    localStorage.setItem("pe_data_" + currentStudent.toLowerCase(), JSON.stringify(studentData));
+    updateRequirements();
+    updateTeacherDashboard();
+  }
+
+  // NAVIGATION SWITCHING
+  function switchRole(roleViewId, event) {
+    document.querySelectorAll(".main-nav-btn").forEach(btn => btn.classList.remove("active"));
+    if (event) event.target.classList.add("active");
+
+    if (roleViewId === "teacherView") {
+      const input = prompt("Enter Teacher Access Password:");
+      if (input !== teacherPassword) {
+        alert("Incorrect password!");
         return;
       }
+      document.getElementById("studentView").classList.add("hidden");
+      document.getElementById("teacherView").classList.remove("hidden");
+      updateTeacherDashboard();
+    } else {
+      document.getElementById("teacherView").classList.add("hidden");
+      document.getElementById("studentView").classList.remove("hidden");
     }
+  }
 
-    activeTabRole = role;
-    document.getElementById('studentView').classList.toggle('hidden', role !== 'studentView');
-    document.getElementById('teacherView').classList.toggle('hidden', role !== 'teacherView');
+  function switchStudentTab(tabId, event) {
+    document.querySelectorAll(".student-tab").forEach(tab => tab.classList.add("hidden"));
+    document.querySelectorAll(".sub-tab-btn").forEach(btn => btn.classList.remove("active"));
     
-    document.getElementById('navStudentBtn').classList.toggle('active', role === 'studentView');
-    document.getElementById('navTeacherBtn').classList.toggle('active', role === 'teacherView');
+    document.getElementById(tabId).classList.remove("hidden");
+    if (event) event.target.classList.add("active");
+  }
 
-    if (role === 'teacherView') {
-      renderTeacherDashboard();
-    }
+  function switchTeacherTab(tabId, event) {
+    document.querySelectorAll(".teacher-tab").forEach(tab => tab.classList.add("hidden"));
+    event.target.parentElement.querySelectorAll(".sub-tab-btn").forEach(btn => btn.classList.remove("active"));
+
+    document.getElementById(tabId).classList.remove("hidden");
+    event.target.classList.add("active");
   }
 
   function changeTeacherPassword() {
     const current = prompt("Enter current password:");
     if (current === teacherPassword) {
-      const newPass = prompt("Enter new password:");
-      if (newPass && newPass.trim() !== "") {
-        teacherPassword = newPass.trim();
-        alert("Teacher password successfully updated.");
+      const next = prompt("Enter new password:");
+      if (next) {
+        teacherPassword = next;
+        alert("Password updated successfully!");
       }
     } else {
       alert("Incorrect password.");
     }
   }
 
-  function switchStudentTab(tabId, event) {
-    document.querySelectorAll('.student-tab').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId).classList.remove('hidden');
-    
-    document.querySelectorAll('#studentView .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (event) event.target.classList.add('active');
-
-    if (tabId === 'tab3') renderABPlanner();
-    if (tabId === 'tab4') renderHistory();
-  }
-
-  function switchTeacherTab(tabId, event) {
-    document.querySelectorAll('.teacher-tab').forEach(el => el.classList.add('hidden'));
-    document.getElementById(tabId).classList.remove('hidden');
-
-    document.querySelectorAll('#teacherView .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (event) event.target.classList.add('active');
-  }
-
-  // STUDENT AUTHENTICATION
-  function loginStudent() {
-    const nameInput = document.getElementById('studentName').value.trim();
-    if (!nameInput) {
-      alert("Please enter a valid student name.");
-      return;
-    }
-    currentUser = nameInput;
-
-    if (!db.users[currentUser]) {
-      db.users[currentUser] = {
-        routine: [],
-        workoutA: [],
-        workoutB: [],
-        history: []
-      };
-      saveDB();
-    }
-
-    alert(`Logged in as ${currentUser}`);
-    renderStudentData();
-  }
-
-  function renderStudentData() {
-    if (!currentUser || !db.users[currentUser]) return;
-    renderRoutineTags();
-    renderABPlanner();
-    renderHistory();
-    updateRequirementsTracker();
-  }
-
-  // EXERCISE SELECTOR LOGIC
+  // EXERCISE SELECTOR FLOW
   function handleTargetAreaChange() {
-    const area = document.getElementById('targetArea').value;
-    const muscleContainer = document.getElementById('muscleGroupContainer');
-    const muscleGrid = document.getElementById('muscleGroupGrid');
-    const exerciseGroup = document.getElementById('exerciseGroup');
-    const customGroup = document.getElementById('customExerciseGroup');
+    currentArea = document.getElementById("targetArea").value;
+    const grid = document.getElementById("muscleGroupGrid");
+    grid.innerHTML = "";
 
-    muscleGrid.innerHTML = "";
-    exerciseGroup.classList.add('hidden');
-    customGroup.classList.add('hidden');
-    document.getElementById('previewBtn').classList.add('hidden');
-    document.getElementById('workoutDayGroup').classList.add('hidden');
-    document.getElementById('fitnessGroup').classList.add('hidden');
-    document.getElementById('addToRoutineBtn').classList.add('hidden');
+    document.getElementById("muscleGroupContainer").classList.add("hidden");
+    document.getElementById("exerciseGroup").classList.add("hidden");
+    document.getElementById("customExerciseGroup").classList.add("hidden");
+    document.getElementById("previewBtn").classList.add("hidden");
+    document.getElementById("workoutDayGroup").classList.add("hidden");
+    document.getElementById("fitnessGroup").classList.add("hidden");
+    document.getElementById("addToRoutineBtn").classList.add("hidden");
 
-    if (!area || !exerciseDB[area]) {
-      muscleContainer.classList.add('hidden');
-      return;
-    }
+    if (!currentArea || !exerciseDB[currentArea]) return;
 
-    muscleContainer.classList.remove('hidden');
-    const groups = exerciseDB[area];
-
-    for (const key in groups) {
-      const btn = document.createElement('button');
-      btn.className = 'muscle-btn';
+    const groups = exerciseDB[currentArea];
+    for (let key in groups) {
+      const btn = document.createElement("button");
+      btn.className = "muscle-btn";
       btn.innerText = groups[key].name;
-      btn.onclick = () => selectMuscleGroup(area, key, btn);
-      muscleGrid.appendChild(btn);
+      btn.onclick = () => selectMuscleGroup(key, btn);
+      grid.appendChild(btn);
     }
+
+    document.getElementById("muscleGroupContainer").classList.remove("hidden");
   }
 
-  function selectMuscleGroup(area, muscleKey, btnElement) {
-    document.querySelectorAll('.muscle-btn').forEach(b => b.classList.remove('active'));
-    btnElement.classList.add('active');
-    selectedMuscleGroupKey = muscleKey;
+  function selectMuscleGroup(key, btnElement) {
+    document.querySelectorAll(".muscle-btn").forEach(b => b.classList.remove("active"));
+    btnElement.classList.add("active");
 
-    const select = document.getElementById('exerciseSelect');
+    currentMuscleGroup = key;
+    const exercises = exerciseDB[currentArea][key].exercises;
+    const select = document.getElementById("exerciseSelect");
     select.innerHTML = '<option value="">-- Choose Exercise --</option>';
 
-    const exercises = exerciseDB[area][muscleKey].exercises;
-    for (const ex in exercises) {
-      const opt = document.createElement('option');
-      opt.value = ex;
-      opt.textContent = ex;
+    for (let name in exercises) {
+      const opt = document.createElement("option");
+      opt.value = name;
+      opt.innerText = name;
       select.appendChild(opt);
     }
 
-    const customOpt = document.createElement('option');
+    const customOpt = document.createElement("option");
     customOpt.value = "CUSTOM";
-    customOpt.textContent = "+ Add Custom Exercise";
+    customOpt.innerText = "➕ Other / Custom Exercise";
     select.appendChild(customOpt);
 
-    document.getElementById('exerciseGroup').classList.remove('hidden');
+    document.getElementById("exerciseGroup").classList.remove("hidden");
   }
 
   function handleExerciseSelect() {
-    const val = document.getElementById('exerciseSelect').value;
-    const isCustom = val === "CUSTOM";
+    const val = document.getElementById("exerciseSelect").value;
+    currentSelectedExercise = val;
 
-    document.getElementById('customExerciseGroup').classList.toggle('hidden', !isCustom);
-    document.getElementById('previewBtn').classList.toggle('hidden', isCustom || !val);
-    
-    const showControls = val !== "";
-    document.getElementById('workoutDayGroup').classList.toggle('hidden', !showControls);
-    document.getElementById('fitnessGroup').classList.toggle('hidden', !showControls);
-    document.getElementById('addToRoutineBtn').classList.toggle('hidden', !showControls);
+    if (val === "CUSTOM") {
+      document.getElementById("customExerciseGroup").classList.remove("hidden");
+      document.getElementById("previewBtn").classList.add("hidden");
+    } else if (val !== "") {
+      document.getElementById("customExerciseGroup").classList.add("hidden");
+      document.getElementById("previewBtn").classList.remove("hidden");
+    } else {
+      document.getElementById("customExerciseGroup").classList.add("hidden");
+      document.getElementById("previewBtn").classList.add("hidden");
+    }
+
+    if (val) {
+      document.getElementById("workoutDayGroup").classList.remove("hidden");
+      document.getElementById("fitnessGroup").classList.remove("hidden");
+      document.getElementById("addToRoutineBtn").classList.remove("hidden");
+    }
   }
 
-  // MODAL FOR FORM CUES
+  // MODAL FOR EXERCISE CUES
   function openModal() {
-    const area = document.getElementById('targetArea').value;
-    const exName = document.getElementById('exerciseSelect').value;
+    if (!currentArea || !currentMuscleGroup || !currentSelectedExercise || currentSelectedExercise === "CUSTOM") return;
 
-    if (!area || !selectedMuscleGroupKey || !exName) return;
-
-    const exData = exerciseDB[area][selectedMuscleGroupKey].exercises[exName];
-    if (!exData) return;
-
-    document.getElementById('modalTitle').innerText = exName;
-    document.getElementById('modalBody').innerHTML = `
+    const exData = exerciseDB[currentArea][currentMuscleGroup].exercises[currentSelectedExercise];
+    document.getElementById("modalTitle").innerText = currentSelectedExercise;
+    document.getElementById("modalBody").innerHTML = `
       <p><strong>Form Cues:</strong> ${exData.cues}</p>
-      <p><a href="${exData.video}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-weight:bold;">▶ Watch Demonstration Video</a></p>
+      <p><a href="${exData.video}" target="_blank" style="color: var(--primary); font-weight:700;">📺 Search Form Demonstration Video</a></p>
     `;
-    document.getElementById('cueModal').classList.remove('hidden');
+    document.getElementById("cueModal").classList.remove("hidden");
   }
 
   function closeModal() {
-    document.getElementById('cueModal').classList.add('hidden');
+    document.getElementById("cueModal").classList.add("hidden");
   }
 
-  // ADD TO ROUTINE & WORKOUT PLANNER
+  // BUILD ROUTINE & ADD TO MASTER WORKOUTS
   function addToRoutine() {
-    if (!currentUser) {
-      alert("Please log in first!");
-      return;
-    }
+    if (!currentStudent) return alert("Please log in with your name first!");
 
-    const area = document.getElementById('targetArea').value;
-    let exName = document.getElementById('exerciseSelect').value;
+    let exName = currentSelectedExercise;
     if (exName === "CUSTOM") {
-      exName = document.getElementById('customExerciseInput').value.trim();
+      exName = document.getElementById("customExerciseInput").value.trim();
+      if (!exName) return alert("Please enter custom exercise name.");
     }
 
-    if (!exName) {
-      alert("Please specify an exercise name.");
-      return;
-    }
+    const day = document.getElementById("workoutDaySelect").value;
+    const comp = document.getElementById("fitnessComponent").value;
 
-    const day = document.getElementById('workoutDaySelect').value;
-    const component = document.getElementById('fitnessComponent').value;
-
-    const newEx = {
-      id: Date.now(),
+    const newItem = {
       name: exName,
-      targetArea: area,
+      area: currentArea,
+      muscle: currentMuscleGroup,
       day: day,
-      component: component,
+      component: comp,
       sets: 3,
       reps: 10,
-      weight: 0
+      weight: 0,
+      completed: false
     };
 
-    if (day === 'A') {
-      db.users[currentUser].workoutA.push(newEx);
-    } else {
-      db.users[currentUser].workoutB.push(newEx);
+    // Save to library if unique
+    if (!studentData.routine.some(i => i.name === exName)) {
+      studentData.routine.push(newItem);
     }
 
-    db.users[currentUser].routine.push(newEx);
-    saveDB();
+    // Add to Master Workout Plans
+    if (day === "A") {
+      studentData.workoutA.push(newItem);
+    } else {
+      studentData.workoutB.push(newItem);
+    }
 
-    renderStudentData();
+    saveData();
+    renderSavedRoutine();
+    renderMasterWorkouts();
     alert(`Added "${exName}" to Workout ${day}!`);
   }
 
-  function renderRoutineTags() {
-    const container = document.getElementById('routineTags');
-    const box = document.getElementById('routineSavedBox');
+  function renderSavedRoutine() {
+    const container = document.getElementById("routineTags");
     container.innerHTML = "";
 
-    const userRoutine = db.users[currentUser]?.routine || [];
-    if (userRoutine.length === 0) {
-      box.classList.add('hidden');
+    if (studentData.routine.length === 0) {
+      document.getElementById("routineSavedBox").classList.add("hidden");
       return;
     }
 
-    box.classList.remove('hidden');
-    userRoutine.forEach(item => {
-      const tag = document.createElement('span');
-      tag.className = 'tag';
-      tag.innerText = `[${item.day}] ${item.name}`;
-      tag.onclick = () => addExerciseToSpreadsheet(item);
+    document.getElementById("routineSavedBox").classList.remove("hidden");
+    studentData.routine.forEach((item, idx) => {
+      const tag = document.createElement("div");
+      tag.className = "tag";
+      tag.innerText = `${item.name} (${item.day})`;
+      tag.onclick = () => addTagToSpreadsheet(item);
       container.appendChild(tag);
     });
   }
 
-  // WORKOUT A/B PLANNER RENDER
-  function renderABPlanner() {
-    if (!currentUser) return;
+  // RENDER MASTER A/B WORKOUT PLANNER
+  function renderMasterWorkouts() {
+    const bodyA = document.getElementById("workoutATable");
+    const bodyB = document.getElementById("workoutBTable");
+    bodyA.innerHTML = "";
+    bodyB.innerHTML = "";
 
-    const user = db.users[currentUser];
-    renderABTable('workoutATable', user.workoutA, 'A');
-    renderABTable('workoutBTable', user.workoutB, 'B');
-    updateRequirementsTracker();
-  }
+    studentData.workoutA.forEach((item, idx) => {
+      bodyA.appendChild(createMasterRow(item, 'A', idx));
+    });
 
-  function renderABTable(tableId, list, day) {
-    const tbody = document.getElementById(tableId);
-    tbody.innerHTML = "";
-
-    list.forEach((item, index) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td style="text-align:center;"><input type="checkbox" onchange="toggleABRowDone(this, '${day}', ${index})"></td>
-        <td><strong style="color:var(--primary);">${item.name}</strong><br><small style="color:var(--subtle);">${item.targetArea.toUpperCase()}</small></td>
-        <td><input type="number" class="sheet-input" value="${item.sets}" onchange="updateABItem('${day}', ${index}, 'sets', this.value)"></td>
-        <td><input type="number" class="sheet-input" value="${item.reps}" onchange="updateABItem('${day}', ${index}, 'reps', this.value)"></td>
-        <td><input type="number" class="sheet-input" value="${item.weight}" onchange="updateABItem('${day}', ${index}, 'weight', this.value)"></td>
-        <td><button class="btn btn-danger" onclick="deleteABItem('${day}', ${index})">✕</button></td>
-      `;
-      tbody.appendChild(tr);
+    studentData.workoutB.forEach((item, idx) => {
+      bodyB.appendChild(createMasterRow(item, 'B', idx));
     });
   }
 
-  function toggleABRowDone(checkbox, day, index) {
-    const tr = checkbox.closest('tr');
-    tr.classList.toggle('completed-row', checkbox.checked);
+  function createMasterRow(item, day, idx) {
+    const tr = document.createElement("tr");
+    if (item.completed) tr.className = "completed-row";
+
+    tr.innerHTML = `
+      <td style="text-align:center;">
+        <input type="checkbox" ${item.completed ? "checked" : ""} onchange="toggleMasterComplete('${day}', ${idx})">
+      </td>
+      <td><strong>${item.name}</strong></td>
+      <td><input type="number" class="sheet-input" value="${item.sets}" onchange="updateMasterVal('${day}', ${idx}, 'sets', this.value)"></td>
+      <td><input type="number" class="sheet-input" value="${item.reps}" onchange="updateMasterVal('${day}', ${idx}, 'reps', this.value)"></td>
+      <td><input type="number" class="sheet-input" value="${item.weight}" onchange="updateMasterVal('${day}', ${idx}, 'weight', this.value)"></td>
+      <td><button class="btn btn-danger" onclick="deleteMasterRow('${day}', ${idx})">X</button></td>
+    `;
+    return tr;
   }
 
-  function updateABItem(day, index, field, value) {
-    const list = day === 'A' ? db.users[currentUser].workoutA : db.users[currentUser].workoutB;
-    list[index][field] = Number(value);
-    saveDB();
-  }
+  function toggleMasterComplete(day, idx) {
+    const arr = day === 'A' ? studentData.workoutA : studentData.workoutB;
+    arr[idx].completed = !arr[idx].completed;
 
-  function deleteABItem(day, index) {
-    if (day === 'A') {
-      db.users[currentUser].workoutA.splice(index, 1);
-    } else {
-      db.users[currentUser].workoutB.splice(index, 1);
+    if (arr[idx].completed) {
+      // Auto push into active spreadsheet log
+      const date = document.getElementById("workoutDate").value || new Date().toISOString().split("T")[0];
+      studentData.activeSheet.push({
+        date: date,
+        name: arr[idx].name,
+        component: arr[idx].component || "Muscular Strength",
+        sets: arr[idx].sets,
+        reps: arr[idx].reps,
+        weight: arr[idx].weight
+      });
+      renderSpreadsheet();
     }
-    saveDB();
-    renderStudentData();
+
+    saveData();
+    renderMasterWorkouts();
   }
 
-  // PROGRAM REQUIREMENTS & PROGRESS
-  function updateRequirementsTracker() {
-    if (!currentUser || !db.users[currentUser]) return;
-
-    const wA = db.users[currentUser].workoutA || [];
-    const wB = db.users[currentUser].workoutB || [];
-
-    const aLower = wA.filter(i => i.targetArea === 'lower').length;
-    const aCore = wA.filter(i => i.targetArea === 'core').length;
-    const bUpper = wB.filter(i => i.targetArea === 'upper').length;
-    const bCore = wB.filter(i => i.targetArea === 'core').length;
-
-    updateReqCard('reqALower', 'countALower', aLower, 4, '🅰️ Workout A Lower Body');
-    updateReqCard('reqACore', 'countACore', aCore, 2, '🅰️ Workout A Core');
-    updateReqCard('reqBUpper', 'countBUpper', bUpper, 4, '🅱️ Workout B Upper Body');
-    updateReqCard('reqBCore', 'countBCore', bCore, 2, '🅱️ Workout B Core');
-
-    const totalMet = Math.min(aLower, 4) + Math.min(aCore, 2) + Math.min(bUpper, 4) + Math.min(bCore, 2);
-    const pct = Math.round((totalMet / 12) * 100);
-
-    document.getElementById('progressBarFill').style.width = pct + '%';
-    document.getElementById('progressPercentText').innerText = pct + '% Complete';
+  function updateMasterVal(day, idx, field, val) {
+    const arr = day === 'A' ? studentData.workoutA : studentData.workoutB;
+    arr[idx][field] = Number(val);
+    saveData();
   }
 
-  function updateReqCard(cardId, countId, current, target, label) {
-    const card = document.getElementById(cardId);
-    const countSpan = document.getElementById(countId);
-    const isDone = current >= target;
-
-    card.className = `req-card ${isDone ? 'complete' : 'missing'}`;
-    countSpan.innerHTML = `${current} / ${target} ${isDone ? '✅' : '❌'}`;
+  function deleteMasterRow(day, idx) {
+    if (day === 'A') {
+      studentData.workoutA.splice(idx, 1);
+    } else {
+      studentData.workoutB.splice(idx, 1);
+    }
+    saveData();
+    renderMasterWorkouts();
   }
 
-  // SPREADSHEET LOGIC
+  // EDITABLE SPREADSHEET LOG
   function addBlankSpreadsheetRow() {
-    const tbody = document.getElementById('editableSheetBody');
-    const dateVal = document.getElementById('workoutDate').value;
-    const tr = document.createElement('tr');
-
-    tr.innerHTML = `
-      <td><input type="date" class="sheet-input" value="${dateVal}"></td>
-      <td><input type="text" class="sheet-input" placeholder="Exercise Name"></td>
-      <td>
-        <select class="sheet-select">
-          <option value="Muscular Strength">Muscular Strength</option>
-          <option value="Muscular Endurance">Muscular Endurance</option>
-          <option value="Cardiovascular Endurance">Cardiovascular Endurance</option>
-          <option value="Flexibility">Flexibility</option>
-        </select>
-      </td>
-      <td><input type="number" class="sheet-input" value="3"></td>
-      <td><input type="number" class="sheet-input" value="10"></td>
-      <td><input type="number" class="sheet-input" value="0"></td>
-      <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">✕</button></td>
-    `;
-    tbody.appendChild(tr);
+    const date = document.getElementById("workoutDate").value || new Date().toISOString().split("T")[0];
+    studentData.activeSheet.push({
+      date: date,
+      name: "",
+      component: "Muscular Strength",
+      sets: 3,
+      reps: 10,
+      weight: 0
+    });
+    renderSpreadsheet();
   }
 
-  function addExerciseToSpreadsheet(item) {
-    const tbody = document.getElementById('editableSheetBody');
-    const dateVal = document.getElementById('workoutDate').value;
-    const tr = document.createElement('tr');
-
-    tr.innerHTML = `
-      <td><input type="date" class="sheet-input" value="${dateVal}"></td>
-      <td><input type="text" class="sheet-input" value="${item.name}"></td>
-      <td>
-        <select class="sheet-select">
-          <option value="Muscular Strength" ${item.component === 'Muscular Strength' ? 'selected' : ''}>Muscular Strength</option>
-          <option value="Muscular Endurance" ${item.component === 'Muscular Endurance' ? 'selected' : ''}>Muscular Endurance</option>
-          <option value="Cardiovascular Endurance" ${item.component === 'Cardiovascular Endurance' ? 'selected' : ''}>Cardiovascular Endurance</option>
-          <option value="Flexibility" ${item.component === 'Flexibility' ? 'selected' : ''}>Flexibility</option>
-        </select>
-      </td>
-      <td><input type="number" class="sheet-input" value="${item.sets}"></td>
-      <td><input type="number" class="sheet-input" value="${item.reps}"></td>
-      <td><input type="number" class="sheet-input" value="${item.weight}"></td>
-      <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">✕</button></td>
-    `;
-    tbody.appendChild(tr);
+  function addTagToSpreadsheet(item) {
+    const date = document.getElementById("workoutDate").value || new Date().toISOString().split("T")[0];
+    studentData.activeSheet.push({
+      date: date,
+      name: item.name,
+      component: item.component || "Muscular Strength",
+      sets: item.sets || 3,
+      reps: item.reps || 10,
+      weight: item.weight || 0
+    });
+    renderSpreadsheet();
     switchStudentTab('tab2');
   }
 
+  function renderSpreadsheet() {
+    const body = document.getElementById("editableSheetBody");
+    body.innerHTML = "";
+
+    studentData.activeSheet.forEach((row, idx) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td><input type="date" class="sheet-input" value="${row.date}" onchange="updateSheetRow(${idx}, 'date', this.value)"></td>
+        <td><input type="text" class="sheet-input" value="${row.name}" placeholder="Exercise Name" onchange="updateSheetRow(${idx}, 'name', this.value)"></td>
+        <td>
+          <select class="sheet-select" onchange="updateSheetRow(${idx}, 'component', this.value)">
+            <option value="Muscular Strength" ${row.component === 'Muscular Strength' ? 'selected' : ''}>Muscular Strength</option>
+            <option value="Muscular Endurance" ${row.component === 'Muscular Endurance' ? 'selected' : ''}>Muscular Endurance</option>
+            <option value="Cardiovascular Endurance" ${row.component === 'Cardiovascular Endurance' ? 'selected' : ''}>Cardiovascular Endurance</option>
+            <option value="Flexibility" ${row.component === 'Flexibility' ? 'selected' : ''}>Flexibility</option>
+          </select>
+        </td>
+        <td><input type="number" class="sheet-input" value="${row.sets}" onchange="updateSheetRow(${idx}, 'sets', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${row.reps}" onchange="updateSheetRow(${idx}, 'reps', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${row.weight}" onchange="updateSheetRow(${idx}, 'weight', this.value)"></td>
+        <td><button class="btn btn-danger" onclick="deleteSheetRow(${idx})">X</button></td>
+      `;
+      body.appendChild(tr);
+    });
+  }
+
+  function updateSheetRow(idx, field, val) {
+    studentData.activeSheet[idx][field] = val;
+    saveData();
+  }
+
+  function deleteSheetRow(idx) {
+    studentData.activeSheet.splice(idx, 1);
+    saveData();
+    renderSpreadsheet();
+  }
+
   function saveSpreadsheetLog() {
-    if (!currentUser) {
-      alert("Please log in first!");
-      return;
-    }
+    if (studentData.activeSheet.length === 0) return alert("Spreadsheet is empty!");
 
-    const rows = document.querySelectorAll('#editableSheetBody tr');
-    if (rows.length === 0) {
-      alert("No rows to commit!");
-      return;
-    }
-
-    rows.forEach(tr => {
-      const inputs = tr.querySelectorAll('.sheet-input, .sheet-select');
-      const entry = {
-        student: currentUser,
-        date: inputs[0].value,
-        exercise: inputs[1].value,
-        component: inputs[2].value,
-        sets: inputs[3].value,
-        reps: inputs[4].value,
-        weight: inputs[5].value
-      };
-
-      if (entry.exercise) {
-        db.users[currentUser].history.push(entry);
-        db.allLogs.push(entry);
-      }
-    });
-
-    saveDB();
-    document.getElementById('editableSheetBody').innerHTML = "";
-    alert("Workout committed to history!");
-    renderStudentData();
+    // Push active rows to history
+    studentData.history.push(...studentData.activeSheet);
+    studentData.activeSheet = []; // Clear spreadsheet after commit
+    saveData();
+    renderSpreadsheet();
+    renderHistory();
+    alert("Workout successfully saved to History!");
   }
 
-  // HISTORY RENDER
   function renderHistory() {
-    if (!currentUser) return;
-    const tbody = document.getElementById('historyTable');
-    tbody.innerHTML = "";
+    const body = document.getElementById("historyTable");
+    body.innerHTML = "";
 
-    const history = db.users[currentUser].history || [];
-    history.slice().reverse().forEach(log => {
-      const tr = document.createElement('tr');
+    studentData.history.forEach(item => {
+      const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td>${log.date}</td>
-        <td><strong>${log.exercise}</strong></td>
-        <td>${log.component}</td>
-        <td>${log.sets}</td>
-        <td>${log.reps}</td>
-        <td>${log.weight} lbs</td>
+        <td>${item.date}</td>
+        <td><strong>${item.name}</strong></td>
+        <td>${item.component}</td>
+        <td>${item.sets}</td>
+        <td>${item.reps}</td>
+        <td>${item.weight} lbs</td>
       `;
-      tbody.appendChild(tr);
+      body.appendChild(tr);
     });
   }
 
-  // TEACHER DASHBOARD
-  function renderTeacherDashboard() {
-    document.getElementById('kpiStudents').innerText = Object.keys(db.users).length;
-    document.getElementById('kpiLogs').innerText = db.allLogs.length;
+  // PE REQUIREMENT TRACKING & CALCULATIONS
+  function updateRequirements() {
+    let aLower = 0, aCore = 0, bUpper = 0, bCore = 0;
 
-    const tbody = document.getElementById('teacherLogsTable');
-    tbody.innerHTML = "";
-
-    db.allLogs.slice().reverse().forEach(log => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${log.student}</strong></td>
-        <td>${log.date}</td>
-        <td>${log.exercise}</td>
-        <td>${log.component}</td>
-        <td>${log.sets}</td>
-        <td>${log.reps}</td>
-        <td>${log.weight} lbs</td>
-      `;
-      tbody.appendChild(tr);
+    studentData.workoutA.forEach(i => {
+      if (i.area === "lower") aLower++;
+      if (i.area === "core") aCore++;
     });
+
+    studentData.workoutB.forEach(i => {
+      if (i.area === "upper") bUpper++;
+      if (i.area === "core") bCore++;
+    });
+
+    updateReqCard("reqALower", "countALower", aLower, 4);
+    updateReqCard("reqACore", "countACore", aCore, 2);
+    updateReqCard("reqBUpper", "countBUpper", bUpper, 4);
+    updateReqCard("reqBCore", "countBCore", bCore, 2);
+
+    // Calculate Total Progress Percent (Out of 12 required exercises)
+    const totalMet = Math.min(aLower, 4) + Math.min(aCore, 2) + Math.min(bUpper, 4) + Math.min(bCore, 2);
+    const percent = Math.round((totalMet / 12) * 100);
+
+    document.getElementById("progressBarFill").style.width = percent + "%";
+    document.getElementById("progressPercentText").innerText = percent + "% Complete";
   }
 
-  function updateLearningTarget() {
-    const val = document.getElementById('newLearningTarget').value.trim();
-    if (!val) return;
-    learningTarget = val;
-    updateLearningTargetUI();
-    alert("Learning Target updated for the class!");
+  function updateReqCard(cardId, countId, current, target) {
+    const card = document.getElementById(cardId);
+    const text = document.getElementById(countId);
+
+    if (current >= target) {
+      card.className = "req-card complete";
+      text.innerText = `${current} / ${target} ✅`;
+    } else {
+      card.className = "req-card missing";
+      text.innerText = `${current} / ${target} ❌`;
+    }
   }
 
-  function updateLearningTargetUI() {
-    document.getElementById('activeTargetBannerText').innerText = learningTarget;
+  // TEACHER DASHBOARD AGGREGATION
+  function updateTeacherDashboard() {
+    let totalStudents = 0;
+    let totalLogsCount = 0;
+    const tableBody = document.getElementById("teacherLogsTable");
+    tableBody.innerHTML = "";
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key.startsWith("pe_data_")) {
+        totalStudents++;
+        const studentName = key.replace("pe_data_", "").toUpperCase();
+        const data = JSON.parse(localStorage.getItem(key));
+
+        if (data.history) {
+          totalLogsCount += data.history.length;
+          data.history.forEach(log => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td><strong>${studentName}</strong></td>
+              <td>${log.date}</td>
+              <td>${log.name}</td>
+              <td>${log.component}</td>
+              <td>${log.sets}</td>
+              <td>${log.reps}</td>
+              <td>${log.weight} lbs</td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        }
+      }
+    }
+
+    document.getElementById("kpiStudents").innerText = totalStudents;
+    document.getElementById("kpiLogs").innerText = totalLogsCount;
   }
 </script>
-
 </body>
 </html>
