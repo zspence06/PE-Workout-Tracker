@@ -453,13 +453,18 @@
       <div class="card">
         <h3>Exercise Selector & Form Cues</h3>
         <div class="form-group">
-          <label for="targetArea">Target Area:</label>
+          <label for="targetArea">Target Region:</label>
           <select id="targetArea" onchange="handleTargetAreaChange()">
-            <option value="">-- Choose Focus Area --</option>
+            <option value="">-- Choose Focus Region --</option>
             <option value="upper">Upper Body</option>
             <option value="lower">Lower Body</option>
             <option value="core">Core</option>
           </select>
+        </div>
+
+        <div id="muscleGroup" class="form-group hidden">
+          <label for="muscleSelect">Specific Muscle Group:</label>
+          <select id="muscleSelect" onchange="handleMuscleSelect()"></select>
         </div>
 
         <div id="exerciseGroup" class="form-group hidden">
@@ -727,28 +732,81 @@
 
 <script>
   const exerciseLibrary = {
-    upper: [
-      { name: "Barbell Bench Press", cues: "Eyes under bar, arch upper back slightly, touch sternum, press feet to floor.", video: "https://www.youtube.com/results?search_query=barbell+bench+press+form" },
-      { name: "Barbell Overhead Press", cues: "Squeeze glutes, brace core, press bar overhead vertically.", video: "https://www.youtube.com/results?search_query=barbell+overhead+press+form" },
-      { name: "Dumbbell Bench Press", cues: "Keep wrists stacked over elbows, lower weights with control.", video: "https://www.youtube.com/results?search_query=dumbbell+bench+press" },
-      { name: "Dumbbell Bicep Curls", cues: "Keep elbows pinned to ribs, squeeze bicep at top.", video: "https://www.youtube.com/results?search_query=dumbbell+bicep+curls" },
-      { name: "TRX Low Row", cues: "Keep body in plank, pull chest to handles.", video: "https://www.youtube.com/results?search_query=trx+low+row" },
-      { name: "Push-Ups", cues: "Body in rigid plank, lower chest to floor.", video: "https://www.youtube.com/results?search_query=push+ups+form" }
-    ],
-    lower: [
-      { name: "Barbell Back Squat", cues: "Bar on upper traps, squat below parallel.", video: "https://www.youtube.com/results?search_query=barbell+back+squat" },
-      { name: "Dumbbell Goblet Squat", cues: "Hold dumbbell at chest, squat deep.", video: "https://www.youtube.com/results?search_query=dumbbell+goblet+squat" },
-      { name: "Kettlebell Swings", cues: "Hinge at hips, snap hips forward explosively.", video: "https://www.youtube.com/results?search_query=kettlebell+swing" },
-      { name: "Plyo Box Jumps", cues: "Soft landing in quarter squat, step down.", video: "https://www.youtube.com/results?search_query=plyo+box+jumps" },
-      { name: "Walking Lunges", cues: "Keep chest tall, lower back knee gently toward floor.", video: "https://www.youtube.com/results?search_query=walking+lunges+form" },
-      { name: "Romanian Deadlift", cues: "Hinge hips back, keep bar close to shins.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" }
-    ],
-    core: [
-      { name: "Forearm Plank", cues: "Elbows under shoulders, pull belly button to spine.", video: "https://www.youtube.com/results?search_query=forearm+plank" },
-      { name: "Medicine Ball Russian Twists", cues: "V-sit position, rotate shoulders and ball side to side.", video: "https://www.youtube.com/results?search_query=medicine+ball+russian+twist" },
-      { name: "Hanging Knee Raises", cues: "Hang from rack bar, raise knees toward chest.", video: "https://www.youtube.com/results?search_query=hanging+knee+raises" },
-      { name: "Ab Wheel Rollout", cues: "Brace core tightly, roll forward without sagging lower back.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollout" }
-    ]
+    upper: {
+      chest: [
+        { name: "Barbell Bench Press (Free Weight)", cues: "Eyes under bar, arch upper back slightly, touch sternum, press feet into floor.", video: "https://www.youtube.com/results?search_query=barbell+bench+press+form" },
+        { name: "Push-Up (Bodyweight)", cues: "Maintain a rigid plank position, touch chest to ground, keep elbows at 45 degrees.", video: "https://www.youtube.com/results?search_query=push+ups+form" },
+        { name: "TRX Chest Press (TRX)", cues: "Body in incline plank, lower chest between handles, drive through palms.", video: "https://www.youtube.com/results?search_query=trx+chest+press" },
+        { name: "Plyo Explosive Clap Push-Up (Plyometric)", cues: "Push forcefully off ground, clap at peak height, land softly with bent elbows.", video: "https://www.youtube.com/results?search_query=clap+pushup" },
+        { name: "Dumbbell Incline Press (Free Weight)", cues: "Set bench to 30 degrees, press dumbbells overhead without touching them together.", video: "https://www.youtube.com/results?search_query=dumbbell+incline+press" }
+      ],
+      back: [
+        { name: "TRX Low Row (TRX)", cues: "Keep body in rigid plank, pull chest up to handles, squeeze shoulder blades.", video: "https://www.youtube.com/results?search_query=trx+low+row" },
+        { name: "Barbell Bent-Over Row (Free Weight)", cues: "Hinge at hips to 45 degrees, pull bar to navel, drive elbows behind back.", video: "https://www.youtube.com/results?search_query=barbell+bent+over+row" },
+        { name: "Pull-Up / Chin-Up (Bodyweight)", cues: "Full dead hang start, pull chin over bar without swinging lower body.", video: "https://www.youtube.com/results?search_query=pullup+form" },
+        { name: "Single-Arm Dumbbell Row (Free Weight)", cues: "Hand and knee on bench, keep flat back, row dumbbell to hip pocket.", video: "https://www.youtube.com/results?search_query=single+arm+dumbbell+row" },
+        { name: "Inverted Row / Australian Pull-Up (Bodyweight)", cues: "Lie under rack bar, keep heels on floor, row chest up to bar.", video: "https://www.youtube.com/results?search_query=inverted+row+form" }
+      ],
+      shoulders: [
+        { name: "Barbell Overhead Standing Press (Free Weight)", cues: "Squeeze glutes and brace core, press bar vertically overhead past chin.", video: "https://www.youtube.com/results?search_query=barbell+overhead+press+form" },
+        { name: "TRX Y-Fly (TRX)", cues: "Lean back, pull straps overhead into a 'Y' shape keeping arms straight.", video: "https://www.youtube.com/results?search_query=trx+y+fly" },
+        { name: "Pike Push-Up (Bodyweight)", cues: "Hips high in downward dog, lower head between hands, push up forcefully.", video: "https://www.youtube.com/results?search_query=pike+pushup" },
+        { name: "Dumbbell Lateral Raise (Free Weight)", cues: "Slight bend in elbows, raise weights out to sides to shoulder height.", video: "https://www.youtube.com/results?search_query=dumbbell+lateral+raise" },
+        { name: "Medicine Ball Overhead Slam (Plyometric)", cues: "Reach ball high overhead, extend hips, slam ball down forcefully.", video: "https://www.youtube.com/results?search_query=medicine+ball+overhead+slam" }
+      ],
+      arms: [
+        { name: "Dumbbell Bicep Curl (Free Weight)", cues: "Pin elbows against ribs, rotate palms up at top of movement.", video: "https://www.youtube.com/results?search_query=dumbbell+bicep+curls" },
+        { name: "TRX Bicep Curl (TRX)", cues: "Keep elbows high and fixed in space, pull forehead to hands.", video: "https://www.youtube.com/results?search_query=trx+bicep+curl" },
+        { name: "Bench Dips (Bodyweight)", cues: "Back close to bench, lower hips until elbows reach 90 degrees.", video: "https://www.youtube.com/results?search_query=bench+dips" },
+        { name: "TRX Tricep Extension (TRX)", cues: "Lean forward, keep elbows in front, bend at elbows and push out.", video: "https://www.youtube.com/results?search_query=trx+tricep+extension" }
+      ]
+    },
+    lower: {
+      quads: [
+        { name: "Barbell Back Squat (Free Weight)", cues: "Bar resting on upper traps, squat below parallel, push knees outward.", video: "https://www.youtube.com/results?search_query=barbell+back+squat" },
+        { name: "Dumbbell Goblet Squat (Free Weight)", cues: "Hold weight at chest, squat low while keeping torso upright.", video: "https://www.youtube.com/results?search_query=dumbbell+goblet+squat" },
+        { name: "TRX Single-Leg Pistol Squat (TRX)", cues: "Hold handles for balance, lower into single-leg squat, drive through heel.", video: "https://www.youtube.com/results?search_query=trx+pistol+squat" },
+        { name: "Plyo Box Jump (Plyometric)", cues: "Explode up onto box, land softly in a quarter squat, step down.", video: "https://www.youtube.com/results?search_query=plyo+box+jumps" },
+        { name: "Bodyweight Jump Squat (Plyometric)", cues: "Squat down, explode vertically into air, absorb landing smoothly.", video: "https://www.youtube.com/results?search_query=jump+squats" }
+      ],
+      hamstrings_glutes: [
+        { name: "Barbell Romanian Deadlift (Free Weight)", cues: "Hinge at hips, slide bar down thighs, feel stretch in hamstrings.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" },
+        { name: "Kettlebell / Dumbbell Swing (Free Weight)", cues: "Explosive hip hinge, drive hips forward to swing weight to chest level.", video: "https://www.youtube.com/results?search_query=kettlebell+swing" },
+        { name: "Walking Lunges (Free Weight / Bodyweight)", cues: "Keep chest tall, lower back knee gently toward floor.", video: "https://www.youtube.com/results?search_query=walking+lunges+form" },
+        { name: "TRX Hamstring Runner / Curl (TRX)", cues: "Heels in foot cradles, lift hips, pull heels toward glutes.", video: "https://www.youtube.com/results?search_query=trx+hamstring+runner" },
+        { name: "Glute Bridge Single-Leg (Bodyweight)", cues: "Lie flat, drive one heel into ground, drive hips high into extension.", video: "https://www.youtube.com/results?search_query=single+leg+glute+bridge" }
+      ],
+      calves_plyo: [
+        { name: "Standing Barbell Calf Raise (Free Weight)", cues: "Push through balls of feet, squeeze calves at top of movement.", video: "https://www.youtube.com/results?search_query=standing+barbell+calf+raise" },
+        { name: "Single-Leg Bodyweight Calf Raise (Bodyweight)", cues: "Balance on step, lower heel for stretch, drive high onto toe.", video: "https://www.youtube.com/results?search_query=single+leg+calf+raise" },
+        { name: "Ankle Bounds / Pogo Jumps (Plyometric)", cues: "Keep legs stiff, bounce quickly off balls of feet, minimize ground contact time.", video: "https://www.youtube.com/results?search_query=pogo+jumps" },
+        { name: "Broad Jump for Distance (Plyometric)", cues: "Arm swing back, spring forward explosively, land softly with knees bent.", video: "https://www.youtube.com/results?search_query=standing+broad+jump" },
+        { name: "Lateral Bounds / Skater Jumps (Plyometric)", cues: "Push off outside foot side-to-side, land balanced on single leg.", video: "https://www.youtube.com/results?search_query=skater+jumps" }
+      ]
+    },
+    core: {
+      abs: [
+        { name: "Forearm Plank (Bodyweight)", cues: "Elbows under shoulders, pull belly button to spine, body in straight line.", video: "https://www.youtube.com/results?search_query=forearm+plank" },
+        { name: "TRX Atomic Push-Up & Crunch (TRX)", cues: "Feet in cradles, push-up then pull knees tightly toward chest.", video: "https://www.youtube.com/results?search_query=trx+atomic+push+up" },
+        { name: "Hanging Knee / Leg Raise (Bodyweight)", cues: "Hang from rack bar, raise knees to chest without swinging hips.", video: "https://www.youtube.com/results?search_query=hanging+knee+raises" },
+        { name: "Ab Wheel Rollout (Free Weight Tool)", cues: "Brace core tightly, roll wheel out forward without letting lower back sag.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollout" },
+        { name: "Medicine Ball Slam & Catch (Plyometric)", cues: "Reach ball up high, slam down hard into floor, catch bounce.", video: "https://www.youtube.com/results?search_query=medicine+ball+slam" }
+      ],
+      obliques: [
+        { name: "Medicine Ball Russian Twists (Free Weight)", cues: "V-sit position, rotate shoulders and ball side to side touch ground.", video: "https://www.youtube.com/results?search_query=medicine+ball+russian+twist" },
+        { name: "TRX Side Plank (TRX)", cues: "Feet in cradles sideways, press hip high off floor, hold rigid line.", video: "https://www.youtube.com/results?search_query=trx+side+plank" },
+        { name: "Side Plank Dip (Bodyweight)", cues: "On elbow, lower hip toward floor and drive up squeezing oblique.", video: "https://www.youtube.com/results?search_query=side+plank+dips" },
+        { name: "Woodchopper Cable / Band (Free Weight / Resistance)", cues: "Rotate torso diagonally from high to low, keep arms extended.", video: "https://www.youtube.com/results?search_query=woodchopper+exercise" },
+        { name: "Bicycle Crunches (Bodyweight)", cues: "Opposite elbow to opposite knee, extend other leg fully out.", video: "https://www.youtube.com/results?search_query=bicycle+crunches" }
+      ],
+      lower_back_stabilizers: [
+        { name: "Bird-Dog (Bodyweight)", cues: "On hands and knees, extend opposite arm and leg straight out without twisting hips.", video: "https://www.youtube.com/results?search_query=bird+dog+exercise" },
+        { name: "Superman Hold (Bodyweight)", cues: "Lie face down, lift chest, arms, and thighs off floor squeezing back.", video: "https://www.youtube.com/results?search_query=superman+exercise" },
+        { name: "Dumbbell Suitcase Carry (Free Weight)", cues: "Hold heavy dumbbell in one hand, walk tall without leaning to side.", video: "https://www.youtube.com/results?search_query=suitcase+carry+exercise" },
+        { name: "TRX Body Saw (TRX)", cues: "In forearm plank with feet in cradles, rock body forward and back.", video: "https://www.youtube.com/results?search_query=trx+body+saw" },
+        { name: "Deadbug (Bodyweight)", cues: "Lie flat on back, extend opposite arm and leg while pressing lower back into floor.", video: "https://www.youtube.com/results?search_query=deadbug+exercise" }
+      ]
+    }
   };
 
   // Local Storage Data Structures
@@ -888,19 +946,50 @@
     }
   }
 
+  // --- DROPDOWN CASCADE LOGIC FOR TARGET AREA -> MUSCLE GROUP -> EXERCISE ---
   function handleTargetAreaChange() {
     const area = document.getElementById('targetArea').value;
-    const exerciseSelect = document.getElementById('exerciseSelect');
-    const exerciseGroup = document.getElementById('exerciseGroup');
+    const muscleSelect = document.getElementById('muscleSelect');
+    const muscleGroup = document.getElementById('muscleGroup');
 
-    exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
+    muscleSelect.innerHTML = '<option value="">-- Choose Muscle Group --</option>';
+    document.getElementById('exerciseSelect').innerHTML = '<option value="">-- Choose Exercise --</option>';
+
+    document.getElementById('exerciseGroup').classList.add('hidden');
     document.getElementById('previewBtn').classList.add('hidden');
     document.getElementById('workoutDayGroup').classList.add('hidden');
     document.getElementById('fitnessGroup').classList.add('hidden');
     document.getElementById('addToRoutineBtn').classList.add('hidden');
 
     if (area && exerciseLibrary[area]) {
-      exerciseLibrary[area].forEach(ex => {
+      Object.keys(exerciseLibrary[area]).forEach(mKey => {
+        const opt = document.createElement('option');
+        opt.value = mKey;
+        // Format display name nicely
+        opt.textContent = mKey.replace('_', ' / ').toUpperCase();
+        muscleSelect.appendChild(opt);
+      });
+      muscleGroup.classList.remove('hidden');
+    } else {
+      muscleGroup.classList.add('hidden');
+    }
+  }
+
+  function handleMuscleSelect() {
+    const area = document.getElementById('targetArea').value;
+    const muscle = document.getElementById('muscleSelect').value;
+    const exerciseSelect = document.getElementById('exerciseSelect');
+    const exerciseGroup = document.getElementById('exerciseGroup');
+
+    exerciseSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
+
+    document.getElementById('previewBtn').classList.add('hidden');
+    document.getElementById('workoutDayGroup').classList.add('hidden');
+    document.getElementById('fitnessGroup').classList.add('hidden');
+    document.getElementById('addToRoutineBtn').classList.add('hidden');
+
+    if (area && muscle && exerciseLibrary[area][muscle]) {
+      exerciseLibrary[area][muscle].forEach(ex => {
         const opt = document.createElement('option');
         opt.value = ex.name;
         opt.textContent = ex.name;
@@ -924,8 +1013,13 @@
 
   function openModal() {
     const area = document.getElementById('targetArea').value;
+    const muscle = document.getElementById('muscleSelect').value;
     const name = document.getElementById('exerciseSelect').value;
-    const ex = exerciseLibrary[area]?.find(e => e.name === name);
+
+    let ex = null;
+    if (area && muscle && exerciseLibrary[area][muscle]) {
+      ex = exerciseLibrary[area][muscle].find(e => e.name === name);
+    }
 
     if (ex) {
       document.getElementById('modalExerciseTitle').textContent = ex.name;
