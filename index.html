@@ -6,16 +6,15 @@
   <title>Memorial PE Workout Tracker</title>
   <style>
     :root {
-      /* SPARTAN GREEN THEME COLOR PALETTE */
       --primary: #18453B;         /* Spartan Green */
       --primary-hover: #11332B;   /* Darker Spartan Green */
       --accent: #215D50;          /* Secondary Spartan Green Accent */
-      --accent-light: #E8F0EE;    /* Subtle Tint Green for cards/banners */
+      --accent-light: #E8F0EE;    /* Subtle Tint Green */
       --bg: #F1F5F9;              /* Slate Light Grey Background */
       --card-bg: #FFFFFF;         /* White Card Background */
-      --text: #0F172A;            /* Dark Charcoal / Near Black Text */
-      --subtle: #475569;          /* Medium Dark Grey for Labels/Subtitles */
-      --border: #CBD5E1;          /* Crisp Border Grey */
+      --text: #0F172A;            /* Dark Charcoal Text */
+      --subtle: #475569;          /* Medium Dark Grey */
+      --border: #CBD5E1;          /* Border Grey */
       --danger: #DC2626;          /* Red Action / Alert */
       --danger-bg: #FEE2E2;       /* Soft Red Highlight */
       --success: #16A34A;         /* Success Green */
@@ -155,7 +154,7 @@
       cursor: pointer;
       display: inline-block;
       text-align: center;
-      transition: background-color 0.2s;
+      transition: background-color 0.2s, transform 0.1s;
     }
 
     .btn-primary {
@@ -189,6 +188,48 @@
 
     .hidden {
       display: none !important;
+    }
+
+    /* BUTTON GRID STYLING FOR MUSCLE GROUPS */
+    .muscle-group-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 10px;
+      margin-bottom: 15px;
+    }
+
+    .muscle-btn {
+      background-color: #FFFFFF;
+      color: var(--primary);
+      border: 2px solid var(--primary);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.2s ease-in-out;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.04);
+    }
+
+    .muscle-btn:hover {
+      background-color: var(--accent-light);
+      transform: translateY(-2px);
+    }
+
+    .muscle-btn.active {
+      background-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 8px rgba(24, 69, 59, 0.3);
+    }
+
+    .dropdown-box {
+      background-color: var(--accent-light);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 15px;
     }
 
     table {
@@ -452,7 +493,7 @@
         
         <!-- STEP 1: Target Area -->
         <div class="form-group">
-          <label for="targetArea">1. Target Area:</label>
+          <label for="targetArea">1. Select Target Area:</label>
           <select id="targetArea" onchange="handleTargetAreaChange()">
             <option value="">-- Choose Focus Area --</option>
             <option value="upper">Upper Body</option>
@@ -461,15 +502,15 @@
           </select>
         </div>
 
-        <!-- STEP 2: Muscle Group -->
+        <!-- STEP 2: Muscle Group Button Grid -->
         <div id="muscleGroupContainer" class="form-group hidden">
-          <label for="muscleGroupSelect">2. Specific Muscle Group:</label>
-          <select id="muscleGroupSelect" onchange="handleMuscleGroupChange()"></select>
+          <label>2. Choose Specific Muscle Group:</label>
+          <div id="muscleGroupGrid" class="muscle-group-grid"></div>
         </div>
 
-        <!-- STEP 3: Exercise Selection -->
-        <div id="exerciseGroup" class="form-group hidden">
-          <label for="exerciseSelect">3. Select Exercise:</label>
+        <!-- STEP 3: Exercise Selection Dropdown (Inside a styled box) -->
+        <div id="exerciseGroup" class="dropdown-box hidden">
+          <label id="exerciseSelectLabel" for="exerciseSelect" style="font-weight: 700; color: var(--primary); display:block; margin-bottom:8px;">3. Select Exercise:</label>
           <select id="exerciseSelect" onchange="handleExerciseSelect()"></select>
         </div>
 
@@ -687,54 +728,58 @@
 </div>
 
 <script>
-  // DEFAULT EXERCISE DATABASE WITH FORM CUES
+  // EXPANDED EXERCISE DATABASE WITH 15+ EXERCISES PER TARGET AREA
   const exerciseDB = {
     upper: {
       deltoids: {
         name: "Deltoids (Shoulders)",
         exercises: {
-          "Barbell Overhead Press": { cues: "Keep core tight, do not arch lower back excessively, press bar straight up.", video: "https://www.youtube.com/results?search_query=barbell+overhead+press+form" },
-          "Dumbbell Lateral Raise": { cues: "Slight bend in elbows, lead with elbows, control the weight on the way down.", video: "https://www.youtube.com/results?search_query=dumbbell+lateral+raise+form" },
-          "Face Pulls": { cues: "Pull rope towards forehead, flare elbows out, focus on rear delts and rotators.", video: "https://www.youtube.com/results?search_query=face+pulls+form" }
+          "Barbell Overhead Press": { cues: "Keep core tight, avoid arching back excessively, press bar straight overhead.", video: "https://www.youtube.com/results?search_query=barbell+overhead+press+form" },
+          "Dumbbell Lateral Raise": { cues: "Slight bend in elbows, lead with elbows, control the downward motion.", video: "https://www.youtube.com/results?search_query=dumbbell+lateral+raise+form" },
+          "Face Pulls": { cues: "Pull rope towards forehead, flare elbows out, focus on rear delts.", video: "https://www.youtube.com/results?search_query=face+pulls+form" },
+          "Seated Dumbbell Shoulder Press": { cues: "Keep back pressed to bench, lower dumbbells to ear level, press straight up.", video: "https://www.youtube.com/results?search_query=seated+dumbbell+shoulder+press+form" },
+          "Arnold Press": { cues: "Start palms facing you, rotate wrists as you press up until palms face forward.", video: "https://www.youtube.com/results?search_query=arnold+press+form" },
+          "Front Dumbbell Raise": { cues: "Raise dumbbells to eye level in front of body, maintain controlled tempo.", video: "https://www.youtube.com/results?search_query=front+dumbbell+raise+form" },
+          "Reverse Pec Deck Fly": { cues: "Keep chest against pad, pull handles out and back squeezing rear delts.", video: "https://www.youtube.com/results?search_query=reverse+pec+deck+fly+form" },
+          "Upright Barbell Row": { cues: "Grip bar shoulder-width, raise bar toward collarbone driving elbows high.", video: "https://www.youtube.com/results?search_query=upright+barbell+row+form" }
         }
       },
       pectorals: {
         name: "Pectorals (Chest)",
         exercises: {
           "Barbell Bench Press": { cues: "Keep feet flat on floor, retract shoulder blades, lower bar to mid-chest.", video: "https://www.youtube.com/results?search_query=barbell+bench+press+form" },
-          "Incline Dumbbell Press": { cues: "Set bench to 30-45 degrees, press upwards bringing dumbbells close together at top.", video: "https://www.youtube.com/results?search_query=incline+dumbbell+press+form" },
-          "Cable Flyes": { cues: "Keep slight bend in arms, hug a tree motion, squeeze chest at peak contraction.", video: "https://www.youtube.com/results?search_query=cable+flyes+form" }
+          "Incline Dumbbell Press": { cues: "Set bench to 30-45 degrees, press upwards bringing dumbbells together at top.", video: "https://www.youtube.com/results?search_query=incline+dumbbell+press+form" },
+          "Cable Chest Flyes": { cues: "Keep slight bend in arms, hug a tree motion, squeeze chest at peak contraction.", video: "https://www.youtube.com/results?search_query=cable+chest+flyes+form" },
+          "Push-Ups": { cues: "Maintain rigid plank posture, lower chest close to floor, elbows at 45 degrees.", video: "https://www.youtube.com/results?search_query=push+ups+form" },
+          "Dumbbell Chest Flyes": { cues: "Lie flat, open arms wide with soft elbows, sweep dumbbells together over chest.", video: "https://www.youtube.com/results?search_query=dumbbell+chest+flyes+form" },
+          "Decline Barbell Bench Press": { cues: "Secure legs on bench, press bar up focusing on lower chest contraction.", video: "https://www.youtube.com/results?search_query=decline+barbell+bench+press+form" },
+          "Chest Dips": { cues: "Lean torso slightly forward, lower body until elbows reach 90 degrees.", video: "https://www.youtube.com/results?search_query=chest+dips+form" }
         }
       },
-      biceps: {
-        name: "Biceps (Front Arms)",
+      arms: {
+        name: "Biceps & Triceps (Arms)",
         exercises: {
-          "Barbell Curl": { cues: "Keep elbows pinned to sides, avoid swinging hips for momentum.", video: "https://www.youtube.com/results?search_query=barbell+curl+form" },
-          "Hammer Curl": { cues: "Palms facing each other, focus on brachialis and forearm integration.", video: "https://www.youtube.com/results?search_query=hammer+curl+form" },
-          "Preacher Curl": { cues: "Keep upper arm flat on pad, fully extend at bottom without locking out harshly.", video: "https://www.youtube.com/results?search_query=preacher+curl+form" }
+          "Barbell Bicep Curl": { cues: "Keep elbows pinned to sides, avoid swinging hips for momentum.", video: "https://www.youtube.com/results?search_query=barbell+bicep+curl+form" },
+          "Dumbbell Hammer Curl": { cues: "Palms facing each other, focus on brachialis and forearm integration.", video: "https://www.youtube.com/results?search_query=dumbbell+hammer+curl+form" },
+          "Preacher Curl": { cues: "Keep upper arm flat on pad, fully extend at bottom without locking joints harshly.", video: "https://www.youtube.com/results?search_query=preacher+curl+form" },
+          "Tricep Rope Pushdown": { cues: "Keep elbows tucked to sides, spread rope outwards at bottom contraction.", video: "https://www.youtube.com/results?search_query=tricep+rope+pushdown+form" },
+          "Lying Skullcrushers": { cues: "Keep upper arms stationary, lower bar towards forehead with control.", video: "https://www.youtube.com/results?search_query=lying+skullcrushers+form" },
+          "Overhead Dumbbell Tricep Extension": { cues: "Hold dumbbell overhead with both hands, lower behind head keeping elbows in.", video: "https://www.youtube.com/results?search_query=overhead+dumbbell+tricep+extension+form" },
+          "Concentration Curls": { cues: "Rest elbow against inner thigh, curl dumbbell up toward shoulder.", video: "https://www.youtube.com/results?search_query=concentration+curls+form" },
+          "Tricep Bench Dips": { cues: "Place hands on bench behind hips, lower hips toward floor bending elbows.", video: "https://www.youtube.com/results?search_query=tricep+bench+dips+form" }
         }
       },
-      triceps: {
-        name: "Triceps (Back Arms)",
-        exercises: {
-          "Tricep Rope Pushdowns": { cues: "Keep elbows tucked to sides, spread rope outwards at the bottom.", video: "https://www.youtube.com/results?search_query=tricep+rope+pushdowns+form" },
-          "Skullcrushers": { cues: "Keep upper arms stationary, lower bar towards forehead/behind head safely.", video: "https://www.youtube.com/results?search_query=skullcrushers+form" },
-          "Dips": { cues: "Keep torso slightly upright for triceps focus, lower until elbows reach 90 degrees.", video: "https://www.youtube.com/results?search_query=dips+form" }
-        }
-      },
-      trapezius: {
-        name: "Trapezius (Upper Back)",
-        exercises: {
-          "Barbell Shrugs": { cues: "Elevate shoulders straight up toward ears, avoid rolling shoulders back aggressively.", video: "https://www.youtube.com/results?search_query=barbell+shrugs+form" },
-          "Dumbbell Shrugs": { cues: "Hold dumbbells at sides, pause for a second at top contraction.", video: "https://www.youtube.com/results?search_query=dumbbell+shrugs+form" }
-        }
-      },
-      latissimus: {
-        name: "Latissimus Dorsi (Mid/Lower Back)",
+      back: {
+        name: "Latissimus & Trapezius (Back)",
         exercises: {
           "Lat Pulldown": { cues: "Pull bar down toward upper chest, drive elbows down and back.", video: "https://www.youtube.com/results?search_query=lat+pulldown+form" },
-          "Bent-Over Rows": { cues: "Hinge at hips with flat back, pull weight to lower ribs.", video: "https://www.youtube.com/results?search_query=bent+over+rows+form" },
-          "Pull-Ups": { cues: "Full range of motion, pull chest to bar, control lowering phase.", video: "https://www.youtube.com/results?search_query=pull+ups+form" }
+          "Bent-Over Barbell Row": { cues: "Hinge at hips with flat back, pull weight to lower ribs.", video: "https://www.youtube.com/results?search_query=bent+over+barbell+row+form" },
+          "Pull-Ups / Chin-Ups": { cues: "Full range of motion, pull chest to bar, control lowering phase.", video: "https://www.youtube.com/results?search_query=pull+ups+form" },
+          "Single-Arm Dumbbell Row": { cues: "Place knee and hand on bench, pull dumbbell to hip keeping spine flat.", video: "https://www.youtube.com/results?search_query=single+arm+dumbbell+row+form" },
+          "Seated Cable Row": { cues: "Keep chest tall, pull handles to abdomen squeezing shoulder blades together.", video: "https://www.youtube.com/results?search_query=seated+cable+row+form" },
+          "Barbell Shrugs": { cues: "Elevate shoulders straight up toward ears, avoid rolling shoulders excessively.", video: "https://www.youtube.com/results?search_query=barbell+shrugs+form" },
+          "Hyperextensions (Back Extension)": { cues: "Hinge at hips on bench, raise torso until parallel with lower body.", video: "https://www.youtube.com/results?search_query=back+extensions+form" },
+          "T-Bar Rows": { cues: "Straddle bar, pull handle into lower stomach maintaining neutral spine.", video: "https://www.youtube.com/results?search_query=t+bar+row+form" }
         }
       }
     },
@@ -742,42 +787,51 @@
       quadriceps: {
         name: "Quadriceps (Thighs)",
         exercises: {
-          "Barbell Back Squat": { cues: "Keep chest up, knees tracking in line with toes, sink hips below parallel.", video: "https://www.youtube.com/results?search_query=barbell+back+squat+form" },
-          "Leg Press": { cues: "Do not lock out knees at top, lower weight until knees form 90 degree angle.", video: "https://www.youtube.com/results?search_query=leg+press+form" },
-          "Bulgarian Split Squat": { cues: "Place rear foot on bench, lower hips until front thigh is parallel to ground.", video: "https://www.youtube.com/results?search_query=bulgarian+split+squat+form" }
+          "Barbell Back Squat": { cues: "Keep chest up, knees tracking over toes, sink hips below parallel.", video: "https://www.youtube.com/results?search_query=barbell+back+squat+form" },
+          "Leg Press Machine": { cues: "Do not lock out knees at top, lower weight until knees form 90 degrees.", video: "https://www.youtube.com/results?search_query=leg+press+machine+form" },
+          "Bulgarian Split Squat": { cues: "Place rear foot on bench, lower hips until front thigh is parallel to ground.", video: "https://www.youtube.com/results?search_query=bulgarian+split+squat+form" },
+          "Goblet Squat": { cues: "Hold dumbbell vertically at chest, squat down keeping torso upright.", video: "https://www.youtube.com/results?search_query=goblet+squat+form" },
+          "Leg Extension Machine": { cues: "Extend knees fully, pause briefly at top, lower weight smoothly.", video: "https://www.youtube.com/results?search_query=leg+extension+machine+form" },
+          "Barbell Front Squat": { cues: "Rest bar across front shoulders, keep elbows high and spine erect.", video: "https://www.youtube.com/results?search_query=barbell+front+squat+form" },
+          "Walking Lunges": { cues: "Step forward into lunges, keeping torso tall and knees stable.", video: "https://www.youtube.com/results?search_query=walking+lunges+form" },
+          "Hack Squat Machine": { cues: "Place back flat on pad, lower until thighs are parallel with platform.", video: "https://www.youtube.com/results?search_query=hack+squat+machine+form" }
         }
       },
-      gluteals: {
-        name: "Gluteals (Glutes)",
+      posterior: {
+        name: "Hamstrings, Glutes & Calves",
         exercises: {
-          "Hip Thrusts": { cues: "Upper back against bench, drive through heels, chin tucked, squeeze glutes at top.", video: "https://www.youtube.com/results?search_query=hip+thrusts+form" },
-          "Cable Kickbacks": { cues: "Keep core stable, extend leg back using glute contraction, avoid arching spine.", video: "https://www.youtube.com/results?search_query=cable+kickbacks+form" },
-          "Barbell Glute Bridge": { cues: "Lie flat on floor, drive hips upward holding bar over pelvis.", video: "https://www.youtube.com/results?search_query=barbell+glute+bridge+form" }
-        }
-      },
-      hamstrings: {
-        name: "Hamstrings (Back Thighs)",
-        exercises: {
-          "Romanian Deadlift": { cues: "Slight bend in knees, hinge at hips pushing tailbone back, feel hamstring stretch.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" },
-          "Lying Leg Curl": { cues: "Keep hips pressed flat into pad, curl heels smoothly toward glutes.", video: "https://www.youtube.com/results?search_query=lying+leg+curl+form" },
-          "Glute-Ham Raise": { cues: "Keep hips extended, lower body under control using hamstrings.", video: "https://www.youtube.com/results?search_query=glute+ham+raise+form" }
-        }
-      },
-      gastrocnemius: {
-        name: "Gastrocnemius (Calves)",
-        exercises: {
-          "Standing Calf Raise": { cues: "Full extension at top, lower down into deep stretch at bottom.", video: "https://www.youtube.com/results?search_query=standing+calf+raise+form" },
-          "Seated Calf Raise": { cues: "Targets soleus muscle, maintain smooth rhythmic reps.", video: "https://www.youtube.com/results?search_query=seated+calf+raise+form" }
+          "Barbell Hip Thrust": { cues: "Upper back against bench, drive through heels, squeeze glutes at top.", video: "https://www.youtube.com/results?search_query=barbell+hip+thrust+form" },
+          "Romanian Deadlift (RDL)": { cues: "Slight bend in knees, hinge at hips pushing tailbone back, feel hamstring stretch.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" },
+          "Lying Leg Curl Machine": { cues: "Keep hips flat against pad, curl heels toward glutes.", video: "https://www.youtube.com/results?search_query=lying+leg+curl+form" },
+          "Standing Calf Raise": { cues: "Push through toes for full extension at top, lower down into deep stretch.", video: "https://www.youtube.com/results?search_query=standing+calf+raise+form" },
+          "Barbell Glute Bridge": { cues: "Lie flat on floor, drive hips upward holding weighted bar across pelvis.", video: "https://www.youtube.com/results?search_query=barbell+glute+bridge+form" },
+          "Cable Glute Kickback": { cues: "Attach cuff to ankle, extend leg straight back using glute drive.", video: "https://www.youtube.com/results?search_query=cable+glute+kickback+form" },
+          "Seated Leg Curl Machine": { cues: "Adjust thigh pad securely, pull handles and curl weight under legs.", video: "https://www.youtube.com/results?search_query=seated+leg+curl+form" },
+          "Seated Calf Raise": { cues: "Targets soleus muscle, lift heels slowly and squeeze at peak height.", video: "https://www.youtube.com/results?search_query=seated+calf+raise+form" },
+          "Sumo Deadlift": { cues: "Wide stance, toes pointed outward, keep chest up and pull bar close to body.", video: "https://www.youtube.com/results?search_query=sumo+deadlift+form" },
+          "Step-Ups": { cues: "Step onto box pushing through heel, raise trailing knee at top.", video: "https://www.youtube.com/results?search_query=step+ups+form" }
         }
       }
     },
     core: {
       abdominals: {
-        name: "Abdominals & Core",
+        name: "Abs, Obliques & Lower Back",
         exercises: {
-          "Cable Crunches": { cues: "Kneel down, flex spine using abdominals to pull cable down toward floor.", video: "https://www.youtube.com/results?search_query=cable+crunches+form" },
-          "Hanging Leg Raises": { cues: "Avoid swinging body, raise legs or knees toward chest with core control.", video: "https://www.youtube.com/results?search_query=hanging+leg+raises+form" },
-          "Planks": { cues: "Maintain straight line from head to heels, engage glutes and brace core.", video: "https://www.youtube.com/results?search_query=plank+form" }
+          "Hanging Leg Raises": { cues: "Avoid swinging, raise legs or knees toward chest using core strength.", video: "https://www.youtube.com/results?search_query=hanging+leg+raises+form" },
+          "Plank Hold": { cues: "Maintain straight line from head to heels, engage glutes and brace core.", video: "https://www.youtube.com/results?search_query=plank+hold+form" },
+          "Cable Kneeling Crunches": { cues: "Kneel down, flex spine using abdominals to pull cable down toward knees.", video: "https://www.youtube.com/results?search_query=cable+kneeling+crunches+form" },
+          "Russian Twists": { cues: "Sit on floor, lean back slightly, rotate torso side to side with weight.", video: "https://www.youtube.com/results?search_query=russian+twists+form" },
+          "Ab Wheel Rollouts": { cues: "Kneel down, roll wheel out maintaining hollow core position, pull back.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollouts+form" },
+          "Bicycle Crunches": { cues: "Alternate elbow to opposite knee in smooth cycling motion.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" },
+          "Mountain Climbers": { cues: "In high plank, drive knees rapidly toward chest while maintaining flat hips.", video: "https://www.youtube.com/results?search_query=mountain+climbers+form" },
+          "Side Plank Hold": { cues: "Support body on one forearm, lift hips straight off ground.", video: "https://www.youtube.com/results?search_query=side+plank+hold+form" },
+          "Captain's Chair Knee Raise": { cues: "Support upper body on pads, raise knees up toward chest.", video: "https://www.youtube.com/results?search_query=captains+chair+knee+raise+form" },
+          "Woodchoppers (Cable or Dumbbell)": { cues: "Rotate diagonally across body with arms extended engaging obliques.", video: "https://www.youtube.com/results?search_query=woodchoppers+exercise+form" },
+          "Decline Bench Sit-Ups": { cues: "Hook feet in bench, lower upper body and sit up under control.", video: "https://www.youtube.com/results?search_query=decline+bench+sit+ups+form" },
+          "Deadbug": { cues: "Lie flat on back, lower opposite arm and leg slowly while keeping spine flat.", video: "https://www.youtube.com/results?search_query=deadbug+exercise+form" },
+          "Bird Dog": { cues: "On hands and knees, reach opposite arm and leg out parallel to floor.", video: "https://www.youtube.com/results?search_query=bird+dog+exercise+form" },
+          "Reverse Crunches": { cues: "Lie flat, curl hips off floor bringing knees toward chest.", video: "https://www.youtube.com/results?search_query=reverse+crunches+form" },
+          "Toe Touches": { cues: "Lie flat with legs vertical, reach hands toward toes flexing upper abs.", video: "https://www.youtube.com/results?search_query=toe+touches+exercise+form" }
         }
       }
     }
@@ -788,7 +842,7 @@
   let teacherPassword = "admin";
   let activeLearningTarget = "Focus on control, proper depth, and executing full range of motion for every rep.";
   let studentsData = JSON.parse(localStorage.getItem('mpe_studentsData')) || {};
-  let currentActiveSheetRows = [];
+  let selectedMuscleGroupKey = "";
 
   // INITIALIZATION
   document.addEventListener('DOMContentLoaded', () => {
@@ -864,13 +918,15 @@
     localStorage.setItem('mpe_studentsData', JSON.stringify(studentsData));
   }
 
-  // EXERCISE SELECTOR CASCADE
+  // EXERCISE SELECTOR CASCADE WITH BUTTON GRID & EXPANDED DROPDOWNS
   function handleTargetAreaChange() {
     const targetArea = document.getElementById('targetArea').value;
-    const muscleSelect = document.getElementById('muscleGroupSelect');
+    const muscleGrid = document.getElementById('muscleGroupGrid');
     const muscleContainer = document.getElementById('muscleGroupContainer');
 
-    muscleSelect.innerHTML = '<option value="">-- Choose Muscle Group --</option>';
+    muscleGrid.innerHTML = '';
+    selectedMuscleGroupKey = "";
+
     document.getElementById('exerciseGroup').classList.add('hidden');
     document.getElementById('customExerciseGroup').classList.add('hidden');
     document.getElementById('previewBtn').classList.add('hidden');
@@ -885,21 +941,30 @@
 
     const groups = exerciseDB[targetArea];
     for (let key in groups) {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = groups[key].name;
-      muscleSelect.appendChild(opt);
+      const btn = document.createElement('button');
+      btn.type = "button";
+      btn.className = "muscle-btn";
+      btn.textContent = groups[key].name;
+      btn.onclick = () => selectMuscleGroup(key, btn, groups[key].name);
+      muscleGrid.appendChild(btn);
     }
     muscleContainer.classList.remove('hidden');
   }
 
-  function handleMuscleGroupChange() {
+  function selectMuscleGroup(muscleKey, btnElement, muscleName) {
+    // Highlight active button
+    document.querySelectorAll('.muscle-btn').forEach(b => b.classList.remove('active'));
+    btnElement.classList.add('active');
+
+    selectedMuscleGroupKey = muscleKey;
     const targetArea = document.getElementById('targetArea').value;
-    const muscleKey = document.getElementById('muscleGroupSelect').value;
     const exSelect = document.getElementById('exerciseSelect');
     const exGroup = document.getElementById('exerciseGroup');
+    const label = document.getElementById('exerciseSelectLabel');
 
+    label.textContent = `3. Select ${muscleName} Exercise:`;
     exSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
+
     document.getElementById('customExerciseGroup').classList.add('hidden');
     document.getElementById('previewBtn').classList.add('hidden');
 
@@ -916,9 +981,10 @@
       exSelect.appendChild(opt);
     }
 
+    // Always include option for OTHER
     const customOpt = document.createElement('option');
     customOpt.value = "Other";
-    customOpt.textContent = "+ Other (Add Custom Exercise)";
+    customOpt.textContent = "✏️ Other (Type Custom Exercise)";
     exSelect.appendChild(customOpt);
 
     exGroup.classList.remove('hidden');
@@ -950,7 +1016,7 @@
   // MODAL FORM CUES
   function openModal() {
     const targetArea = document.getElementById('targetArea').value;
-    const muscleKey = document.getElementById('muscleGroupSelect').value;
+    const muscleKey = selectedMuscleGroupKey;
     const selectedEx = document.getElementById('exerciseSelect').value;
 
     if (!selectedEx || selectedEx === "Other") return;
