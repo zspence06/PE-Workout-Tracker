@@ -742,7 +742,7 @@
   // TEACHER ACCESS CODE
   let teacherPassword = "Spartans123";
 
-  // EXERCISE DATABASE
+  // EXPANDED EXERCISE DATABASE (AT LEAST 15 PER MUSCLE GROUP)
   const exerciseDB = {
     upper: {
       deltoids: {
@@ -755,7 +755,14 @@
           "Arnold Press": { cues: "Start palms facing you, rotate wrists as you press up until palms face forward.", video: "https://www.youtube.com/results?search_query=arnold+press+form" },
           "Front Dumbbell Raise": { cues: "Raise dumbbells to eye level in front of body, maintain controlled tempo.", video: "https://www.youtube.com/results?search_query=front+dumbbell+raise+form" },
           "Reverse Pec Deck Fly": { cues: "Keep chest against pad, pull handles out and back squeezing rear delts.", video: "https://www.youtube.com/results?search_query=reverse+pec+deck+fly+form" },
-          "Upright Barbell Row": { cues: "Grip bar shoulder-width, raise bar toward collarbone driving elbows high.", video: "https://www.youtube.com/results?search_query=upright+barbell+row+form" }
+          "Upright Barbell Row": { cues: "Grip bar shoulder-width, raise bar toward collarbone driving elbows high.", video: "https://www.youtube.com/results?search_query=upright+barbell+row+form" },
+          "Cable Lateral Raise": { cues: "Position cable low, pull handle across body for constant tension.", video: "https://www.youtube.com/results?search_query=cable+lateral+raise+form" },
+          "Bent-Over Dumbbell Rear Delt Fly": { cues: "Hinge at waist, raise arms out to sides keeping elbows slightly bent.", video: "https://www.youtube.com/results?search_query=bent+over+dumbbell+rear+delt+fly+form" },
+          "Push Press": { cues: "Use slight leg dip to initiate momentum, lock out overhead.", video: "https://www.youtube.com/results?search_query=push+press+form" },
+          "Single-Arm Cable Front Raise": { cues: "Raise cable attachment to shoulder level with steady pace.", video: "https://www.youtube.com/results?search_query=single+arm+cable+front+raise+form" },
+          "Machine Shoulder Press": { cues: "Adjust seat so handles start at shoulder height, push straight up.", video: "https://www.youtube.com/results?search_query=machine+shoulder+press+form" },
+          "Landmine Press": { cues: "Press bar at an angle forward and up, keeping core braced.", video: "https://www.youtube.com/results?search_query=landmine+press+form" },
+          "Plate Front Raise": { cues: "Hold weight plate at 3 and 9 o'clock, raise to eye level.", video: "https://www.youtube.com/results?search_query=plate+front+raise+form" }
         }
       },
       pectorals: {
@@ -767,7 +774,15 @@
           "Push-Ups": { cues: "Maintain rigid plank posture, lower chest close to floor, elbows at 45 degrees.", video: "https://www.youtube.com/results?search_query=push+ups+form" },
           "Dumbbell Chest Flyes": { cues: "Lie flat, open arms wide with soft elbows, sweep dumbbells together over chest.", video: "https://www.youtube.com/results?search_query=dumbbell+chest+flyes+form" },
           "Decline Barbell Bench Press": { cues: "Secure legs on bench, press bar up focusing on lower chest contraction.", video: "https://www.youtube.com/results?search_query=decline+barbell+bench+press+form" },
-          "Chest Dips": { cues: "Lean torso slightly forward, lower body until elbows reach 90 degrees.", video: "https://www.youtube.com/results?search_query=chest+dips+form" }
+          "Chest Dips": { cues: "Lean torso slightly forward, lower body until elbows reach 90 degrees.", video: "https://www.youtube.com/results?search_query=chest+dips+form" },
+          "Flat Dumbbell Press": { cues: "Lower dumbbells until upper arms are parallel to floor, press up.", video: "https://www.youtube.com/results?search_query=flat+dumbbell+press+form" },
+          "Pec Deck Fly Machine": { cues: "Keep back against pad, pull handles together in arc motion.", video: "https://www.youtube.com/results?search_query=pec+deck+fly+machine+form" },
+          "Incline Barbell Bench Press": { cues: "Unrack bar, lower smoothly to upper chest, drive straight up.", video: "https://www.youtube.com/results?search_query=incline+barbell+bench+press+form" },
+          "Low-to-High Cable Fly": { cues: "Set cables low, sweep hands upward and together to target upper chest.", video: "https://www.youtube.com/results?search_query=low+to+high+cable+fly+form" },
+          "High-to-Low Cable Crossover": { cues: "Set cables high, pull handles down across front of hips.", video: "https://www.youtube.com/results?search_query=high+to+low+cable+crossover+form" },
+          "Decline Dumbbell Press": { cues: "Lie on decline bench, press weights up while bracing core.", video: "https://www.youtube.com/results?search_query=decline+dumbbell+press+form" },
+          "Machine Chest Press": { cues: "Adjust seat height so handles align with mid-chest, extend arms fully.", video: "https://www.youtube.com/results?search_query=machine+chest+press+form" },
+          "Svmend Press": { cues: "Squeeze weight plate horizontally between palms at chest level, press outward.", video: "https://www.youtube.com/results?search_query=svend+press+form" }
         }
       },
       arms: {
@@ -780,7 +795,14 @@
           "Lying Skullcrushers": { cues: "Keep upper arms stationary, lower bar towards forehead with control.", video: "https://www.youtube.com/results?search_query=lying+skullcrushers+form" },
           "Overhead Dumbbell Tricep Extension": { cues: "Hold dumbbell overhead with both hands, lower behind head keeping elbows in.", video: "https://www.youtube.com/results?search_query=overhead+dumbbell+tricep+extension+form" },
           "Concentration Curls": { cues: "Rest elbow against inner thigh, curl dumbbell up toward shoulder.", video: "https://www.youtube.com/results?search_query=concentration+curls+form" },
-          "Tricep Bench Dips": { cues: "Place hands on bench behind hips, lower hips toward floor bending elbows.", video: "https://www.youtube.com/results?search_query=tricep+bench+dips+form" }
+          "Tricep Bench Dips": { cues: "Place hands on bench behind hips, lower hips toward floor bending elbows.", video: "https://www.youtube.com/results?search_query=tricep+bench+dips+form" },
+          "Incline Dumbbell Curl": { cues: "Sit on incline bench, let arms hang, curl upwards without moving shoulders.", video: "https://www.youtube.com/results?search_query=incline+dumbbell+curl+form" },
+          "Cable Bicep Curl": { cues: "Attach straight bar to low pulley, maintain strict elbow position while curling.", video: "https://www.youtube.com/results?search_query=cable+bicep+curl+form" },
+          "EZ Bar Spider Curl": { cues: "Lean over preacher bench chest down, curl EZ bar up keeping shoulders still.", video: "https://www.youtube.com/results?search_query=ez+bar+spider+curl+form" },
+          "Tricep Straight Bar Pushdown": { cues: "Overhand grip, press bar down to thighs extending elbows completely.", video: "https://www.youtube.com/results?search_query=tricep+straight+bar+pushdown+form" },
+          "Close-Grip Barbell Bench Press": { cues: "Grip bar shoulder-width apart, lower to lower chest keeping elbows close to body.", video: "https://www.youtube.com/results?search_query=close+grip+barbell+bench+press+form" },
+          "Single-Arm Cable Tricep Kickback": { cues: "Hinge at waist, extend arm back parallel to floor squeezing tricep.", video: "https://www.youtube.com/results?search_query=single+arm+cable+tricep+kickback+form" },
+          "Reverse Grip Wrist Curls": { cues: "Rest forearms on bench, curl bar up using forearms and wrist flexors.", video: "https://www.youtube.com/results?search_query=reverse+grip+wrist+curls+form" }
         }
       },
       back: {
@@ -792,7 +814,15 @@
           "Single-Arm Dumbbell Row": { cues: "Place knee and hand on bench, pull dumbbell to hip keeping spine flat.", video: "https://www.youtube.com/results?search_query=single+arm+dumbbell+row+form" },
           "Seated Cable Row": { cues: "Keep chest tall, pull handles to abdomen squeezing shoulder blades together.", video: "https://www.youtube.com/results?search_query=seated+cable+row+form" },
           "Barbell Shrugs": { cues: "Elevate shoulders straight up toward ears, avoid rolling shoulders excessively.", video: "https://www.youtube.com/results?search_query=barbell+shrugs+form" },
-          "T-Bar Rows": { cues: "Straddle bar, pull handle into lower stomach maintaining neutral spine.", video: "https://www.youtube.com/results?search_query=t+bar+row+form" }
+          "T-Bar Rows": { cues: "Straddle bar, pull handle into lower stomach maintaining neutral spine.", video: "https://www.youtube.com/results?search_query=t+bar+row+form" },
+          "Straight-Arm Cable Pulldown": { cues: "Keep elbows slightly bent, sweep bar down to thighs using lats.", video: "https://www.youtube.com/results?search_query=straight+arm+cable+pulldown+form" },
+          "Dumbbell Shrugs": { cues: "Hold heavy dumbbells at sides, raise shoulders toward ears and pause.", video: "https://www.youtube.com/results?search_query=dumbbell+shrugs+form" },
+          "Meadows Row": { cues: "Stand perpendicular to landmine, pull sleeve end toward hip with pronated grip.", video: "https://www.youtube.com/results?search_query=meadows+row+form" },
+          "Chest-Supported Dumbbell Row": { cues: "Lie face down on incline bench, row dumbbells to waist without swinging.", video: "https://www.youtube.com/results?search_query=chest+supported+dumbbell+row+form" },
+          "Neutral Grip Lat Pulldown": { cues: "Use V-bar, pull handle down to chest while squeezing mid-back.", video: "https://www.youtube.com/results?search_query=neutral+grip+lat+pulldown+form" },
+          "Inverted Rows": { cues: "Set barbell in rack, hang underneath and pull chest to bar with straight body.", video: "https://www.youtube.com/results?search_query=inverted+rows+form" },
+          "Rack Pulls": { cues: "Set barbell on pins below knees, extend hips to lock out weight with back tight.", video: "https://www.youtube.com/results?search_query=rack+pulls+form" },
+          "Machine Seated Lat Row": { cues: "Adjust chest pad, pull handles back retracting scapulae fully.", video: "https://www.youtube.com/results?search_query=machine+seated+lat+row+form" }
         }
       }
     },
@@ -807,7 +837,14 @@
           "Leg Extension Machine": { cues: "Extend knees fully, pause briefly at top, lower weight smoothly.", video: "https://www.youtube.com/results?search_query=leg+extension+machine+form" },
           "Barbell Front Squat": { cues: "Rest bar across front shoulders, keep elbows high and spine erect.", video: "https://www.youtube.com/results?search_query=barbell+front+squat+form" },
           "Walking Lunges": { cues: "Step forward into lunges, keeping torso tall and knees stable.", video: "https://www.youtube.com/results?search_query=walking+lunges+form" },
-          "Hack Squat Machine": { cues: "Place back flat on pad, lower until thighs are parallel with platform.", video: "https://www.youtube.com/results?search_query=hack+squat+machine+form" }
+          "Hack Squat Machine": { cues: "Place back flat on pad, lower until thighs are parallel with platform.", video: "https://www.youtube.com/results?search_query=hack+squat+machine+form" },
+          "Step-Ups with Dumbbells": { cues: "Step firmly onto box, drive up using front quadricep.", video: "https://www.youtube.com/results?search_query=step+ups+with+dumbbells+form" },
+          "Sissy Squat": { cues: "Lean torso backward while bending knees forward, extending quads fully.", video: "https://www.youtube.com/results?search_query=sissy+squat+form" },
+          "Reverse Lunges": { cues: "Step backward into lunge, keeping front knee behind toe.", video: "https://www.youtube.com/results?search_query=reverse+lunges+form" },
+          "Box Squats": { cues: "Sit back onto box under control, pause briefly, drive up through heels.", video: "https://www.youtube.com/results?search_query=box+squats+form" },
+          "Pendulum Squat": { cues: "Position feet on platform, squat down smoothly keeping hips stable.", video: "https://www.youtube.com/results?search_query=pendulum+squat+form" },
+          "Cyclist Squats": { cues: "Elevate heels on board or plate, keep torso upright while squatting.", video: "https://www.youtube.com/results?search_query=cyclist+squats+form" },
+          "Wall Sit Hold": { cues: "Press back to wall with knees at 90 degrees, hold position statically.", video: "https://www.youtube.com/results?search_query=wall+sit+hold+form" }
         }
       },
       hamstrings: {
@@ -816,7 +853,18 @@
           "Romanian Deadlift (RDL)": { cues: "Slight bend in knees, hinge at hips pushing tailbone back, feel hamstring stretch.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" },
           "Lying Leg Curl Machine": { cues: "Keep hips flat against pad, curl heels toward glutes.", video: "https://www.youtube.com/results?search_query=lying+leg+curl+form" },
           "Seated Leg Curl Machine": { cues: "Secure lap pad firmly, press heels down and back under seat.", video: "https://www.youtube.com/results?search_query=seated+leg+curl+form" },
-          "Single-Leg Romanian Deadlift": { cues: "Hinge forward on one leg, extend non-working leg back for balance.", video: "https://www.youtube.com/results?search_query=single+leg+romanian+deadlift+form" }
+          "Single-Leg Romanian Deadlift": { cues: "Hinge forward on one leg, extend non-working leg back for balance.", video: "https://www.youtube.com/results?search_query=single+leg+romanian+deadlift+form" },
+          "Barbell Stiff-Leg Deadlift": { cues: "Keep knees straight but not locked, lower bar near shins bending at waist.", video: "https://www.youtube.com/results?search_query=barbell+stiff+leg+deadlift+form" },
+          "Nordic Hamstring Curl": { cues: "Anchor feet, lower torso forward slowly resisting gravity with hamstrings.", video: "https://www.youtube.com/results?search_query=nordic+hamstring+curl+form" },
+          "Swiss Ball Leg Curls": { cues: "Lie on back with feet on ball, bridge hips up and curl ball in toward glutes.", video: "https://www.youtube.com/results?search_query=swiss+ball+leg+curls+form" },
+          "Glute Ham Raise (GHR)": { cues: "On GHD bench, extend knees to lower body, contract hamstrings to pull back up.", video: "https://www.youtube.com/results?search_query=glute+ham+raise+form" },
+          "Standing Single-Leg Curl": { cues: "Flex ankle, curl heel toward glute on standing curl machine.", video: "https://www.youtube.com/results?search_query=standing+single+leg+curl+form" },
+          "Dumbbell RDL": { cues: "Hold dumbbells close to legs, hinge hips back until deep stretch is felt.", video: "https://www.youtube.com/results?search_query=dumbbell+rdl+form" },
+          "Kettlebell Swings": { cues: "Hinge at hips, snap glutes and hamstrings forward to propel kettlebell to chest height.", video: "https://www.youtube.com/results?search_query=kettlebell+swings+form" },
+          "Single-Leg Swiss Ball Curl": { cues: "Perform hamstring bridge and curl on one leg at a time.", video: "https://www.youtube.com/results?search_query=single+leg+swiss+ball+curl+form" },
+          "Cable Pull-Through (Hamstring Focus)": { cues: "Hinge deep at hips facing away from low pulley, drag hips forward.", video: "https://www.youtube.com/results?search_query=cable+pull+through+form" },
+          "Good Mornings (Hamstring Bias)": { cues: "Maintain flat back, soft knees, push glutes back until stretch is reached.", video: "https://www.youtube.com/results?search_query=good+mornings+form" },
+          "Slider Hamstring Curls": { cues: "Lie on back, place heels on sliders, pull heels toward hips in bridge position.", video: "https://www.youtube.com/results?search_query=slider+hamstring+curls+form" }
         }
       },
       glutes: {
@@ -825,7 +873,18 @@
           "Barbell Hip Thrust": { cues: "Upper back against bench, drive through heels, squeeze glutes at top.", video: "https://www.youtube.com/results?search_query=barbell+hip+thrust+form" },
           "Glute Kickbacks": { cues: "Maintain neutral spine, extend hip back squeezing glute at full extension.", video: "https://www.youtube.com/results?search_query=glute+kickbacks+form" },
           "Cable Pull-Throughs": { cues: "Hinge at hips facing away from stack, snap hips forward squeezing glutes.", video: "https://www.youtube.com/results?search_query=cable+pull+throughs+form" },
-          "Step-Ups": { cues: "Drive through front heel onto box, minimize pushing off rear leg.", video: "https://www.youtube.com/results?search_query=step+ups+form" }
+          "Step-Ups": { cues: "Drive through front heel onto box, minimize pushing off rear leg.", video: "https://www.youtube.com/results?search_query=step+ups+form" },
+          "Single-Leg Hip Thrust": { cues: "Perform hip thrust on one leg, driving hips up toward ceiling.", video: "https://www.youtube.com/results?search_query=single+leg+hip+thrust+form" },
+          "Frog Pumps": { cues: "Soles of feet together, knees flared out, press hips up repeatedly.", video: "https://www.youtube.com/results?search_query=frog+pumps+form" },
+          "Seated Abductor Machine": { cues: "Sit back in seat, push knees outward against pads squeezing outer glutes.", video: "https://www.youtube.com/results?search_query=seated+abductor+machine+form" },
+          "Band Standing Glute Abduction": { cues: "Place mini band around knees, step side to side under tension.", video: "https://www.youtube.com/results?search_query=band+standing+glute+abduction+form" },
+          "Sumo Deadlift": { cues: "Wide stance, toes pointed outward, drive floor away with heels.", video: "https://www.youtube.com/results?search_query=sumo+deadlift+form" },
+          "Reverse Hyperextension": { cues: "Anchor chest on pad, lift legs upward using glute contraction.", video: "https://www.youtube.com/results?search_query=reverse+hyperextension+form" },
+          "Curtsy Lunges": { cues: "Step backward at an angle behind front leg, lowering hips evenly.", video: "https://www.youtube.com/results?search_query=curtsy+lunges+form" },
+          "Cable Hip Abduction": { cues: "Attach cuff to ankle, kick leg out laterally away from body.", video: "https://www.youtube.com/results?search_query=cable+hip+abduction+form" },
+          "Glute Bridge (Floor)": { cues: "Lie flat on back, bend knees, lift hips off floor until aligned with thighs.", video: "https://www.youtube.com/results?search_query=glute+bridge+form" },
+          "Dumbbell Sumo Squat": { cues: "Hold heavy weight down between wide stance, squat low and squeeze at top.", video: "https://www.youtube.com/results?search_query=dumbbell+sumo+squat+form" },
+          "Fire Hydrants": { cues: "On hands and knees, lift bent leg out to side squeezing glute medius.", video: "https://www.youtube.com/results?search_query=fire+hydrants+form" }
         }
       },
       calves: {
@@ -833,7 +892,19 @@
         exercises: {
           "Standing Calf Raise": { cues: "Full stretch at bottom, press up onto toes and hold peak contraction.", video: "https://www.youtube.com/results?search_query=standing+calf+raise+form" },
           "Seated Calf Raise": { cues: "Rest pad on lower thighs, press through balls of feet, control descent.", video: "https://www.youtube.com/results?search_query=seated+calf+raise+form" },
-          "Donkey Calf Raise": { cues: "Hinge at hips, press up through toes for deep calf isolation.", video: "https://www.youtube.com/results?search_query=donkey+calf+raise+form" }
+          "Donkey Calf Raise": { cues: "Hinge at hips, press up through toes for deep calf isolation.", video: "https://www.youtube.com/results?search_query=donkey+calf+raise+form" },
+          "Leg Press Calf Press": { cues: "Place balls of feet on bottom edge of sled, flex ankles back and forth.", video: "https://www.youtube.com/results?search_query=leg+press+calf+press+form" },
+          "Single-Leg Standing Calf Raise": { cues: "Stand on one foot on edge of step, perform full ankle extensions.", video: "https://www.youtube.com/results?search_query=single+leg+standing+calf+raise+form" },
+          "Smith Machine Calf Raise": { cues: "Bar on shoulders, stand on block, perform controlled calf raises.", video: "https://www.youtube.com/results?search_query=smith+machine+calf+raise+form" },
+          "Dumbbell Seated Calf Raise": { cues: "Sit on bench, rest dumbbell on knee, elevate heel off ground.", video: "https://www.youtube.com/results?search_query=dumbbell+seated+calf+raise+form" },
+          "Farmer's Walk on Toes": { cues: "Hold heavy dumbbells, walk forward remaining up on balls of feet.", video: "https://www.youtube.com/results?search_query=farmers+walk+on+toes+form" },
+          "Tibialis Raise": { cues: "Lean back against wall, raise toes upward toward shins to work anterior calf.", video: "https://www.youtube.com/results?search_query=tibialis+raise+form" },
+          "Barbell Standing Calf Raise": { cues: "Hold barbell on back, lift heels up to maximum range.", video: "https://www.youtube.com/results?search_query=barbell+standing+calf+raise+form" },
+          "Cable Calf Raise": { cues: "Stand on block facing cable stack, hold bar low and raise heels.", video: "https://www.youtube.com/results?search_query=cable+calf+raise+form" },
+          "Single-Leg Leg Press Calf Raise": { cues: "Isolate one foot on bottom edge of leg press plate.", video: "https://www.youtube.com/results?search_query=single+leg+leg+press+calf+raise+form" },
+          "Ankle Hops / Jump Rope": { cues: "Maintain stiff ankles, bounce quickly off balls of feet.", video: "https://www.youtube.com/results?search_query=ankle+hops+form" },
+          "Hack Squat Calf Raise": { cues: "Position toes at base of platform, extend ankles fully under load.", video: "https://www.youtube.com/results?search_query=hack+squat+calf+raise+form" },
+          "Eccentric Heel Drops": { cues: "Rise on both feet, lower slowly down on one foot below step level.", video: "https://www.youtube.com/results?search_query=eccentric+heel+drops+form" }
         }
       }
     },
@@ -846,7 +917,16 @@
           "Ab Wheel Rollout": { cues: "Keep back rounded slightly, roll forward slowly without arching lower back.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollout+form" },
           "Cable Crunch": { cues: "Kneel, pull cable handles to forehead, flex spine bringing elbows to knees.", video: "https://www.youtube.com/results?search_query=cable+crunch+form" },
           "Decline Sit-Ups": { cues: "Anchor feet, curl torso up focusing on contracting abdominal wall.", video: "https://www.youtube.com/results?search_query=decline+sit+ups+form" },
-          "Mountain Climbers": { cues: "Hold high plank, drive knees rapidly toward chest while maintaining stable posture.", video: "https://www.youtube.com/results?search_query=mountain+climbers+form" }
+          "Mountain Climbers": { cues: "Hold high plank, drive knees rapidly toward chest while maintaining stable posture.", video: "https://www.youtube.com/results?search_query=mountain+climbers+form" },
+          "Reverse Crunch": { cues: "Lie flat, curl knees toward chest lifting hips slightly off floor.", video: "https://www.youtube.com/results?search_query=reverse+crunch+form" },
+          "Hollow Body Hold": { cues: "Press lower back into floor, extend arms and legs outward statically.", video: "https://www.youtube.com/results?search_query=hollow+body+hold+form" },
+          "V-Ups": { cues: "Lift legs and torso simultaneously, reaching hands to toes at peak contraction.", video: "https://www.youtube.com/results?search_query=v+ups+form" },
+          "Captain's Chair Knee Raise": { cues: "Support body on elbows, pull knees up toward chest in controlled movement.", video: "https://www.youtube.com/results?search_query=captains+chair+knee+raise+form" },
+          "Toe Touches": { cues: "Lie on back with legs perpendicular to floor, reach hands up to touch feet.", video: "https://www.youtube.com/results?search_query=toe+touches+exercise+form" },
+          "Flutter Kicks": { cues: "Keep lower back flat, flutter straight legs up and down quickly.", video: "https://www.youtube.com/results?search_query=flutter+kicks+form" },
+          "Swiss Ball Crunch": { cues: "Lie back over ball, flex spine upward squeezing abs at top.", video: "https://www.youtube.com/results?search_query=swiss+ball+crunch+form" },
+          "Dead Bug": { cues: "Lie on back, lower opposite arm and leg while keeping spine pressed flat.", video: "https://www.youtube.com/results?search_query=dead+bug+form" },
+          "L-Sit Hold": { cues: "Support body on parallettes or floor, extend legs straight out in front horizontally.", video: "https://www.youtube.com/results?search_query=l+sit+hold+form" }
         }
       },
       obliques: {
@@ -855,7 +935,18 @@
           "Russian Twists": { cues: "Rotate torso side to side, hold weight close to body, keep core engaged.", video: "https://www.youtube.com/results?search_query=russian+twists+form" },
           "Side Plank": { cues: "Align shoulder over elbow, elevate hips off floor keeping body in straight line.", video: "https://www.youtube.com/results?search_query=side+plank+form" },
           "Woodchoppers": { cues: "Pull cable diagonally across body, rotate hips and torso through movement.", video: "https://www.youtube.com/results?search_query=woodchoppers+form" },
-          "Bicycle Crunches": { cues: "Bring opposite elbow to knee while extending opposite leg, control movement.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" }
+          "Bicycle Crunches": { cues: "Bring opposite elbow to knee while extending opposite leg, control movement.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" },
+          "Dumbbell Side Bends": { cues: "Hold dumbbell in one hand, lower laterally down leg, flex back up.", video: "https://www.youtube.com/results?search_query=dumbbell+side+bends+form" },
+          "Hanging Windshield Wipers": { cues: "Hang from bar, rotate straight legs side to side in arc motion.", video: "https://www.youtube.com/results?search_query=hanging+windshield+wipers+form" },
+          "Side Plank Cable Row": { cues: "Hold side plank while rowing cable handle into torso.", video: "https://www.youtube.com/results?search_query=side+plank+cable+row+form" },
+          "Pallof Press": { cues: "Stand perpendicular to cable, press handle straight out resisting rotation.", video: "https://www.youtube.com/results?search_query=pallof+press+form" },
+          "Cross-Body Mountain Climbers": { cues: "Drive right knee toward left elbow in high plank, alternating sides.", video: "https://www.youtube.com/results?search_query=cross+body+mountain+climbers+form" },
+          "Heel Touches": { cues: "Lie on back with knees bent, reach side to side touching heels with fingers.", video: "https://www.youtube.com/results?search_query=heel+touches+form" },
+          "Saxon Side Bends": { cues: "Hold light dumbbells overhead, lean side to side bending at waist.", video: "https://www.youtube.com/results?search_query=saxon+side+bends+form" },
+          "Landmine Rotations": { cues: "Hold barbell overhead, twist bar from hip to hip using obliques.", video: "https://www.youtube.com/results?search_query=landmine+rotations+form" },
+          "Side Crunch on Bench": { cues: "Lie sideways on hyperextension bench, crunch upper body sideways upward.", video: "https://www.youtube.com/results?search_query=side+crunch+on+bench+form" },
+          "Spiderman Push-Ups": { cues: "Bring knee out to side toward elbow as chest lowers in push-up.", video: "https://www.youtube.com/results?search_query=spiderman+push+ups+form" },
+          "Single-Leg Side Plank Lift": { cues: "In side plank, raise top leg up and down maintaining rigid core.", video: "https://www.youtube.com/results?search_query=single+leg+side+plank+lift+form" }
         }
       },
       lowerBack: {
@@ -864,7 +955,18 @@
           "Hyperextensions (Back Extension)": { cues: "Hinge at hips on bench, raise torso until parallel with lower body.", video: "https://www.youtube.com/results?search_query=back+extensions+form" },
           "Supermans": { cues: "Lie face down, lift arms, chest, and legs simultaneously off floor.", video: "https://www.youtube.com/results?search_query=superman+exercise+form" },
           "Bird-Dog": { cues: "On hands and knees, reach opposite arm and leg straight out without twisting hips.", video: "https://www.youtube.com/results?search_query=bird+dog+exercise+form" },
-          "Good Mornings": { cues: "Barbell across upper back, hinge forward at hips with flat back, return up.", video: "https://www.youtube.com/results?search_query=good+mornings+exercise+form" }
+          "Good Mornings": { cues: "Barbell across upper back, hinge forward at hips with flat back, return up.", video: "https://www.youtube.com/results?search_query=good+mornings+exercise+form" },
+          "Barbell Conventional Deadlift": { cues: "Bar over midfoot, brace core, drive through feet extending hips and back.", video: "https://www.youtube.com/results?search_query=barbell+conventional+deadlift+form" },
+          "Jefferson Curls": { cues: "Stand on box, roll spine down segment by segment holding light weight, roll up slowly.", video: "https://www.youtube.com/results?search_query=jefferson+curls+form" },
+          "Reverse Hyper on Swiss Ball": { cues: "Rest stomach on ball, lift straight legs upward engaging erectors.", video: "https://www.youtube.com/results?search_query=reverse+hyper+on+swiss+ball+form" },
+          "Kettlebell Suitcase Deadlift": { cues: "Deadlift single kettlebell at side, resisting lateral torso tilting.", video: "https://www.youtube.com/results?search_query=kettlebell+suitcase+deadlift+form" },
+          "Prone Cobra": { cues: "Lie face down, lift chest and rotate thumbs to ceiling, squeezing upper/lower back.", video: "https://www.youtube.com/results?search_query=prone+cobra+form" },
+          "Barbell Deficit Deadlift": { cues: "Stand on 1-2 inch plate, hinge deep and deadlift with flat back.", video: "https://www.youtube.com/results?search_query=barbell+deficit+deadlift+form" },
+          "Standing Good Mornings with Band": { cues: "Step on band loop, place top over neck, hinge hips back against tension.", video: "https://www.youtube.com/results?search_query=banded+good+mornings+form" },
+          "Single-Leg Back Extensions": { cues: "On hyperextension bench, raise torso using one leg at a time.", video: "https://www.youtube.com/results?search_query=single+leg+back+extensions+form" },
+          "Seated Back Extension Machine": { cues: "Adjust pad against upper back, lean backward extending spinal erectors.", video: "https://www.youtube.com/results?search_query=seated+back+extension+machine+form" },
+          "Aquaman Swimmers": { cues: "Lie face down, flutter opposite arm and leg up and down continuously.", video: "https://www.youtube.com/results?search_query=aquaman+swimmers+exercise+form" },
+          "Rack Pulls (Erector Focus)": { cues: "Set pins at shin height, pull bar to lockout keeping back tight.", video: "https://www.youtube.com/results?search_query=rack+pulls+erector+focus+form" }
         }
       }
     }
