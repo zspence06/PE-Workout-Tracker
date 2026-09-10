@@ -752,7 +752,7 @@
   // TEACHER ACCESS CODE
   let teacherPassword = "Spartans123";
 
-  // DATABASE WITH FULL-LENGTH DIRECT YOUTUBE TUTORIAL WATCH IDS
+  // COMPLETE EXERCISE DATABASE (ALL MUSCLE GROUPS RESTORED)
   const exerciseDB = {
     upper: {
       deltoids: {
@@ -1068,7 +1068,7 @@
     } else {
       // FALLBACK TO DIRECT SEARCH QUERY IF VIDEO ID IS DOWN/RESTRICTED
       let searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(selectedExerciseName + " proper form exercise tutorial")}`;
-      statusDiv.innerHTML = "<span style='color: var(--subtle);'>⚠️ Video link unavailable. Switched to direct search match:</span>";
+      statusDiv.innerHTML = "<span style='color: var(--subtle);'>⚠️ Direct video link unavailable. Switched to YouTube search match:</span>";
       document.getElementById("activeVideoLink").href = searchUrl;
       document.getElementById("activeVideoLink").innerText = "🔍 Search Demonstration Videos on YouTube";
       linkContainer.classList.remove("hidden");
