@@ -6,12 +6,12 @@
   <title>Memorial PE Workout Tracker</title>
   <style>
     :root {
-      --primary: #18453B;         /* Spartan Green */
+      --primary: #18453B;          /* Spartan Green */
       --primary-hover: #11332B;   /* Darker Spartan Green */
       --accent: #215D50;          /* Secondary Spartan Green Accent */
       --accent-light: #E8F0EE;    /* Subtle Tint Green */
       --bg: #F1F5F9;              /* Slate Light Grey Background */
-      --card-bg: #FFFFFF;         /* White Card Background */
+      --card-bg: #FFFFFF;          /* White Card Background */
       --text: #0F172A;            /* Dark Charcoal Text */
       --subtle: #475569;          /* Medium Dark Grey */
       --border: #CBD5E1;          /* Border Grey */
@@ -403,8 +403,8 @@
   <header>
     <h1>Memorial PE Workout Tracker</h1>
     <div class="nav-tabs">
-      <button class="main-nav-btn active" onclick="switchRole('studentView', event)">Student Workspace</button>
-      <button class="main-nav-btn" onclick="switchRole('teacherView', event)">Teacher Dashboard</button>
+      <button id="navStudentBtn" class="main-nav-btn active" onclick="switchRole('studentView', event)">Student Workspace</button>
+      <button id="navTeacherBtn" class="main-nav-btn" onclick="switchRole('teacherView', event)">Teacher Dashboard</button>
     </div>
   </header>
 
@@ -508,7 +508,7 @@
           <div id="muscleGroupGrid" class="muscle-group-grid"></div>
         </div>
 
-        <!-- STEP 3: Exercise Selection Dropdown (Inside a styled box) -->
+        <!-- STEP 3: Exercise Selection Dropdown -->
         <div id="exerciseGroup" class="dropdown-box hidden">
           <label id="exerciseSelectLabel" for="exerciseSelect" style="font-weight: 700; color: var(--primary); display:block; margin-bottom:8px;">3. Select Exercise:</label>
           <select id="exerciseSelect" onchange="handleExerciseSelect()"></select>
@@ -727,8 +727,22 @@
   </div>
 </div>
 
+<!-- DAILY LEARNING TARGET POP-UP MODAL -->
+<div id="targetModal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color:var(--primary);">🎯 Today's Learning Target</h3>
+    <p id="targetModalBody" style="font-size: 1.1rem; line-height: 1.5; color: var(--text);"></p>
+    <div style="text-align: right; margin-top: 20px;">
+      <button class="btn btn-primary" onclick="closeTargetModal()">Got It!</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  // EXPANDED EXERCISE DATABASE WITH 15+ EXERCISES PER TARGET AREA
+  // TEACHER ACCESS CODE
+  let teacherPassword = "Spartans123";
+
+  // EXERCISE DATABASE
   const exerciseDB = {
     upper: {
       deltoids: {
@@ -806,226 +820,234 @@
           "Standing Calf Raise": { cues: "Push through toes for full extension at top, lower down into deep stretch.", video: "https://www.youtube.com/results?search_query=standing+calf+raise+form" },
           "Barbell Glute Bridge": { cues: "Lie flat on floor, drive hips upward holding weighted bar across pelvis.", video: "https://www.youtube.com/results?search_query=barbell+glute+bridge+form" },
           "Cable Glute Kickback": { cues: "Attach cuff to ankle, extend leg straight back using glute drive.", video: "https://www.youtube.com/results?search_query=cable+glute+kickback+form" },
-          "Seated Leg Curl Machine": { cues: "Adjust thigh pad securely, pull handles and curl weight under legs.", video: "https://www.youtube.com/results?search_query=seated+leg+curl+form" },
-          "Seated Calf Raise": { cues: "Targets soleus muscle, lift heels slowly and squeeze at peak height.", video: "https://www.youtube.com/results?search_query=seated+calf+raise+form" },
-          "Sumo Deadlift": { cues: "Wide stance, toes pointed outward, keep chest up and pull bar close to body.", video: "https://www.youtube.com/results?search_query=sumo+deadlift+form" },
-          "Step-Ups": { cues: "Step onto box pushing through heel, raise trailing knee at top.", video: "https://www.youtube.com/results?search_query=step+ups+form" }
+          "Seated Leg Curl Machine": { cues: "Adjust thigh pad securely, pull handles and curl heels under seat.", video: "https://www.youtube.com/results?search_query=seated+leg+curl+form" }
         }
       }
     },
     core: {
       abdominals: {
-        name: "Abs, Obliques & Lower Back",
+        name: "Abdominals & Obliques",
         exercises: {
-          "Hanging Leg Raises": { cues: "Avoid swinging, raise legs or knees toward chest using core strength.", video: "https://www.youtube.com/results?search_query=hanging+leg+raises+form" },
-          "Plank Hold": { cues: "Maintain straight line from head to heels, engage glutes and brace core.", video: "https://www.youtube.com/results?search_query=plank+hold+form" },
-          "Cable Kneeling Crunches": { cues: "Kneel down, flex spine using abdominals to pull cable down toward knees.", video: "https://www.youtube.com/results?search_query=cable+kneeling+crunches+form" },
-          "Russian Twists": { cues: "Sit on floor, lean back slightly, rotate torso side to side with weight.", video: "https://www.youtube.com/results?search_query=russian+twists+form" },
-          "Ab Wheel Rollouts": { cues: "Kneel down, roll wheel out maintaining hollow core position, pull back.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollouts+form" },
-          "Bicycle Crunches": { cues: "Alternate elbow to opposite knee in smooth cycling motion.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" },
-          "Mountain Climbers": { cues: "In high plank, drive knees rapidly toward chest while maintaining flat hips.", video: "https://www.youtube.com/results?search_query=mountain+climbers+form" },
-          "Side Plank Hold": { cues: "Support body on one forearm, lift hips straight off ground.", video: "https://www.youtube.com/results?search_query=side+plank+hold+form" },
-          "Captain's Chair Knee Raise": { cues: "Support upper body on pads, raise knees up toward chest.", video: "https://www.youtube.com/results?search_query=captains+chair+knee+raise+form" },
-          "Woodchoppers (Cable or Dumbbell)": { cues: "Rotate diagonally across body with arms extended engaging obliques.", video: "https://www.youtube.com/results?search_query=woodchoppers+exercise+form" },
-          "Decline Bench Sit-Ups": { cues: "Hook feet in bench, lower upper body and sit up under control.", video: "https://www.youtube.com/results?search_query=decline+bench+sit+ups+form" },
-          "Deadbug": { cues: "Lie flat on back, lower opposite arm and leg slowly while keeping spine flat.", video: "https://www.youtube.com/results?search_query=deadbug+exercise+form" },
-          "Bird Dog": { cues: "On hands and knees, reach opposite arm and leg out parallel to floor.", video: "https://www.youtube.com/results?search_query=bird+dog+exercise+form" },
-          "Reverse Crunches": { cues: "Lie flat, curl hips off floor bringing knees toward chest.", video: "https://www.youtube.com/results?search_query=reverse+crunches+form" },
-          "Toe Touches": { cues: "Lie flat with legs vertical, reach hands toward toes flexing upper abs.", video: "https://www.youtube.com/results?search_query=toe+touches+exercise+form" }
+          "Plank Hold": { cues: "Maintain straight line from head to heels, brace core, do not sag hips.", video: "https://www.youtube.com/results?search_query=plank+hold+form" },
+          "Hanging Leg Raise": { cues: "Hang from bar, raise legs to 90 degrees without swinging.", video: "https://www.youtube.com/results?search_query=hanging+leg+raise+form" },
+          "Russian Twists": { cues: "Sit at angle, rotate shoulders and hands side-to-side controlling motion.", video: "https://www.youtube.com/results?search_query=russian+twists+form" },
+          "Ab Wheel Rollout": { cues: "Kneel down, roll wheel forward keeping core hollow and back protected.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollout+form" },
+          "Bicycle Crunches": { cues: "Alternate elbow to opposite knee while extending opposite leg out.", video: "https://www.youtube.com/results?search_query=bicycle+crunches+form" },
+          "Cable Rope Crunch": { cues: "Kneel below high pulley, flex spine pulling elbows towards thighs.", video: "https://www.youtube.com/results?search_query=cable+rope+crunch+form" },
+          "Side Plank": { cues: "Support weight on one forearm, stack feet, align hips straight.", video: "https://www.youtube.com/results?search_query=side+plank+form" }
         }
       }
     }
   };
 
-  // APP STATE MANAGEMENT
-  let currentStudent = "";
-  let teacherPassword = "admin";
-  let activeLearningTarget = "Focus on control, proper depth, and executing full range of motion for every rep.";
-  let studentsData = JSON.parse(localStorage.getItem('mpe_studentsData')) || {};
+  // APP STATE
+  let currentUser = "";
+  let learningTarget = "Demonstrate correct execution of multi-joint lifts and track performance metrics accurately.";
   let selectedMuscleGroupKey = "";
+  let activeTabRole = "studentView";
 
-  // INITIALIZATION
+  // LOCAL STORAGE INITIALIZATION
+  let db = JSON.parse(localStorage.getItem('memorialPE_DB')) || {
+    users: {},
+    allLogs: []
+  };
+
+  function saveDB() {
+    localStorage.setItem('memorialPE_DB', JSON.stringify(db));
+  }
+
+  // INITIAL SETUP ON PAGE LOAD
   document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('workoutDate').valueAsDate = new Date();
-    loadLearningTarget();
+    document.getElementById('workoutDate').value = new Date().toISOString().split('T')[0];
+    updateLearningTargetUI();
+    checkDailyLearningTargetPopup();
   });
 
-  // NAVIGATION & ROLE SWITCHING
-  function switchRole(roleViewId, evt) {
-    if (roleViewId === 'teacherView') {
-      const pw = prompt("Enter Teacher Password:");
-      if (pw !== teacherPassword) {
-        alert("Incorrect Password!");
+  // DAILY LEARNING TARGET POPUP LOGIC
+  function checkDailyLearningTargetPopup() {
+    const today = new Date().toISOString().split('T')[0];
+    const lastShownDate = localStorage.getItem('memorialPE_targetLastShownDate');
+
+    if (lastShownDate !== today) {
+      document.getElementById('targetModalBody').innerText = learningTarget;
+      document.getElementById('targetModal').classList.remove('hidden');
+      localStorage.setItem('memorialPE_targetLastShownDate', today);
+    }
+  }
+
+  function closeTargetModal() {
+    document.getElementById('targetModal').classList.add('hidden');
+  }
+
+  // ROLE & TAB SWITCHING
+  function switchRole(role, event) {
+    if (role === 'teacherView') {
+      const enteredPass = prompt("Enter Teacher Password:");
+      if (enteredPass !== teacherPassword) {
+        alert("Incorrect password. Access denied.");
         return;
       }
-      renderTeacherDashboard();
     }
 
-    document.getElementById('studentView').classList.add('hidden');
-    document.getElementById('teacherView').classList.add('hidden');
-    document.getElementById(roleViewId).classList.remove('hidden');
+    activeTabRole = role;
+    document.getElementById('studentView').classList.toggle('hidden', role !== 'studentView');
+    document.getElementById('teacherView').classList.toggle('hidden', role !== 'teacherView');
+    
+    document.getElementById('navStudentBtn').classList.toggle('active', role === 'studentView');
+    document.getElementById('navTeacherBtn').classList.toggle('active', role === 'teacherView');
 
-    document.querySelectorAll('.main-nav-btn').forEach(btn => btn.classList.remove('active'));
-    if (evt) evt.target.classList.add('active');
+    if (role === 'teacherView') {
+      renderTeacherDashboard();
+    }
   }
 
-  function switchStudentTab(tabId, evt) {
-    document.querySelectorAll('.student-tab').forEach(tab => tab.classList.add('hidden'));
+  function changeTeacherPassword() {
+    const current = prompt("Enter current password:");
+    if (current === teacherPassword) {
+      const newPass = prompt("Enter new password:");
+      if (newPass && newPass.trim() !== "") {
+        teacherPassword = newPass.trim();
+        alert("Teacher password successfully updated.");
+      }
+    } else {
+      alert("Incorrect password.");
+    }
+  }
+
+  function switchStudentTab(tabId, event) {
+    document.querySelectorAll('.student-tab').forEach(el => el.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
-
+    
     document.querySelectorAll('#studentView .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (evt) evt.target.classList.add('active');
+    if (event) event.target.classList.add('active');
+
+    if (tabId === 'tab3') renderABPlanner();
+    if (tabId === 'tab4') renderHistory();
   }
 
-  function switchTeacherTab(tabId, evt) {
-    document.querySelectorAll('.teacher-tab').forEach(tab => tab.classList.add('hidden'));
+  function switchTeacherTab(tabId, event) {
+    document.querySelectorAll('.teacher-tab').forEach(el => el.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
 
     document.querySelectorAll('#teacherView .sub-tab-btn').forEach(btn => btn.classList.remove('active'));
-    if (evt) evt.target.classList.add('active');
+    if (event) event.target.classList.add('active');
   }
 
-  // STUDENT MANAGEMENT
+  // STUDENT AUTHENTICATION
   function loginStudent() {
     const nameInput = document.getElementById('studentName').value.trim();
     if (!nameInput) {
       alert("Please enter a valid student name.");
       return;
     }
-    currentStudent = nameInput;
+    currentUser = nameInput;
 
-    if (!studentsData[currentStudent]) {
-      studentsData[currentStudent] = {
+    if (!db.users[currentUser]) {
+      db.users[currentUser] = {
         routine: [],
+        workoutA: [],
+        workoutB: [],
         history: []
       };
-      saveAllData();
+      saveDB();
     }
 
-    alert(`Logged in as: ${currentStudent}`);
-    renderStudentProfile();
+    alert(`Logged in as ${currentUser}`);
+    renderStudentData();
   }
 
-  function renderStudentProfile() {
-    if (!currentStudent || !studentsData[currentStudent]) return;
-    renderSavedRoutineTags();
-    renderABTables();
-    renderHistoryTable();
+  function renderStudentData() {
+    if (!currentUser || !db.users[currentUser]) return;
+    renderRoutineTags();
+    renderABPlanner();
+    renderHistory();
     updateRequirementsTracker();
   }
 
-  function saveAllData() {
-    localStorage.setItem('mpe_studentsData', JSON.stringify(studentsData));
-  }
-
-  // EXERCISE SELECTOR CASCADE WITH BUTTON GRID & EXPANDED DROPDOWNS
+  // EXERCISE SELECTOR LOGIC
   function handleTargetAreaChange() {
-    const targetArea = document.getElementById('targetArea').value;
-    const muscleGrid = document.getElementById('muscleGroupGrid');
+    const area = document.getElementById('targetArea').value;
     const muscleContainer = document.getElementById('muscleGroupContainer');
+    const muscleGrid = document.getElementById('muscleGroupGrid');
+    const exerciseGroup = document.getElementById('exerciseGroup');
+    const customGroup = document.getElementById('customExerciseGroup');
 
-    muscleGrid.innerHTML = '';
-    selectedMuscleGroupKey = "";
-
-    document.getElementById('exerciseGroup').classList.add('hidden');
-    document.getElementById('customExerciseGroup').classList.add('hidden');
+    muscleGrid.innerHTML = "";
+    exerciseGroup.classList.add('hidden');
+    customGroup.classList.add('hidden');
     document.getElementById('previewBtn').classList.add('hidden');
     document.getElementById('workoutDayGroup').classList.add('hidden');
     document.getElementById('fitnessGroup').classList.add('hidden');
     document.getElementById('addToRoutineBtn').classList.add('hidden');
 
-    if (!targetArea || !exerciseDB[targetArea]) {
+    if (!area || !exerciseDB[area]) {
       muscleContainer.classList.add('hidden');
       return;
     }
 
-    const groups = exerciseDB[targetArea];
-    for (let key in groups) {
+    muscleContainer.classList.remove('hidden');
+    const groups = exerciseDB[area];
+
+    for (const key in groups) {
       const btn = document.createElement('button');
-      btn.type = "button";
-      btn.className = "muscle-btn";
-      btn.textContent = groups[key].name;
-      btn.onclick = () => selectMuscleGroup(key, btn, groups[key].name);
+      btn.className = 'muscle-btn';
+      btn.innerText = groups[key].name;
+      btn.onclick = () => selectMuscleGroup(area, key, btn);
       muscleGrid.appendChild(btn);
     }
-    muscleContainer.classList.remove('hidden');
   }
 
-  function selectMuscleGroup(muscleKey, btnElement, muscleName) {
-    // Highlight active button
+  function selectMuscleGroup(area, muscleKey, btnElement) {
     document.querySelectorAll('.muscle-btn').forEach(b => b.classList.remove('active'));
     btnElement.classList.add('active');
-
     selectedMuscleGroupKey = muscleKey;
-    const targetArea = document.getElementById('targetArea').value;
-    const exSelect = document.getElementById('exerciseSelect');
-    const exGroup = document.getElementById('exerciseGroup');
-    const label = document.getElementById('exerciseSelectLabel');
 
-    label.textContent = `3. Select ${muscleName} Exercise:`;
-    exSelect.innerHTML = '<option value="">-- Choose Exercise --</option>';
+    const select = document.getElementById('exerciseSelect');
+    select.innerHTML = '<option value="">-- Choose Exercise --</option>';
 
-    document.getElementById('customExerciseGroup').classList.add('hidden');
-    document.getElementById('previewBtn').classList.add('hidden');
-
-    if (!targetArea || !muscleKey || !exerciseDB[targetArea][muscleKey]) {
-      exGroup.classList.add('hidden');
-      return;
-    }
-
-    const exercises = exerciseDB[targetArea][muscleKey].exercises;
-    for (let exName in exercises) {
+    const exercises = exerciseDB[area][muscleKey].exercises;
+    for (const ex in exercises) {
       const opt = document.createElement('option');
-      opt.value = exName;
-      opt.textContent = exName;
-      exSelect.appendChild(opt);
+      opt.value = ex;
+      opt.textContent = ex;
+      select.appendChild(opt);
     }
 
-    // Always include option for OTHER
     const customOpt = document.createElement('option');
-    customOpt.value = "Other";
-    customOpt.textContent = "✏️ Other (Type Custom Exercise)";
-    exSelect.appendChild(customOpt);
+    customOpt.value = "CUSTOM";
+    customOpt.textContent = "+ Add Custom Exercise";
+    select.appendChild(customOpt);
 
-    exGroup.classList.remove('hidden');
+    document.getElementById('exerciseGroup').classList.remove('hidden');
   }
 
   function handleExerciseSelect() {
-    const selectedEx = document.getElementById('exerciseSelect').value;
-    const customGroup = document.getElementById('customExerciseGroup');
-    const previewBtn = document.getElementById('previewBtn');
+    const val = document.getElementById('exerciseSelect').value;
+    const isCustom = val === "CUSTOM";
 
-    if (selectedEx === "Other") {
-      customGroup.classList.remove('hidden');
-      previewBtn.classList.add('hidden');
-    } else if (selectedEx) {
-      customGroup.classList.add('hidden');
-      previewBtn.classList.remove('hidden');
-    } else {
-      customGroup.classList.add('hidden');
-      previewBtn.classList.add('hidden');
-    }
-
-    if (selectedEx) {
-      document.getElementById('workoutDayGroup').classList.remove('hidden');
-      document.getElementById('fitnessGroup').classList.remove('hidden');
-      document.getElementById('addToRoutineBtn').classList.remove('hidden');
-    }
+    document.getElementById('customExerciseGroup').classList.toggle('hidden', !isCustom);
+    document.getElementById('previewBtn').classList.toggle('hidden', isCustom || !val);
+    
+    const showControls = val !== "";
+    document.getElementById('workoutDayGroup').classList.toggle('hidden', !showControls);
+    document.getElementById('fitnessGroup').classList.toggle('hidden', !showControls);
+    document.getElementById('addToRoutineBtn').classList.toggle('hidden', !showControls);
   }
 
-  // MODAL FORM CUES
+  // MODAL FOR FORM CUES
   function openModal() {
-    const targetArea = document.getElementById('targetArea').value;
-    const muscleKey = selectedMuscleGroupKey;
-    const selectedEx = document.getElementById('exerciseSelect').value;
+    const area = document.getElementById('targetArea').value;
+    const exName = document.getElementById('exerciseSelect').value;
 
-    if (!selectedEx || selectedEx === "Other") return;
+    if (!area || !selectedMuscleGroupKey || !exName) return;
 
-    const data = exerciseDB[targetArea][muscleKey].exercises[selectedEx];
-    document.getElementById('modalTitle').textContent = selectedEx;
+    const exData = exerciseDB[area][selectedMuscleGroupKey].exercises[exName];
+    if (!exData) return;
+
+    document.getElementById('modalTitle').innerText = exName;
     document.getElementById('modalBody').innerHTML = `
-      <p><strong>Key Form Cues:</strong> ${data.cues}</p>
-      <p><a href="${data.video}" target="_blank" style="color: var(--primary); font-weight: 600;">📺 Search Form Demonstration Video</a></p>
+      <p><strong>Form Cues:</strong> ${exData.cues}</p>
+      <p><a href="${exData.video}" target="_blank" rel="noopener noreferrer" style="color:var(--primary); font-weight:bold;">▶ Watch Demonstration Video</a></p>
     `;
     document.getElementById('cueModal').classList.remove('hidden');
   }
@@ -1034,21 +1056,21 @@
     document.getElementById('cueModal').classList.add('hidden');
   }
 
-  // ROUTINE BUILDER & REQUIREMENT TRACKER
+  // ADD TO ROUTINE & WORKOUT PLANNER
   function addToRoutine() {
-    if (!currentStudent) {
-      alert("Please log in with your name first.");
+    if (!currentUser) {
+      alert("Please log in first!");
       return;
     }
 
-    const targetArea = document.getElementById('targetArea').value;
+    const area = document.getElementById('targetArea').value;
     let exName = document.getElementById('exerciseSelect').value;
-    if (exName === "Other") {
+    if (exName === "CUSTOM") {
       exName = document.getElementById('customExerciseInput').value.trim();
     }
 
     if (!exName) {
-      alert("Please specify or select an exercise name.");
+      alert("Please specify an exercise name.");
       return;
     }
 
@@ -1058,133 +1080,162 @@
     const newEx = {
       id: Date.now(),
       name: exName,
-      targetArea: targetArea,
+      targetArea: area,
       day: day,
       component: component,
       sets: 3,
       reps: 10,
-      weight: 45,
-      completed: false
+      weight: 0
     };
 
-    studentsData[currentStudent].routine.push(newEx);
-    saveAllData();
-    renderStudentProfile();
+    if (day === 'A') {
+      db.users[currentUser].workoutA.push(newEx);
+    } else {
+      db.users[currentUser].workoutB.push(newEx);
+    }
+
+    db.users[currentUser].routine.push(newEx);
+    saveDB();
+
+    renderStudentData();
     alert(`Added "${exName}" to Workout ${day}!`);
   }
 
-  function renderSavedRoutineTags() {
+  function renderRoutineTags() {
     const container = document.getElementById('routineTags');
     const box = document.getElementById('routineSavedBox');
-    container.innerHTML = '';
+    container.innerHTML = "";
 
-    const list = studentsData[currentStudent].routine || [];
-    if (list.length === 0) {
+    const userRoutine = db.users[currentUser]?.routine || [];
+    if (userRoutine.length === 0) {
       box.classList.add('hidden');
       return;
     }
 
     box.classList.remove('hidden');
-    list.forEach(item => {
+    userRoutine.forEach(item => {
       const tag = document.createElement('span');
       tag.className = 'tag';
-      tag.textContent = `[Day ${item.day}] ${item.name}`;
-      tag.onclick = () => sendTagToSpreadsheet(item);
+      tag.innerText = `[${item.day}] ${item.name}`;
+      tag.onclick = () => addExerciseToSpreadsheet(item);
       container.appendChild(tag);
     });
   }
 
-  function renderABTables() {
-    const tableA = document.getElementById('workoutATable');
-    const tableB = document.getElementById('workoutBTable');
-    tableA.innerHTML = '';
-    tableB.innerHTML = '';
+  // WORKOUT A/B PLANNER RENDER
+  function renderABPlanner() {
+    if (!currentUser) return;
 
-    const list = studentsData[currentStudent]?.routine || [];
+    const user = db.users[currentUser];
+    renderABTable('workoutATable', user.workoutA, 'A');
+    renderABTable('workoutBTable', user.workoutB, 'B');
+    updateRequirementsTracker();
+  }
 
-    list.forEach(item => {
-      const row = document.createElement('tr');
-      if (item.completed) row.classList.add('completed-row');
+  function renderABTable(tableId, list, day) {
+    const tbody = document.getElementById(tableId);
+    tbody.innerHTML = "";
 
-      row.innerHTML = `
-        <td><input type="checkbox" ${item.completed ? 'checked' : ''} onchange="toggleABComplete(${item.id}, this.checked)"></td>
-        <td><strong>${item.name}</strong><br><small style="color:var(--subtle);">${item.component}</small></td>
-        <td><input type="number" class="sheet-input" style="width:50px;" value="${item.sets}" onchange="updateABMetric(${item.id}, 'sets', this.value)"></td>
-        <td><input type="number" class="sheet-input" style="width:50px;" value="${item.reps}" onchange="updateABMetric(${item.id}, 'reps', this.value)"></td>
-        <td><input type="number" class="sheet-input" style="width:60px;" value="${item.weight}" onchange="updateABMetric(${item.id}, 'weight', this.value)"></td>
-        <td><button class="btn btn-danger" onclick="deleteABItem(${item.id})">✕</button></td>
+    list.forEach((item, index) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td style="text-align:center;"><input type="checkbox" onchange="toggleABRowDone(this, '${day}', ${index})"></td>
+        <td><strong style="color:var(--primary);">${item.name}</strong><br><small style="color:var(--subtle);">${item.targetArea.toUpperCase()}</small></td>
+        <td><input type="number" class="sheet-input" value="${item.sets}" onchange="updateABItem('${day}', ${index}, 'sets', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${item.reps}" onchange="updateABItem('${day}', ${index}, 'reps', this.value)"></td>
+        <td><input type="number" class="sheet-input" value="${item.weight}" onchange="updateABItem('${day}', ${index}, 'weight', this.value)"></td>
+        <td><button class="btn btn-danger" onclick="deleteABItem('${day}', ${index})">✕</button></td>
       `;
-
-      if (item.day === 'A') {
-        tableA.appendChild(row);
-      } else {
-        tableB.appendChild(row);
-      }
+      tbody.appendChild(tr);
     });
   }
 
-  function toggleABComplete(id, isChecked) {
-    const item = studentsData[currentStudent].routine.find(i => i.id === id);
-    if (item) {
-      item.completed = isChecked;
-      saveAllData();
-      renderABTables();
+  function toggleABRowDone(checkbox, day, index) {
+    const tr = checkbox.closest('tr');
+    tr.classList.toggle('completed-row', checkbox.checked);
+  }
+
+  function updateABItem(day, index, field, value) {
+    const list = day === 'A' ? db.users[currentUser].workoutA : db.users[currentUser].workoutB;
+    list[index][field] = Number(value);
+    saveDB();
+  }
+
+  function deleteABItem(day, index) {
+    if (day === 'A') {
+      db.users[currentUser].workoutA.splice(index, 1);
+    } else {
+      db.users[currentUser].workoutB.splice(index, 1);
     }
+    saveDB();
+    renderStudentData();
   }
 
-  function updateABMetric(id, field, value) {
-    const item = studentsData[currentStudent].routine.find(i => i.id === id);
-    if (item) {
-      item[field] = Number(value);
-      saveAllData();
-    }
-  }
-
-  function deleteABItem(id) {
-    studentsData[currentStudent].routine = studentsData[currentStudent].routine.filter(i => i.id !== id);
-    saveAllData();
-    renderStudentProfile();
-  }
-
+  // PROGRAM REQUIREMENTS & PROGRESS
   function updateRequirementsTracker() {
-    const list = studentsData[currentStudent]?.routine || [];
+    if (!currentUser || !db.users[currentUser]) return;
 
-    const aLower = list.filter(i => i.day === 'A' && i.targetArea === 'lower').length;
-    const aCore = list.filter(i => i.day === 'A' && i.targetArea === 'core').length;
-    const bUpper = list.filter(i => i.day === 'B' && i.targetArea === 'upper').length;
-    const bCore = list.filter(i => i.day === 'B' && i.targetArea === 'core').length;
+    const wA = db.users[currentUser].workoutA || [];
+    const wB = db.users[currentUser].workoutB || [];
+
+    const aLower = wA.filter(i => i.targetArea === 'lower').length;
+    const aCore = wA.filter(i => i.targetArea === 'core').length;
+    const bUpper = wB.filter(i => i.targetArea === 'upper').length;
+    const bCore = wB.filter(i => i.targetArea === 'core').length;
 
     updateReqCard('reqALower', 'countALower', aLower, 4, '🅰️ Workout A Lower Body');
     updateReqCard('reqACore', 'countACore', aCore, 2, '🅰️ Workout A Core');
     updateReqCard('reqBUpper', 'countBUpper', bUpper, 4, '🅱️ Workout B Upper Body');
     updateReqCard('reqBCore', 'countBCore', bCore, 2, '🅱️ Workout B Core');
 
-    const score = Math.min(aLower, 4) + Math.min(aCore, 2) + Math.min(bUpper, 4) + Math.min(bCore, 2);
-    const percent = Math.round((score / 12) * 100);
+    const totalMet = Math.min(aLower, 4) + Math.min(aCore, 2) + Math.min(bUpper, 4) + Math.min(bCore, 2);
+    const pct = Math.round((totalMet / 12) * 100);
 
-    document.getElementById('progressPercentText').textContent = `${percent}% Complete`;
-    document.getElementById('progressBarFill').style.width = `${percent}%`;
+    document.getElementById('progressBarFill').style.width = pct + '%';
+    document.getElementById('progressPercentText').innerText = pct + '% Complete';
   }
 
   function updateReqCard(cardId, countId, current, target, label) {
     const card = document.getElementById(cardId);
     const countSpan = document.getElementById(countId);
+    const isDone = current >= target;
 
-    const isComplete = current >= target;
-    card.className = `req-card ${isComplete ? 'complete' : 'missing'}`;
-    countSpan.textContent = `${current} / ${target} ${isComplete ? '✅' : '❌'}`;
+    card.className = `req-card ${isDone ? 'complete' : 'missing'}`;
+    countSpan.innerHTML = `${current} / ${target} ${isDone ? '✅' : '❌'}`;
   }
 
-  // SPREADSHEET LOGGING SYSTEM
-  function sendTagToSpreadsheet(item) {
-    const date = document.getElementById('workoutDate').value || new Date().toISOString().split('T')[0];
-    const body = document.getElementById('editableSheetBody');
-    const rowId = Date.now();
-
+  // SPREADSHEET LOGIC
+  function addBlankSpreadsheetRow() {
+    const tbody = document.getElementById('editableSheetBody');
+    const dateVal = document.getElementById('workoutDate').value;
     const tr = document.createElement('tr');
-    tr.id = `row-${rowId}`;
+
     tr.innerHTML = `
-      <td><input type="date" class="sheet-input" value="${date}"></td>
+      <td><input type="date" class="sheet-input" value="${dateVal}"></td>
+      <td><input type="text" class="sheet-input" placeholder="Exercise Name"></td>
+      <td>
+        <select class="sheet-select">
+          <option value="Muscular Strength">Muscular Strength</option>
+          <option value="Muscular Endurance">Muscular Endurance</option>
+          <option value="Cardiovascular Endurance">Cardiovascular Endurance</option>
+          <option value="Flexibility">Flexibility</option>
+        </select>
+      </td>
+      <td><input type="number" class="sheet-input" value="3"></td>
+      <td><input type="number" class="sheet-input" value="10"></td>
+      <td><input type="number" class="sheet-input" value="0"></td>
+      <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  function addExerciseToSpreadsheet(item) {
+    const tbody = document.getElementById('editableSheetBody');
+    const dateVal = document.getElementById('workoutDate').value;
+    const tr = document.createElement('tr');
+
+    tr.innerHTML = `
+      <td><input type="date" class="sheet-input" value="${dateVal}"></td>
       <td><input type="text" class="sheet-input" value="${item.name}"></td>
       <td>
         <select class="sheet-select">
@@ -1194,88 +1245,59 @@
           <option value="Flexibility" ${item.component === 'Flexibility' ? 'selected' : ''}>Flexibility</option>
         </select>
       </td>
-      <td><input type="number" class="sheet-input" style="width:60px;" value="${item.sets}"></td>
-      <td><input type="number" class="sheet-input" style="width:60px;" value="${item.reps}"></td>
-      <td><input type="number" class="sheet-input" style="width:70px;" value="${item.weight}"></td>
-      <td><button class="btn btn-danger" onclick="document.getElementById('row-${rowId}').remove()">✕</button></td>
+      <td><input type="number" class="sheet-input" value="${item.sets}"></td>
+      <td><input type="number" class="sheet-input" value="${item.reps}"></td>
+      <td><input type="number" class="sheet-input" value="${item.weight}"></td>
+      <td><button class="btn btn-danger" onclick="this.closest('tr').remove()">✕</button></td>
     `;
-    body.appendChild(tr);
+    tbody.appendChild(tr);
     switchStudentTab('tab2');
   }
 
-  function addBlankSpreadsheetRow() {
-    const date = document.getElementById('workoutDate').value || new Date().toISOString().split('T')[0];
-    const body = document.getElementById('editableSheetBody');
-    const rowId = Date.now();
-
-    const tr = document.createElement('tr');
-    tr.id = `row-${rowId}`;
-    tr.innerHTML = `
-      <td><input type="date" class="sheet-input" value="${date}"></td>
-      <td><input type="text" class="sheet-input" placeholder="Exercise name"></td>
-      <td>
-        <select class="sheet-select">
-          <option value="Muscular Strength">Muscular Strength</option>
-          <option value="Muscular Endurance">Muscular Endurance</option>
-          <option value="Cardiovascular Endurance">Cardiovascular Endurance</option>
-          <option value="Flexibility">Flexibility</option>
-        </select>
-      </td>
-      <td><input type="number" class="sheet-input" style="width:60px;" value="3"></td>
-      <td><input type="number" class="sheet-input" style="width:60px;" value="10"></td>
-      <td><input type="number" class="sheet-input" style="width:70px;" value="45"></td>
-      <td><button class="btn btn-danger" onclick="document.getElementById('row-${rowId}').remove()">✕</button></td>
-    `;
-    body.appendChild(tr);
-  }
-
   function saveSpreadsheetLog() {
-    if (!currentStudent) {
-      alert("Please log in with your name first.");
+    if (!currentUser) {
+      alert("Please log in first!");
       return;
     }
 
     const rows = document.querySelectorAll('#editableSheetBody tr');
     if (rows.length === 0) {
-      alert("No rows to commit.");
+      alert("No rows to commit!");
       return;
     }
 
-    let count = 0;
     rows.forEach(tr => {
-      const inputs = tr.querySelectorAll('input, select');
-      const date = inputs[0].value;
-      const exName = inputs[1].value.trim();
-      const comp = inputs[2].value;
-      const sets = Number(inputs[3].value);
-      const reps = Number(inputs[4].value);
-      const weight = Number(inputs[5].value);
+      const inputs = tr.querySelectorAll('.sheet-input, .sheet-select');
+      const entry = {
+        student: currentUser,
+        date: inputs[0].value,
+        exercise: inputs[1].value,
+        component: inputs[2].value,
+        sets: inputs[3].value,
+        reps: inputs[4].value,
+        weight: inputs[5].value
+      };
 
-      if (exName) {
-        studentsData[currentStudent].history.push({
-          date: date,
-          exercise: exName,
-          component: comp,
-          sets: sets,
-          reps: reps,
-          weight: weight
-        });
-        count++;
+      if (entry.exercise) {
+        db.users[currentUser].history.push(entry);
+        db.allLogs.push(entry);
       }
     });
 
-    saveAllData();
-    document.getElementById('editableSheetBody').innerHTML = '';
-    renderHistoryTable();
-    alert(`Successfully committed ${count} exercise logs to history!`);
+    saveDB();
+    document.getElementById('editableSheetBody').innerHTML = "";
+    alert("Workout committed to history!");
+    renderStudentData();
   }
 
-  function renderHistoryTable() {
-    const body = document.getElementById('historyTable');
-    body.innerHTML = '';
+  // HISTORY RENDER
+  function renderHistory() {
+    if (!currentUser) return;
+    const tbody = document.getElementById('historyTable');
+    tbody.innerHTML = "";
 
-    const list = studentsData[currentStudent]?.history || [];
-    list.forEach(log => {
+    const history = db.users[currentUser].history || [];
+    history.slice().reverse().forEach(log => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${log.date}</td>
@@ -1285,69 +1307,45 @@
         <td>${log.reps}</td>
         <td>${log.weight} lbs</td>
       `;
-      body.appendChild(tr);
+      tbody.appendChild(tr);
     });
   }
 
   // TEACHER DASHBOARD
   function renderTeacherDashboard() {
-    const studentKeys = Object.keys(studentsData);
-    document.getElementById('kpiStudents').textContent = studentKeys.length;
+    document.getElementById('kpiStudents').innerText = Object.keys(db.users).length;
+    document.getElementById('kpiLogs').innerText = db.allLogs.length;
 
-    let totalLogs = 0;
-    const body = document.getElementById('teacherLogsTable');
-    body.innerHTML = '';
+    const tbody = document.getElementById('teacherLogsTable');
+    tbody.innerHTML = "";
 
-    studentKeys.forEach(studentName => {
-      const logs = studentsData[studentName].history || [];
-      totalLogs += logs.length;
-
-      logs.forEach(log => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${studentName}</strong></td>
-          <td>${log.date}</td>
-          <td>${log.exercise}</td>
-          <td>${log.component}</td>
-          <td>${log.sets}</td>
-          <td>${log.reps}</td>
-          <td>${log.weight} lbs</td>
-        `;
-        body.appendChild(tr);
-      });
+    db.allLogs.slice().reverse().forEach(log => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${log.student}</strong></td>
+        <td>${log.date}</td>
+        <td>${log.exercise}</td>
+        <td>${log.component}</td>
+        <td>${log.sets}</td>
+        <td>${log.reps}</td>
+        <td>${log.weight} lbs</td>
+      `;
+      tbody.appendChild(tr);
     });
-
-    document.getElementById('kpiLogs').textContent = totalLogs;
-  }
-
-  function changeTeacherPassword() {
-    const current = prompt("Enter current teacher password:");
-    if (current === teacherPassword) {
-      const newPw = prompt("Enter new teacher password:");
-      if (newPw) {
-        teacherPassword = newPw;
-        alert("Password updated successfully!");
-      }
-    } else {
-      alert("Incorrect current password.");
-    }
-  }
-
-  function loadLearningTarget() {
-    const saved = localStorage.getItem('mpe_learningTarget');
-    if (saved) activeLearningTarget = saved;
-    document.getElementById('activeTargetBannerText').textContent = activeLearningTarget;
   }
 
   function updateLearningTarget() {
-    const input = document.getElementById('newLearningTarget').value.trim();
-    if (input) {
-      activeLearningTarget = input;
-      localStorage.setItem('mpe_learningTarget', activeLearningTarget);
-      document.getElementById('activeTargetBannerText').textContent = activeLearningTarget;
-      alert("Learning Target updated for all students!");
-    }
+    const val = document.getElementById('newLearningTarget').value.trim();
+    if (!val) return;
+    learningTarget = val;
+    updateLearningTargetUI();
+    alert("Learning Target updated for the class!");
+  }
+
+  function updateLearningTargetUI() {
+    document.getElementById('activeTargetBannerText').innerText = learningTarget;
   }
 </script>
+
 </body>
 </html>
