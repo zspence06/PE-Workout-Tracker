@@ -35,7 +35,7 @@
     }
 
     .container {
-      max-width: 1000px;
+      max-width: 1050px;
       margin: 0 auto;
     }
 
@@ -254,17 +254,24 @@
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: 12px;
-      margin-top: 10px;
+      margin-top: 15px;
     }
 
     .req-card {
-      padding: 10px 14px;
+      padding: 12px 14px;
       border-radius: 6px;
       font-weight: 600;
       display: flex;
+      flex-direction: column;
+      gap: 4px;
+      border: 1px solid var(--border);
+    }
+
+    .req-card-header {
+      display: flex;
       justify-content: space-between;
       align-items: center;
-      border: 1px solid var(--border);
+      font-size: 0.95rem;
     }
 
     .req-card.missing {
@@ -298,7 +305,7 @@
     /* MASTER WORKOUT PLANNER GRID */
     .ab-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
       gap: 20px;
     }
 
@@ -394,7 +401,9 @@
         <span id="progressPercentText" style="font-weight: 700; color: var(--primary);">0% Complete</span>
       </div>
       <p style="margin: 5px 0 10px 0; font-size: 0.85rem; color: var(--subtle);">
-        Your overall plan (A Day + B Day) requires a minimum of <strong>3 Upper Body, 3 Lower Body, and 3 Core exercises</strong>.
+        Each workout day requires a <strong>minimum of 6 total exercises</strong>:
+        <br>• <strong>Workout A:</strong> 4 Lower Body + 2 Core Exercises.
+        <br>• <strong>Workout B:</strong> 4 Upper Body + 2 Core Exercises.
       </p>
       
       <div class="progress-bar-container">
@@ -402,17 +411,32 @@
       </div>
 
       <div class="req-grid">
-        <div id="reqUpper" class="req-card missing">
-          <span>Upper Body (Min 3):</span>
-          <span id="countUpper">0 / 3 ❌</span>
+        <div id="reqALower" class="req-card missing">
+          <div class="req-card-header">
+            <span>🅰️ Workout A Lower Body (Min 4):</span>
+            <span id="countALower">0 / 4 ❌</span>
+          </div>
         </div>
-        <div id="reqLower" class="req-card missing">
-          <span>Lower Body (Min 3):</span>
-          <span id="countLower">0 / 3 ❌</span>
+
+        <div id="reqACore" class="req-card missing">
+          <div class="req-card-header">
+            <span>🅰️ Workout A Core (Min 2):</span>
+            <span id="countACore">0 / 2 ❌</span>
+          </div>
         </div>
-        <div id="reqCore" class="req-card missing">
-          <span>Core (Min 3):</span>
-          <span id="countCore">0 / 3 ❌</span>
+
+        <div id="reqBUpper" class="req-card missing">
+          <div class="req-card-header">
+            <span>🅱️ Workout B Upper Body (Min 4):</span>
+            <span id="countBUpper">0 / 4 ❌</span>
+          </div>
+        </div>
+
+        <div id="reqBCore" class="req-card missing">
+          <div class="req-card-header">
+            <span>🅱️ Workout B Core (Min 2):</span>
+            <span id="countBCore">0 / 2 ❌</span>
+          </div>
         </div>
       </div>
     </div>
@@ -448,8 +472,8 @@
         <div id="workoutDayGroup" class="form-group hidden">
           <label for="workoutDaySelect">Assign to Workout Day:</label>
           <select id="workoutDaySelect">
-            <option value="A">Workout A</option>
-            <option value="B">Workout B</option>
+            <option value="A">Workout A (Requires Lower Body & Core)</option>
+            <option value="B">Workout B (Requires Upper Body & Core)</option>
           </select>
         </div>
 
@@ -473,7 +497,7 @@
       </div>
     </div>
 
-    <!-- TAB 3: NEW FULL MASTER A/B WORKOUT PLANNER -->
+    <!-- TAB 3: FULL MASTER A/B WORKOUT PLANNER -->
     <div id="tab3" class="student-tab hidden">
       <div class="card">
         <h3>Full Master Workout Plan (A/B Schedule)</h3>
@@ -484,8 +508,9 @@
         <div class="ab-grid">
           <!-- A DAY COLUMN -->
           <div>
-            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px;">🅰️ Workout A</h4>
-            <div style="overflow-x: auto;">
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A (6 Exercises Total Required)</h4>
+            <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Lower Body + 2 Core</span>
+            <div style="overflow-x: auto; margin-top: 5px;">
               <table>
                 <thead>
                   <tr>
@@ -504,8 +529,9 @@
 
           <!-- B DAY COLUMN -->
           <div>
-            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px;">🅱️ Workout B</h4>
-            <div style="overflow-x: auto;">
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B (6 Exercises Total Required)</h4>
+            <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Upper Body + 2 Core</span>
+            <div style="overflow-x: auto; margin-top: 5px;">
               <table>
                 <thead>
                   <tr>
@@ -713,12 +739,15 @@
       { name: "Barbell Back Squat", cues: "Bar on upper traps, squat below parallel.", video: "https://www.youtube.com/results?search_query=barbell+back+squat" },
       { name: "Dumbbell Goblet Squat", cues: "Hold dumbbell at chest, squat deep.", video: "https://www.youtube.com/results?search_query=dumbbell+goblet+squat" },
       { name: "Kettlebell Swings", cues: "Hinge at hips, snap hips forward explosively.", video: "https://www.youtube.com/results?search_query=kettlebell+swing" },
-      { name: "Plyo Box Jumps", cues: "Soft landing in quarter squat, step down.", video: "https://www.youtube.com/results?search_query=plyo+box+jumps" }
+      { name: "Plyo Box Jumps", cues: "Soft landing in quarter squat, step down.", video: "https://www.youtube.com/results?search_query=plyo+box+jumps" },
+      { name: "Walking Lunges", cues: "Keep chest tall, lower back knee gently toward floor.", video: "https://www.youtube.com/results?search_query=walking+lunges+form" },
+      { name: "Romanian Deadlift", cues: "Hinge hips back, keep bar close to shins.", video: "https://www.youtube.com/results?search_query=romanian+deadlift+form" }
     ],
     core: [
       { name: "Forearm Plank", cues: "Elbows under shoulders, pull belly button to spine.", video: "https://www.youtube.com/results?search_query=forearm+plank" },
       { name: "Medicine Ball Russian Twists", cues: "V-sit position, rotate shoulders and ball side to side.", video: "https://www.youtube.com/results?search_query=medicine+ball+russian+twist" },
-      { name: "Hanging Knee Raises", cues: "Hang from rack bar, raise knees toward chest.", video: "https://www.youtube.com/results?search_query=hanging+knee+raises" }
+      { name: "Hanging Knee Raises", cues: "Hang from rack bar, raise knees toward chest.", video: "https://www.youtube.com/results?search_query=hanging+knee+raises" },
+      { name: "Ab Wheel Rollout", cues: "Brace core tightly, roll forward without sagging lower back.", video: "https://www.youtube.com/results?search_query=ab+wheel+rollout" }
     ]
   };
 
@@ -940,43 +969,52 @@
     alert(`${exName} added to Workout ${day}!`);
   }
 
-  // --- PROGRESS BAR & REQUIREMENTS ENGINE ---
+  // --- REVISED PROGRESS BAR & SPECIFIC REQUIREMENTS ENGINE ---
   function updateProgressUI() {
     if (!activeStudent || !studentRoutines[activeStudent]) {
-      setRequirementState('Upper', 0);
-      setRequirementState('Lower', 0);
-      setRequirementState('Core', 0);
+      setRequirementCard('ALower', 0, 4);
+      setRequirementCard('ACore', 0, 2);
+      setRequirementCard('BUpper', 0, 4);
+      setRequirementCard('BCore', 0, 2);
       updateProgressBar(0);
       return;
     }
 
     const items = studentRoutines[activeStudent];
-    const upperCount = items.filter(i => i.area === 'upper').length;
-    const lowerCount = items.filter(i => i.area === 'lower').length;
-    const coreCount = items.filter(i => i.area === 'core').length;
 
-    setRequirementState('Upper', upperCount);
-    setRequirementState('Lower', lowerCount);
-    setRequirementState('Core', coreCount);
+    // Calculate exact requirement counts
+    const aLowerCount = items.filter(i => (i.day || 'A') === 'A' && i.area === 'lower').length;
+    const aCoreCount  = items.filter(i => (i.day || 'A') === 'A' && i.area === 'core').length;
+    const bUpperCount = items.filter(i => i.day === 'B' && i.area === 'upper').length;
+    const bCoreCount  = items.filter(i => i.day === 'B' && i.area === 'core').length;
 
-    const targetUpper = Math.min(upperCount, 3);
-    const targetLower = Math.min(lowerCount, 3);
-    const targetCore = Math.min(coreCount, 3);
+    setRequirementCard('ALower', aLowerCount, 4);
+    setRequirementCard('ACore', aCoreCount, 2);
+    setRequirementCard('BUpper', bUpperCount, 4);
+    setRequirementCard('BCore', bCoreCount, 2);
 
-    const pct = Math.round(((targetUpper + targetLower + targetCore) / 9) * 100);
+    // Calculate weighted total progress percentage (Target = 12 total items)
+    const validALower = Math.min(aLowerCount, 4);
+    const validACore  = Math.min(aCoreCount, 2);
+    const validBUpper = Math.min(bUpperCount, 4);
+    const validBCore  = Math.min(bCoreCount, 2);
+
+    const totalValidExercises = validALower + validACore + validBUpper + validBCore;
+    const pct = Math.round((totalValidExercises / 12) * 100);
+    
     updateProgressBar(pct);
   }
 
-  function setRequirementState(type, count) {
-    const card = document.getElementById(`req${type}`);
-    const countLabel = document.getElementById(`count${type}`);
+  function setRequirementCard(reqKey, currentCount, targetCount) {
+    const card = document.getElementById(`req${reqKey}`);
+    const countLabel = document.getElementById(`count${reqKey}`);
 
-    if (count >= 3) {
+    if (currentCount >= targetCount) {
       card.className = 'req-card complete';
-      countLabel.textContent = `${count} / 3 ✔️`;
+      countLabel.textContent = `${currentCount} / ${targetCount} ✔️`;
     } else {
       card.className = 'req-card missing';
-      countLabel.textContent = `${count} / 3 ❌`;
+      countLabel.textContent = `${currentCount} / ${targetCount} ❌`;
     }
   }
 
@@ -1044,7 +1082,7 @@
         <td style="text-align: center;">
           <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleExerciseDone(${item.id})">
         </td>
-        <td><strong>${item.exercise}</strong></td>
+        <td><strong>${item.exercise}</strong> <br><small style="color:var(--subtle);">${item.area.toUpperCase()}</small></td>
         <td><input type="number" class="sheet-input" value="${item.sets || 3}" onchange="updateRoutineField(${item.id}, 'sets', this.value)" style="width:50px;"></td>
         <td><input type="text" class="sheet-input" value="${item.reps || 10}" onchange="updateRoutineField(${item.id}, 'reps', this.value)" style="width:50px;"></td>
         <td><input type="number" class="sheet-input" value="${item.weight || 0}" onchange="updateRoutineField(${item.id}, 'weight', this.value)" style="width:60px;"></td>
