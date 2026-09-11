@@ -274,22 +274,6 @@
       margin-top: 10px;
     }
 
-    .tag {
-      background-color: var(--accent-light);
-      color: var(--primary);
-      border: 1px solid var(--primary);
-      padding: 4px 10px;
-      border-radius: 16px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-    }
-
-    .tag:hover {
-      background-color: var(--primary);
-      color: #FFFFFF;
-    }
-
     .req-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -474,7 +458,7 @@
         </div>
         <div class="form-group" style="margin-bottom: 0;">
           <label>Assigned Class:</label>
-          <span id="activeClassBadge" class="class-badge">General PE</span>
+          <span id="activeClassBadge" class="class-badge">1st Hour</span>
         </div>
       </div>
     </div>
@@ -557,14 +541,14 @@
 
         <!-- STEP 3: Exercise Selection Dropdown -->
         <div id="exerciseGroup" class="dropdown-box hidden">
-          <label id="exerciseSelectLabel" for="exerciseSelect" style="font-weight: 700; color: var(--primary); display:block; margin-bottom:8px;">3. Select Exercise:</label>
+          <label id="exerciseSelectLabel" for="exerciseSelect" style="font-weight: 700; color: var(--primary); display:block; margin-bottom:8px;">3. Select Exercise (15 Choices + Custom Option):</label>
           <select id="exerciseSelect" onchange="handleExerciseSelect()"></select>
         </div>
 
         <!-- Custom Exercise Input -->
         <div id="customExerciseGroup" class="form-group hidden">
           <label for="customExerciseInput">Enter Custom Exercise Name:</label>
-          <input type="text" id="customExerciseInput" placeholder="e.g., Incline Dumbbell Flyes">
+          <input type="text" id="customExerciseInput" placeholder="e.g., Incline Cable Flyes">
         </div>
 
         <button id="previewBtn" class="btn btn-secondary hidden" onclick="openModal()" style="margin-bottom: 15px;">🔍 View Exercise Form Cues & Video</button>
@@ -588,16 +572,10 @@
         </div>
 
         <button id="addToRoutineBtn" class="btn btn-primary hidden" onclick="addToRoutine()">+ Add to Routine</button>
-
-        <div id="routineSavedBox" class="hidden" style="margin-top: 20px;">
-          <h4>Your Saved Exercises:</h4>
-          <p style="font-size: 0.85rem; color: var(--subtle);">Click any tag below to send directly to your active spreadsheet.</p>
-          <div id="routineTags" class="tag-container"></div>
-        </div>
       </div>
     </div>
 
-    <!-- TAB 3: FULL MASTER A/B WORKOUT PLANNER -->
+    <!-- TAB 3: MASTER A/B WORKOUT PLANNER -->
     <div id="tab3" class="student-tab hidden">
       <div class="card">
         <h3>Full Master Workout Plan (A/B Schedule)</h3>
@@ -768,7 +746,7 @@
       <div class="card">
         <h3>Class Invite Links & Access Setup</h3>
         <p style="color: var(--subtle); font-size: 0.9rem; margin-bottom: 20px;">
-          Share these links with your classes. Students will not need to select their period—opening their class link automatically assigns them to that hour and routes all logs directly into this central dashboard.
+          Share these links with your classes. Students opening their class link are automatically assigned to that hour and route all logs directly into this central dashboard.
         </p>
 
         <div class="class-card-grid">
@@ -839,28 +817,17 @@
   </div>
 </div>
 
-<!-- DAILY LEARNING TARGET POP-UP MODAL -->
-<div id="targetModal" class="modal-overlay hidden">
-  <div class="modal-content">
-    <h3 style="margin-top:0; color:var(--primary);">🎯 Today's Learning Target</h3>
-    <p id="targetModalBody" style="font-size: 1.1rem; line-height: 1.5; color: var(--text);"></p>
-    <div style="text-align: right; margin-top: 20px;">
-      <button class="btn btn-primary" onclick="closeTargetModal()">Got It!</button>
-    </div>
-  </div>
-</div>
-
 <script>
   let teacherPassword = "Spartans123";
   let currentStudent = "";
-  let assignedClassPeriod = "1st Hour"; // Default fallback if no class parameter in link
+  let assignedClassPeriod = "1st Hour";
   let studentLogs = [];
   let workoutA = [];
   let workoutB = [];
   let selectedCategory = "";
   let selectedMuscleGroupKey = "";
 
-  // EXPANDED EXERCISE DATABASE - ALL EXERCISES RESTORED
+  // COMPLETE EXERCISE DATABASE: EXACTLY 15 EXERCISES PER CATEGORY + CUSTOM OPTION
   const exerciseDB = {
     upper: {
       deltoids: {
@@ -924,10 +891,23 @@
         }
       },
       trapezius: {
-        name: "Trapezius (Traps & Upper Back)",
+        name: "Trapezius & Upper Back",
         exercises: {
           "Barbell Shrugs (Squat Rack)": { cues: "Lift bar from rack pins, shrug shoulders straight up to ears and hold.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
-          "Dumbbell Standing Shrugs": { cues: "Hold heavy dumbbells at sides, pull shoulders up vertically without rolling.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" }
+          "Dumbbell Standing Shrugs": { cues: "Hold heavy dumbbells at sides, pull shoulders up vertically without rolling.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
+          "TRX Low Row": { cues: "Face TRX anchor, keep body rigid, pull elbows back pinching shoulder blades.", video: "https://www.youtube.com/shorts/2z8JmcrW-As" },
+          "Pulldown Machine Lat Pulldown": { cues: "Wide grip on bar, pull down to upper chest while driving elbows down.", video: "https://www.youtube.com/shorts/CAwf7n6Luuc" },
+          "Barbell Bent-Over Row": { cues: "Hinge hips at 45 degrees, pull barbell to lower ribcage squeezing upper back.", video: "https://www.youtube.com/shorts/G8l_8chR5BE" },
+          "Dumbbell Single-Arm Row": { cues: "One knee on bench, pull dumbbell to hip keeping core steady.", video: "https://www.youtube.com/shorts/pYcpY20QaE8" },
+          "Bodyweight Pull-Ups (Overhand)": { cues: "Overhand grip slightly wider than shoulders, pull chest to bar.", video: "https://www.youtube.com/shorts/eGo4IYlbE5g" },
+          "TRX High Row": { cues: "Face anchor, pull handles to chest height flaring elbows out wide.", video: "https://www.youtube.com/shorts/2z8JmcrW-As" },
+          "Medicine Ball Overhead Throw Backwards": { cues: "Explosively hinge and throw heavy med ball over head behind you.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Seated Cable Machine Row": { cues: "Sit tall, pull cable handle to mid-torso driving elbows backward.", video: "https://www.youtube.com/shorts/G8l_8chR5BE" },
+          "Plyo Box Inverted Row": { cues: "Heels on box, pull chest up to bar suspended above.", video: "https://www.youtube.com/shorts/2z8JmcrW-As" },
+          "Dumbbell Incline Chest-Supported Row": { cues: "Lie face down on incline bench, pull dumbbells up squeezing traps.", video: "https://www.youtube.com/shorts/pYcpY20QaE8" },
+          "TRX Single-Arm Row": { cues: "Lean back using one TRX handle, pull chest up avoiding torso rotation.", video: "https://www.youtube.com/shorts/2z8JmcrW-As" },
+          "Squat Rack Barbell Rack Pulls": { cues: "Set pins above knees, pull barbell upright squeezing traps and upper back.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
+          "Pulldown Machine Straight-Arm Pushdown": { cues: "Keep arms straight, push cable bar down to thighs using lats and traps.", video: "https://www.youtube.com/shorts/CAwf7n6Luuc" }
         }
       }
     },
@@ -939,15 +919,37 @@
           "Dumbbell Goblet Squat": { cues: "Hold dumbbell vertical at chest, sink hips between knees.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
           "TRX Single-Leg Pistol Squat": { cues: "Hold TRX handles, extend one leg forward, squat deep on standing leg.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
           "Plyo Box Jump Overs": { cues: "Stand laterally to box, explosively jump sideways landing softly on balance.", video: "https://www.youtube.com/shorts/NBY9-kTUHEM" },
-          "Bodyweight Walking Lunges": { cues: "Step forward into 90 degree knees, drive off front heel to next step.", video: "https://www.youtube.com/shorts/D7Ka34I-JVA" }
+          "Bodyweight Walking Lunges": { cues: "Step forward into 90 degree knees, drive off front heel to next step.", video: "https://www.youtube.com/shorts/D7Ka34I-JVA" },
+          "Barbell Front Squat": { cues: "Rest bar on front deltoids, keep elbows high, squat low with upright torso.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
+          "Dumbbell Step-Ups on Plyo Box": { cues: "Step onto box driving through heel, extend knee fully at top.", video: "https://www.youtube.com/shorts/D7Ka34I-JVA" },
+          "TRX Assisted Squats": { cues: "Hold TRX, squat deep taking weight off knees using upper body support.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
+          "Bodyweight Jump Squats": { cues: "Squat down and explode vertically into air, soft land back into squat.", video: "https://www.youtube.com/shorts/NBY9-kTUHEM" },
+          "Barbell Box Squats": { cues: "Squat back onto box or bench, pause briefly without relaxing, drive up.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
+          "Dumbbell Bulgarian Split Squat": { cues: "Rear foot elevated on bench, drop back knee straight down, drive off front heel.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Medicine Ball Wall Balls": { cues: "Full squat with med ball, explode up throwing ball to target line on wall.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Bodyweight Reverse Lunges": { cues: "Step backward lowering back knee close to floor, step up forward.", video: "https://www.youtube.com/shorts/D7Ka34I-JVA" },
+          "Leg Press Machine Extension": { cues: "Feet mid-platform, lower weight smoothly to 90 degrees and press.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
+          "TRX Jump Squats": { cues: "Hold TRX straps, squat low and explode up utilizing handles for momentum.", video: "https://www.youtube.com/shorts/NBY9-kTUHEM" }
         }
       },
       hamstrings: {
         name: "Hamstrings & Glutes",
         exercises: {
           "Barbell Romanian Deadlift": { cues: "Hinge at hips, keep back flat, slide bar down thighs until hamstrings stretch.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
-          "Dumbbell Bulgarian Split Squat": { cues: "Rear foot elevated on bench, drop back knee straight down, drive off front heel.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
-          "TRX Hamstring Runner Curls": { cues: "Lie on back, heels in TRX loops, elevate hips and curl heels toward glutes.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" }
+          "TRX Hamstring Runner Curls": { cues: "Lie on back, heels in TRX loops, elevate hips and curl heels toward glutes.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Barbell Conventional Deadlift": { cues: "Feet hip-width, grip bar outside legs, drive through floor lifting with flat back.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Dumbbell Single-Leg Deadlift": { cues: "Balance on one leg, hinge forward extending opposite leg back behind.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Glute Bridge / Hip Thrust": { cues: "Upper back on bench, drive hips upward squeezing glutes at top.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Bodyweight Good Mornings": { cues: "Hands behind head, hinge hips backward keeping spine neutral, drive hips through.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Plyo Box Broad Jump to Step-Down": { cues: "Jump forward for maximum distance, land soft, step back.", video: "https://www.youtube.com/shorts/NBY9-kTUHEM" },
+          "Dumbbell Sumo Squat / Deadlift": { cues: "Wide stance, toes pointed out, lower dumbbell between legs and squeeze glutes.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
+          "TRX Hip Press": { cues: "Heels in TRX straps, press hips upward squeeze glutes and hamstrings.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Medicine Ball Kettlebell-Style Swings": { cues: "Hinge hips back, drive hips forward swinging med ball to chest height.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Lying Hamstring Leg Curl Machine": { cues: "Lie face down, flex knees curling weight towards glutes under control.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Dumbbell Walking Hip-Hinge Lunges": { cues: "Take long step, hinge torso forward slightly over front knee to load glutes.", video: "https://www.youtube.com/shorts/D7Ka34I-JVA" },
+          "Single-Leg Glute Bridge": { cues: "Lie on back, extend one leg up, drive off single heel lifting hips high.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Barbell Hip Thrust (Squat Rack Bench)": { cues: "Barbell resting on hips with pad, drive upper hips straight to ceiling.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Bodyweight Nordic Hamstring Curls": { cues: "Ankles anchored, lower body forward slowly using hamstrings to resist gravity.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" }
         }
       }
     },
@@ -958,7 +960,18 @@
           "Plank Hold": { cues: "Body in rigid straight line, squeeze glutes and brace core.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
           "Hanging Leg Raise": { cues: "Hang from bar, raise legs to 90 degrees without swinging.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
           "TRX Atomic Crunches": { cues: "Feet in TRX loops, perform plank into double knee tuck.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
-          "Medicine Ball Russian Twists": { cues: "Sit in V-hold, rotate med ball side to side touching floor.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" }
+          "Medicine Ball Russian Twists": { cues: "Sit in V-hold, rotate med ball side to side touching floor.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Bodyweight Abdominal Crunches": { cues: "Lower back flat on floor, lift shoulder blades squeezing upper abs.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "TRX Body Saw": { cues: "Forearm plank in TRX, slide body forward and backward keeping core locked.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Medicine Ball Woodchoppers": { cues: "Pivot feet, bring med ball diagonally across body from high to low.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Bodyweight Bicycle Crunches": { cues: "Alternate elbow to opposite knee while extending opposite leg straight.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Dumbbell Side Bend": { cues: "Hold weight in one hand, tilt torso laterally and pull back upright.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "TRX Mountain Climbers": { cues: "Feet suspended in straps, drive knees rapidly to chest in plank.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Medicine Ball Slam to Knee Tuck": { cues: "Slam ball down, quickly drop to plank and perform knee tuck.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Bodyweight Flutter Kicks": { cues: "Lie flat, hands under glutes, kick legs up and down alternate rhythm.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Hanging Windshield Wipers": { cues: "Hang from pull-up bar, raise feet high and rotate legs left and right.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
+          "Plank Up-Downs": { cues: "Transition smoothly from forearm plank up to push-up hand position.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Dumbbell Farmers Carry Walk": { cues: "Hold heavy dumbbells at sides, walk tall with rigid core and no slumping.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" }
         }
       }
     }
@@ -1373,10 +1386,6 @@
 
   function closeModal() {
     document.getElementById('cueModal').classList.add('hidden');
-  }
-
-  function closeTargetModal() {
-    document.getElementById('targetModal').classList.add('hidden');
   }
 </script>
 </body>
