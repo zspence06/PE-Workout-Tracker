@@ -395,6 +395,32 @@
       font-weight: 700;
       color: var(--primary);
     }
+
+    .submit-status {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      margin: 10px 0;
+    }
+    .submit-status.pending {
+      background-color: var(--danger-bg);
+      color: var(--danger);
+    }
+    .submit-status.submitted {
+      background-color: var(--success-bg);
+      color: var(--success);
+    }
+
+    .print-only { display: none; }
+    @media print {
+      .container, .modal-overlay { display: none !important; }
+      .print-only { display: block !important; }
+    }
+    .print-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; }
+    .print-page:last-of-type { page-break-after: auto; }
+    .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .print-table th, .print-table td { border: 1px solid #333; padding: 8px; text-align: left; }
+    .print-blank { min-width: 70px; height: 30px; }
   </style>
 </head>
 <body>
@@ -422,12 +448,14 @@
           <label for="studentName">Student Name:</label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="studentName" placeholder="e.g., Alex Smith">
+            <input type="text" id="studentPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" style="max-width: 110px;">
             <button class="btn btn-primary" onclick="loginStudent()">Log In / Register</button>
           </div>
+          <p style="font-size: 0.8rem; color: var(--subtle); margin: 4px 0 0;">First time? Type a new 4-digit PIN and it becomes yours. Forgot it? Ask your teacher to reset it.</p>
         </div>
         <div class="form-group" style="flex: 1; min-width: 200px;">
           <label for="workoutDate">Workout Date:</label>
-          <input type="date" id="workoutDate">
+          <input type="date" id="workoutDate" onchange="renderSubmitStatus()">
         </div>
       </div>
     </div>
@@ -553,11 +581,16 @@
     <!-- TAB 3: FULL MASTER A/B WORKOUT PLANNER -->
     <div id="tab3" class="student-tab hidden">
       <div class="card">
-        <h3>Full Master Workout Plan (A/B Schedule)</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <h3 style="margin:0;">Full Master Workout Plan (A/B Schedule)</h3>
+          <button class="btn btn-primary" onclick="printWorkoutPlan()">🖨️ Print Workout Plan</button>
+        </div>
         <p style="color: var(--subtle); font-size: 0.9rem;">
-          View and edit your complete routine. Check the box when completed today, or update your targets on the fly!
+          View and edit your complete routine. Check the box when completed today, or update your targets on the fly! The <strong>Last Time</strong> column shows what you need to beat.
         </p>
-        
+
+        <div id="submitStatusBar" class="submit-status pending">⏳ Not submitted yet.</div>
+
         <div class="ab-grid">
           <!-- A DAY COLUMN -->
           <div>
@@ -569,6 +602,7 @@
                   <tr>
                     <th>Done</th>
                     <th>Exercise</th>
+                    <th>Last Time</th>
                     <th>Sets</th>
                     <th>Reps</th>
                     <th>Lbs</th>
@@ -577,6 +611,10 @@
                 </thead>
                 <tbody id="workoutATable"></tbody>
               </table>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="submitWorkout('A')">✅ Submit Workout</button>
+              <button class="btn btn-danger" onclick="undoSubmitWorkout()">↩️ Undo Submit</button>
             </div>
           </div>
 
@@ -590,6 +628,7 @@
                   <tr>
                     <th>Done</th>
                     <th>Exercise</th>
+                    <th>Last Time</th>
                     <th>Sets</th>
                     <th>Reps</th>
                     <th>Lbs</th>
@@ -598,6 +637,10 @@
                 </thead>
                 <tbody id="workoutBTable"></tbody>
               </table>
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+              <button class="btn btn-primary" onclick="submitWorkout('B')">✅ Submit Workout</button>
+              <button class="btn btn-danger" onclick="undoSubmitWorkout()">↩️ Undo Submit</button>
             </div>
           </div>
         </div>
@@ -640,6 +683,7 @@
             <thead>
               <tr>
                 <th>Date</th>
+                <th>Workout</th>
                 <th>Exercise</th>
                 <th>Component</th>
                 <th>Sets</th>
@@ -682,6 +726,22 @@
       </div>
 
       <div class="card">
+        <h3>Manage Students</h3>
+        <p style="color: var(--subtle); font-size: 0.9rem;">Reset a student's PIN if they forget it.</p>
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Student Name</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="manageStudentsTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
         <h3>All Student Activity Logs</h3>
         <div style="overflow-x: auto;">
           <table>
@@ -689,6 +749,7 @@
               <tr>
                 <th>Student Name</th>
                 <th>Date</th>
+                <th>Workout</th>
                 <th>Exercise</th>
                 <th>Component</th>
                 <th>Sets</th>
@@ -738,10 +799,34 @@
   </div>
 </div>
 
-<script>
-  // TEACHER ACCESS CODE
-  let teacherPassword = "Spartans123";
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
+  const firebaseConfig = {
+    apiKey: "AIzaSyBYLwq1yaeITJYnVBE72CL-N0t309Ad6EA",
+    authDomain: "memorial-pe-tracker.firebaseapp.com",
+    projectId: "memorial-pe-tracker",
+    storageBucket: "memorial-pe-tracker.firebasestorage.app",
+    messagingSenderId: "375636936783",
+    appId: "1:375636936783:web:13c7a87bf540350944023a"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  window.db = getFirestore(app);
+  window.auth = getAuth(app);
+  window.fbDoc = doc;
+  window.fbGetDoc = getDoc;
+  window.fbSetDoc = setDoc;
+  window.fbUpdateDoc = updateDoc;
+  window.fbCollection = collection;
+  window.fbGetDocs = getDocs;
+  window.fbSignIn = signInWithEmailAndPassword;
+  window.fbUpdatePassword = updatePassword;
+</script>
+
+<script>
   // EXPANDED EXERCISE DATABASE - MINIMUM 10 TO 15 EXERCISES PER MUSCLE GROUP USING VARIED EQUIPMENT
   const exerciseDB = {
     upper: {
@@ -1040,7 +1125,18 @@
   let savedRoutines = [];
   let spreadsheetRows = [];
   let historyLogs = [];
+  let todaysSubmission = null;
   let currentLearningTarget = "Focus on explosive power and full range of motion.";
+
+  function studentDocId(name) {
+    return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  }
+
+  async function hashPin(pin, salt) {
+    let data = new TextEncoder().encode(salt + ":" + pin);
+    let hashBuffer = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
 
   window.onload = function() {
     let today = new Date().toISOString().split('T')[0];
@@ -1058,46 +1154,94 @@
     document.getElementById('targetModal').classList.remove('hidden');
   }
 
-  function switchRole(role, evt) {
+  async function switchRole(role, evt) {
     document.querySelectorAll('.main-nav-btn').forEach(b => b.classList.remove('active'));
     evt.target.classList.add('active');
 
     if(role === 'studentView') {
       document.getElementById('studentView').classList.remove('hidden');
       document.getElementById('teacherView').classList.add('hidden');
-    } else {
-      let pass = prompt("Enter Teacher Password:", "");
-      if(pass === teacherPassword) {
-        document.getElementById('studentView').classList.add('hidden');
-        document.getElementById('teacherView').classList.remove('hidden');
-        renderTeacherLogs();
-      } else {
-        alert("Incorrect password!");
-        document.getElementById('navStudentBtn').classList.add('active');
-        document.getElementById('navTeacherBtn').classList.remove('active');
-      }
+      return;
+    }
+
+    let email = prompt("Teacher email:", "");
+    if(!email) { resetToStudentNav(); return; }
+    let password = prompt("Teacher password:", "");
+    if(!password) { resetToStudentNav(); return; }
+
+    try {
+      await fbSignIn(auth, email, password);
+      document.getElementById('studentView').classList.add('hidden');
+      document.getElementById('teacherView').classList.remove('hidden');
+      await renderTeacherLogs();
+    } catch(err) {
+      alert("Login failed: " + err.message);
+      resetToStudentNav();
     }
   }
 
-  function loginStudent() {
+  function resetToStudentNav() {
+    document.getElementById('navStudentBtn').classList.add('active');
+    document.getElementById('navTeacherBtn').classList.remove('active');
+  }
+
+  async function loginStudent() {
     let nameInput = document.getElementById('studentName').value.trim();
+    let pinInput = document.getElementById('studentPin').value.trim();
     if(!nameInput) {
       alert("Please enter a student name.");
       return;
     }
-    currentUser = nameInput;
-    alert("Welcome, " + currentUser + "! Your workspace is ready.");
-    
-    // Check local storage for user state
-    let saved = localStorage.getItem("pe_data_" + currentUser);
-    if(saved) {
-      let data = JSON.parse(saved);
+    if(!/^\d{4}$/.test(pinInput)) {
+      alert("Please enter a 4-digit PIN.");
+      return;
+    }
+
+    let docId = studentDocId(nameInput);
+    if(!docId) {
+      alert("Please enter a valid name.");
+      return;
+    }
+    let ref = fbDoc(db, "students", docId);
+    let hash = await hashPin(pinInput, docId);
+    let snap;
+    try {
+      snap = await fbGetDoc(ref);
+    } catch(err) {
+      alert("Couldn't reach the server — check your internet connection and try again.");
+      return;
+    }
+
+    if(snap.exists()) {
+      let data = snap.data();
+      if(data.pinHash !== hash) {
+        alert("Incorrect PIN for " + data.name + ". Ask your teacher to reset it if you forgot.");
+        return;
+      }
+      currentUser = data.name;
       savedRoutines = data.routines || [];
       historyLogs = data.history || [];
-      renderSavedTags();
-      renderHistoryTable();
-      renderMasterWorkoutPlan();
+      todaysSubmission = data.submission || null;
+      alert("Welcome back, " + currentUser + "!");
+    } else {
+      currentUser = nameInput;
+      savedRoutines = [];
+      historyLogs = [];
+      todaysSubmission = null;
+      try {
+        await fbSetDoc(ref, { name: currentUser, pinHash: hash, routines: [], history: [], submission: null });
+      } catch(err) {
+        alert("Couldn't create your account — check your internet connection and try again.");
+        currentUser = null;
+        return;
+      }
+      alert(`Welcome, ${currentUser}! Your PIN is ${pinInput} — remember it, you'll need it to log back in on any device.`);
     }
+
+    renderSavedTags();
+    renderHistoryTable();
+    renderMasterWorkoutPlan();
+    renderSubmitStatus();
     updateProgressUI();
   }
 
@@ -1221,7 +1365,8 @@
       component: comp,
       sets: 3,
       reps: 10,
-      lbs: 0
+      lbs: 0,
+      done: false
     };
 
     savedRoutines.push(item);
@@ -1257,10 +1402,17 @@
     bodyB.innerHTML = "";
 
     savedRoutines.forEach(r => {
+      let last = getLastPerformance(r.name);
+      let lastCell = last
+        ? `${last.sets}×${last.reps} @ ${last.lbs}lbs<br><span style="font-size:0.7rem; color:var(--subtle);">${formatDateShort(last.date)}</span>`
+        : `<span style="color:var(--subtle);">—</span>`;
+
       let tr = document.createElement('tr');
+      if(r.done) tr.classList.add('completed-row');
       tr.innerHTML = `
-        <td><input type="checkbox" onchange="toggleCompleteRow(this)"></td>
+        <td><input type="checkbox" ${r.done ? 'checked' : ''} onchange="r.done=this.checked; toggleCompleteRow(this); saveUserData();"></td>
         <td><strong>${r.name}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${r.component}</span></td>
+        <td>${lastCell}</td>
         <td><input type="number" class="sheet-input" value="${r.sets}" onchange="r.sets=this.value"></td>
         <td><input type="number" class="sheet-input" value="${r.reps}" onchange="r.reps=this.value"></td>
         <td><input type="number" class="sheet-input" value="${r.lbs}" onchange="r.lbs=this.value"></td>
@@ -1273,6 +1425,62 @@
         bodyB.appendChild(tr);
       }
     });
+  }
+
+  function getLastPerformance(exerciseName) {
+    if(!exerciseName) return null;
+    let name = exerciseName.trim().toLowerCase();
+    let matches = historyLogs.filter(h => (h.exercise || "").trim().toLowerCase() === name);
+    if(matches.length === 0) return null;
+    matches.sort((a, b) => b.date.localeCompare(a.date));
+    return matches[0];
+  }
+
+  function getLastLogForDay(exerciseName, date) {
+    let name = (exerciseName || "").trim().toLowerCase();
+    return historyLogs.find(h => h.date === date && (h.exercise || "").trim().toLowerCase() === name);
+  }
+
+  function formatDateShort(iso) {
+    let parts = (iso || "").split("-");
+    if(parts.length !== 3) return iso || "";
+    return `${parseInt(parts[1])}/${parseInt(parts[2])}`;
+  }
+
+  function printWorkoutPlan() {
+    let sheet = document.getElementById('printSheet');
+    sheet.innerHTML =
+      buildPrintableDay("A", "Workout A", "Requires 4 Lower Body + 2 Core") +
+      buildPrintableDay("B", "Workout B", "Requires 4 Upper Body + 2 Core");
+    window.print();
+  }
+
+  function buildPrintableDay(day, title, subtitle) {
+    let rows = savedRoutines.filter(r => r.day === day);
+    let rowsHtml = rows.map(r => {
+      let last = getLastPerformance(r.name);
+      let lastText = last ? `${last.sets} x ${last.reps} @ ${last.lbs} lbs (${formatDateShort(last.date)})` : "First time";
+      return `
+        <tr>
+          <td>${r.name}</td>
+          <td>${lastText}</td>
+          <td class="print-blank"></td>
+          <td class="print-blank"></td>
+          <td class="print-blank"></td>
+        </tr>`;
+    }).join("");
+
+    return `
+      <div class="print-page">
+        <h2>${title} — ${currentUser || "________________"}</h2>
+        <p>${subtitle}</p>
+        <table class="print-table">
+          <thead>
+            <tr><th>Exercise</th><th>Last Time (beat this)</th><th>Sets</th><th>Reps</th><th>Lbs</th></tr>
+          </thead>
+          <tbody>${rowsHtml || '<tr><td colspan="5">No exercises added yet.</td></tr>'}</tbody>
+        </table>
+      </div>`;
   }
 
   function toggleCompleteRow(cb) {
@@ -1351,6 +1559,30 @@
     renderSpreadsheet();
   }
 
+  function commitRowsToHistory(rows) {
+    let seen = new Set();
+    for(let row of rows) {
+      let key = row.date + "||" + (row.exercise || "").trim().toLowerCase();
+      if(seen.has(key)) {
+        alert(`"${row.exercise}" is on the log twice for ${row.date}. Each exercise can only be logged once per day — remove the duplicate and try again.`);
+        return false;
+      }
+      seen.add(key);
+    }
+    for(let row of rows) {
+      if(getLastLogForDay(row.exercise, row.date)) {
+        alert(`"${row.exercise}" was already logged for ${row.date}. Each exercise can only be logged once per day.`);
+        return false;
+      }
+    }
+
+    historyLogs.push(...rows);
+    saveUserData();
+    renderHistoryTable();
+    updateKPIs();
+    return true;
+  }
+
   function saveSpreadsheetLog() {
     if(!currentUser) {
       alert("Please log in with student name.");
@@ -1361,13 +1593,80 @@
       return;
     }
 
-    historyLogs.push(...spreadsheetRows);
+    if(!commitRowsToHistory(spreadsheetRows)) return;
+
     spreadsheetRows = [];
     renderSpreadsheet();
+    alert("Workout logs committed successfully to History!");
+  }
+
+  function submitWorkout(day) {
+    if(!currentUser) {
+      alert("Please log in with student name first.");
+      return;
+    }
+
+    let items = savedRoutines.filter(r => r.day === day);
+    if(items.length === 0) {
+      alert(`Add exercises to Workout ${day} before submitting.`);
+      return;
+    }
+    if(items.some(r => !r.done)) {
+      alert(`You haven't checked off all your Workout ${day} exercises as Done yet. Finish your workout, or set sets/reps to 0 for anything you skipped, check it off, then submit.`);
+      return;
+    }
+
+    let dateVal = document.getElementById('workoutDate').value;
+    let rows = items.map(r => ({
+      date: dateVal, exercise: r.name, component: r.component,
+      sets: r.sets, reps: r.reps, lbs: r.lbs, day: day
+    }));
+
+    if(!commitRowsToHistory(rows)) return;
+
+    todaysSubmission = { date: dateVal, day: day, exercises: items.map(r => r.name) };
+    saveUserData();
+    renderSubmitStatus();
+    alert(`Workout ${day} submitted! Your teacher can now see it.`);
+  }
+
+  function undoSubmitWorkout() {
+    if(!todaysSubmission) {
+      alert("Nothing to undo — you haven't submitted a workout yet today.");
+      return;
+    }
+    let dateVal = document.getElementById('workoutDate').value;
+    if(todaysSubmission.date !== dateVal) {
+      alert("You can only undo today's submission, not a past day.");
+      return;
+    }
+    if(!confirm(`Undo your Workout ${todaysSubmission.day} submission for ${formatDateShort(todaysSubmission.date)}? This removes it from your history.`)) {
+      return;
+    }
+
+    let names = new Set(todaysSubmission.exercises.map(n => n.trim().toLowerCase()));
+    historyLogs = historyLogs.filter(h => !(h.date === todaysSubmission.date && names.has((h.exercise || "").trim().toLowerCase())));
+
+    todaysSubmission = null;
     saveUserData();
     renderHistoryTable();
     updateKPIs();
-    alert("Workout logs committed successfully to History!");
+    renderSubmitStatus();
+    alert("Submission undone. Fix your workout and resubmit when ready.");
+  }
+
+  function renderSubmitStatus() {
+    let bar = document.getElementById('submitStatusBar');
+    if(!bar) return;
+    let dateVal = document.getElementById('workoutDate').value;
+
+    if(todaysSubmission && todaysSubmission.date === dateVal) {
+      bar.className = "submit-status submitted";
+      bar.innerHTML = `✅ Workout ${todaysSubmission.day} submitted for ${formatDateShort(dateVal)} — your teacher can see it.`;
+    } else {
+      bar.className = "submit-status pending";
+      bar.innerHTML = `⏳ Not submitted yet for ${formatDateShort(dateVal)}.`;
+    }
   }
 
   function renderHistoryTable() {
@@ -1377,6 +1676,7 @@
       let tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${h.date}</td>
+        <td>${h.day || "—"}</td>
         <td><strong>${h.exercise}</strong></td>
         <td>${h.component}</td>
         <td>${h.sets}</td>
@@ -1420,11 +1720,12 @@
 
   function saveUserData() {
     if(!currentUser) return;
-    let data = {
+    let ref = fbDoc(db, "students", studentDocId(currentUser));
+    fbUpdateDoc(ref, {
       routines: savedRoutines,
-      history: historyLogs
-    };
-    localStorage.setItem("pe_data_" + currentUser, JSON.stringify(data));
+      history: historyLogs,
+      submission: todaysSubmission
+    }).catch(err => console.error("Save failed:", err));
   }
 
   function switchStudentTab(tabId, evt) {
@@ -1455,41 +1756,71 @@
     alert("Learning target updated for class.");
   }
 
-  function renderTeacherLogs() {
+  async function renderTeacherLogs() {
     let tbody = document.getElementById('teacherLogsTable');
+    let studentsBody = document.getElementById('manageStudentsTable');
     tbody.innerHTML = "";
-    
-    // Scan local storage for all student records
+    studentsBody.innerHTML = "";
+
     let totalLogsCount = 0;
-    let studentSet = new Set();
-
-    for(let i=0; i<localStorage.length; i++) {
-      let key = localStorage.key(i);
-      if(key.startsWith("pe_data_")) {
-        let name = key.replace("pe_data_", "");
-        studentSet.add(name);
-        let data = JSON.parse(localStorage.getItem(key));
-        let hLogs = data.history || [];
-        totalLogsCount += hLogs.length;
-
-        hLogs.forEach(h => {
-          let tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><strong>${name}</strong></td>
-            <td>${h.date}</td>
-            <td>${h.exercise}</td>
-            <td>${h.component}</td>
-            <td>${h.sets}</td>
-            <td>${h.reps}</td>
-            <td>${h.lbs} lbs</td>
-          `;
-          tbody.appendChild(tr);
-        });
-      }
+    let snap;
+    try {
+      snap = await fbGetDocs(fbCollection(db, "students"));
+    } catch(err) {
+      alert("Couldn't load student data: " + err.message);
+      return;
     }
 
-    document.getElementById('kpiStudents').innerText = studentSet.size;
+    snap.forEach(docSnap => {
+      let data = docSnap.data();
+      let name = data.name || docSnap.id;
+      let hLogs = data.history || [];
+      totalLogsCount += hLogs.length;
+
+      hLogs.forEach(h => {
+        let tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${name}</strong></td>
+          <td>${h.date}</td>
+          <td>${h.day || "—"}</td>
+          <td>${h.exercise}</td>
+          <td>${h.component}</td>
+          <td>${h.sets}</td>
+          <td>${h.reps}</td>
+          <td>${h.lbs} lbs</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      let str = document.createElement('tr');
+      str.innerHTML = `
+        <td><strong>${name}</strong></td>
+        <td><button class="btn btn-danger" onclick="resetStudentPin('${docSnap.id}')">Reset PIN</button></td>
+      `;
+      studentsBody.appendChild(str);
+    });
+
+    document.getElementById('kpiStudents').innerText = snap.size;
     document.getElementById('kpiLogs').innerText = totalLogsCount;
+  }
+
+  async function resetStudentPin(studentId) {
+    let ref = fbDoc(db, "students", studentId);
+    try {
+      let snap = await fbGetDoc(ref);
+      if(!snap.exists()) { alert("Student not found."); return; }
+      let name = snap.data().name || studentId;
+
+      let newPin = prompt(`New 4-digit PIN for ${name}:`);
+      if(!newPin) return;
+      if(!/^\d{4}$/.test(newPin)) { alert("PIN must be exactly 4 digits."); return; }
+
+      let hash = await hashPin(newPin, studentId);
+      await fbUpdateDoc(ref, { pinHash: hash });
+      alert(`${name}'s PIN has been reset to ${newPin}. Let them know.`);
+    } catch(err) {
+      alert("Couldn't reset PIN: " + err.message);
+    }
   }
 
   function updateKPIs() {
@@ -1498,14 +1829,19 @@
     }
   }
 
-  function changeTeacherPassword() {
+  async function changeTeacherPassword() {
     let newP = prompt("Enter new teacher password:");
-    if(newP) {
-      teacherPassword = newP;
+    if(!newP) return;
+    try {
+      await fbUpdatePassword(auth.currentUser, newP);
       alert("Password updated.");
+    } catch(err) {
+      alert("Couldn't update password: " + err.message + "\n\nTry logging out and back into the Teacher Dashboard first, then retry — Firebase requires a recent login to change your password.");
     }
   }
 </script>
+
+<div id="printSheet" class="print-only"></div>
 
 </body>
 </html>
