@@ -6,19 +6,19 @@
   <title>Memorial PE Workout Tracker</title>
   <style>
     :root {
-      --primary: #18453B;
-      --primary-hover: #11332B;
-      --accent: #215D50;
-      --accent-light: #E8F0EE;
-      --bg: #F1F5F9;
-      --card-bg: #FFFFFF;
-      --text: #0F172A;
-      --subtle: #475569;
-      --border: #CBD5E1;
-      --danger: #DC2626;
-      --danger-bg: #FEE2E2;
-      --success: #16A34A;
-      --success-bg: #DCFCE7;
+      --primary: #18453B;          /* Spartan Green */
+      --primary-hover: #11332B;   /* Darker Spartan Green */
+      --accent: #215D50;          /* Secondary Spartan Green Accent */
+      --accent-light: #E8F0EE;    /* Subtle Tint Green */
+      --bg: #F1F5F9;              /* Slate Light Grey Background */
+      --card-bg: #FFFFFF;          /* White Card Background */
+      --text: #0F172A;            /* Dark Charcoal Text */
+      --subtle: #475569;          /* Medium Dark Grey */
+      --border: #CBD5E1;          /* Border Grey */
+      --danger: #DC2626;          /* Red Action / Alert */
+      --danger-bg: #FEE2E2;       /* Soft Red Highlight */
+      --success: #16A34A;         /* Success Green */
+      --success-bg: #DCFCE7;      /* Soft Green Highlight */
     }
 
     * {
@@ -190,6 +190,7 @@
       display: none !important;
     }
 
+    /* BUTTON GRID STYLING FOR MUSCLE GROUPS */
     .muscle-group-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -347,6 +348,12 @@
       gap: 20px;
     }
 
+    .completed-row {
+      background-color: #F0FDF4 !important;
+      text-decoration: line-through;
+      opacity: 0.7;
+    }
+
     .modal-overlay {
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -420,6 +427,17 @@
       margin-top: 6px;
       min-height: 18px;
     }
+
+    .class-badge {
+      display: inline-block;
+      background-color: var(--accent-light);
+      color: var(--primary);
+      font-weight: 700;
+      padding: 6px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--primary);
+      font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
@@ -442,25 +460,21 @@
   <!-- STUDENT VIEW -->
   <div id="studentView">
     <div class="card">
-      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <div class="form-group" style="flex: 1; min-width: 200px;">
+      <div style="display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-end;">
+        <div class="form-group" style="flex: 2; min-width: 250px; margin-bottom: 0;">
           <label for="studentName">Student Name:</label>
           <div style="display: flex; gap: 8px;">
             <input type="text" id="studentName" placeholder="e.g., Alex Smith">
             <button class="btn btn-primary" onclick="loginStudent()">Log In / Register</button>
           </div>
         </div>
-        <div class="form-group" style="flex: 1; min-width: 180px;">
-          <label for="studentClassSelect">Class Period:</label>
-          <select id="studentClassSelect">
-            <option value="1st Hour">1st Hour</option>
-            <option value="3rd Hour">3rd Hour</option>
-            <option value="7th Hour">7th Hour</option>
-          </select>
-        </div>
-        <div class="form-group" style="flex: 1; min-width: 180px;">
+        <div class="form-group" style="flex: 1; min-width: 180px; margin-bottom: 0;">
           <label for="workoutDate">Workout Date:</label>
           <input type="date" id="workoutDate">
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label>Assigned Class:</label>
+          <span id="activeClassBadge" class="class-badge">General PE</span>
         </div>
       </div>
     </div>
@@ -524,6 +538,7 @@
       <div class="card">
         <h3>Exercise Selector & Form Cues</h3>
         
+        <!-- STEP 1: Target Area -->
         <div class="form-group">
           <label for="targetArea">1. Select Target Area:</label>
           <select id="targetArea" onchange="handleTargetAreaChange()">
@@ -534,14 +549,22 @@
           </select>
         </div>
 
+        <!-- STEP 2: Muscle Group Button Grid -->
         <div id="muscleGroupContainer" class="form-group hidden">
           <label>2. Choose Specific Muscle Group:</label>
           <div id="muscleGroupGrid" class="muscle-group-grid"></div>
         </div>
 
+        <!-- STEP 3: Exercise Selection Dropdown -->
         <div id="exerciseGroup" class="dropdown-box hidden">
           <label id="exerciseSelectLabel" for="exerciseSelect" style="font-weight: 700; color: var(--primary); display:block; margin-bottom:8px;">3. Select Exercise:</label>
           <select id="exerciseSelect" onchange="handleExerciseSelect()"></select>
+        </div>
+
+        <!-- Custom Exercise Input -->
+        <div id="customExerciseGroup" class="form-group hidden">
+          <label for="customExerciseInput">Enter Custom Exercise Name:</label>
+          <input type="text" id="customExerciseInput" placeholder="e.g., Incline Dumbbell Flyes">
         </div>
 
         <button id="previewBtn" class="btn btn-secondary hidden" onclick="openModal()" style="margin-bottom: 15px;">🔍 View Exercise Form Cues & Video</button>
@@ -578,7 +601,12 @@
     <div id="tab3" class="student-tab hidden">
       <div class="card">
         <h3>Full Master Workout Plan (A/B Schedule)</h3>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          View and edit your complete routine. Check the box when completed today, or update your targets on the fly!
+        </p>
+        
         <div class="ab-grid">
+          <!-- A DAY COLUMN -->
           <div>
             <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A (6 Exercises Total Required)</h4>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Lower Body + 2 Core</span>
@@ -599,6 +627,7 @@
             </div>
           </div>
 
+          <!-- B DAY COLUMN -->
           <div>
             <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B (6 Exercises Total Required)</h4>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Upper Body + 2 Core</span>
@@ -739,7 +768,7 @@
       <div class="card">
         <h3>Class Invite Links & Access Setup</h3>
         <p style="color: var(--subtle); font-size: 0.9rem; margin-bottom: 20px;">
-          Share these links or codes with your classes. When students open a class-specific link, their class period will auto-select upon login. All student logs feed directly into the central Teacher Dashboard above.
+          Share these links with your classes. Students will not need to select their period—opening their class link automatically assigns them to that hour and routes all logs directly into this central dashboard.
         </p>
 
         <div class="class-card-grid">
@@ -810,28 +839,95 @@
   </div>
 </div>
 
+<!-- DAILY LEARNING TARGET POP-UP MODAL -->
+<div id="targetModal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color:var(--primary);">🎯 Today's Learning Target</h3>
+    <p id="targetModalBody" style="font-size: 1.1rem; line-height: 1.5; color: var(--text);"></p>
+    <div style="text-align: right; margin-top: 20px;">
+      <button class="btn btn-primary" onclick="closeTargetModal()">Got It!</button>
+    </div>
+  </div>
+</div>
+
 <script>
   let teacherPassword = "Spartans123";
   let currentStudent = "";
+  let assignedClassPeriod = "1st Hour"; // Default fallback if no class parameter in link
   let studentLogs = [];
   let workoutA = [];
   let workoutB = [];
-  let savedRoutine = [];
+  let selectedCategory = "";
+  let selectedMuscleGroupKey = "";
 
+  // EXPANDED EXERCISE DATABASE - ALL EXERCISES RESTORED
   const exerciseDB = {
     upper: {
       deltoids: {
         name: "Deltoids (Shoulders)",
         exercises: {
           "Squat Rack Overhead Press": { cues: "Unrack bar at chest, brace core, press straight up with head clearance.", video: "https://www.youtube.com/shorts/2yjwXTZQDDI" },
-          "Dumbbell Lateral Raise": { cues: "Slight bend in elbows, lead with elbows, control downward motion.", video: "https://www.youtube.com/shorts/3VcKaXpzqRo" }
+          "Dumbbell Lateral Raise": { cues: "Slight bend in elbows, lead with elbows, control downward motion.", video: "https://www.youtube.com/shorts/3VcKaXpzqRo" },
+          "TRX Y-Flyes": { cues: "Lean back on TRX, keep arms straight, pull body up into a 'Y' shape squeezing shoulders.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
+          "Medicine Ball Overhead Slam": { cues: "Raise med ball overhead with extended arms, slam powerfully down near toes.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Bodyweight Pike Push-Ups": { cues: "Elevate hips high in downward dog position, lower forehead toward floor.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "TRX Rear Delt Flyes": { cues: "Facing anchor point, pull handles apart laterally while keeping elbows soft.", video: "https://www.youtube.com/shorts/0Xp3uJ2T08s" },
+          "Seated Dumbbell Shoulder Press": { cues: "Keep back flat on bench, press dumbbells upward until extended overhead.", video: "https://www.youtube.com/shorts/qEwKCR5JCog" },
+          "Arnold Dumbbell Press": { cues: "Start palms facing you, rotate wrists out as you overhead press.", video: "https://www.youtube.com/shorts/6Z15_WdXmVw" },
+          "Pulldown Machine Face Pulls": { cues: "Attach rope to pulley, pull rope towards forehead flaring elbows high.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
+          "Dumbbell Front Raise": { cues: "Raise dumbbells to eye level in front of body with soft elbows.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Bodyweight Feet-Elevated Pike Push-Up": { cues: "Place feet on plyo box, hips over shoulders, lower top of head to ground.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "Dumbbell Bent-Over Rear Delt Fly": { cues: "Hinge at waist, raise weights laterally keeping shoulder blades relaxed.", video: "https://www.youtube.com/shorts/0Xp3uJ2T08s" },
+          "Squat Rack Push Press": { cues: "Dip knees slightly in rack position and drive upwards overhead with legs.", video: "https://www.youtube.com/shorts/iaBf1A377-w" },
+          "Medicine Ball Single-Arm Overhead Press": { cues: "Hold heavy med ball at shoulder, press upward bracing core anti-laterally.", video: "https://www.youtube.com/shorts/4L_P0jL61I4" },
+          "TRX Overhead Shoulder Press": { cues: "Face away from anchor, lean forward on TRX straps and press arms overhead.", video: "https://www.youtube.com/shorts/8JkP_5Kj4tA" }
         }
       },
       pectorals: {
         name: "Pectorals (Chest)",
         exercises: {
-          "Barbell Bench Press": { cues: "Feet flat, retract shoulder blades, lower bar to mid-chest and drive up.", video: "https://www.youtube.com/shorts/vcBig73ojpE" },
-          "Incline Dumbbell Press": { cues: "Set bench 30-45 degrees, press dumbbells upward squeezing upper chest.", video: "https://www.youtube.com/shorts/8iPEnn-ltC8" }
+          "Squat Rack Barbell Bench Press": { cues: "Feet flat, retract shoulder blades, lower bar to mid-chest and drive up.", video: "https://www.youtube.com/shorts/vcBig73ojpE" },
+          "Incline Dumbbell Chest Press": { cues: "Set bench 30-45 degrees, press dumbbells upward squeezing upper chest.", video: "https://www.youtube.com/shorts/8iPEnn-ltC8" },
+          "TRX Suspension Chest Press": { cues: "Face away from anchor, maintain rigid plank, press away from handles.", video: "https://www.youtube.com/shorts/Iwe6AmxVf7o" },
+          "Bodyweight Push-Ups": { cues: "Rigid plank position, lower chest near floor with elbows at 45 degrees.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "Plyo Box Feet-Elevated Push-Ups": { cues: "Feet on plyo box, hands on floor, lower chest into deep push-up.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "Medicine Ball Chest Pass Slam": { cues: "Explosively push med ball away from chest against solid wall.", video: "https://www.youtube.com/shorts/0U35dI4J4S4" },
+          "Dumbbell Flat Chest Flyes": { cues: "Lie flat, open arms wide with soft elbows, sweep weights together above chest.", video: "https://www.youtube.com/shorts/eozdVDA78K0" },
+          "TRX Chest Flyes": { cues: "Lean forward on TRX, spread arms wide in arc motion, squeeze chest to return.", video: "https://www.youtube.com/shorts/Iwe6AmxVf7o" },
+          "Bodyweight Dip Station Chest Dips": { cues: "Lean torso forward 30 degrees, lower body until elbows reach 90 degrees.", video: "https://www.youtube.com/shorts/2z8JmcrW-As" },
+          "Flat Dumbbell Press": { cues: "Lower dumbbells until elbows parallel with torso, press straight up.", video: "https://www.youtube.com/shorts/VmB1G1K7v94" },
+          "Plyo Box Hands-Elevated Push-Ups": { cues: "Hands on box, perform push-ups to scale intensity while maintaining form.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "Medicine Ball Push-Ups": { cues: "One or both hands on medicine ball, perform push-up for core and chest stability.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "Squat Rack Incline Barbell Press": { cues: "Barbell un-racked at incline, lower smoothly to upper collarbone.", video: "https://www.youtube.com/shorts/SrqOu55lrYU" },
+          "Single-Arm Dumbbell Bench Press": { cues: "Lie on bench, press single dumbbell up while bracing core to prevent twisting.", video: "https://www.youtube.com/shorts/VmB1G1K7v94" },
+          "TRX Atomic Push-Ups": { cues: "Feet suspended in TRX straps, perform push-up followed by knee tuck.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" }
+        }
+      },
+      arms: {
+        name: "Biceps & Triceps (Arms)",
+        exercises: {
+          "Barbell Bicep Curl (Squat Rack)": { cues: "Stand tall with bar, keep elbows pinned to sides, curl smoothly up.", video: "https://www.youtube.com/shorts/kwG2ipFRgfo" },
+          "Dumbbell Hammer Curls": { cues: "Palms facing each other, curl dumbbells to target brachialis and biceps.", video: "https://www.youtube.com/shorts/CFBZ4jN1CMI" },
+          "TRX Bicep Curls": { cues: "Face TRX anchor, lean back, keep elbows high and curl handles to forehead.", video: "https://www.youtube.com/shorts/Jvj2wV0vOYU" },
+          "TRX Overhead Tricep Extensions": { cues: "Face away from anchor, arms overhead, bend elbows lowering hands behind head.", video: "https://www.youtube.com/shorts/_gsUck-7M74" },
+          "Pulldown Machine Tricep Rope Pushdowns": { cues: "Attach rope to top cable pulley, tuck elbows, spread rope at bottom.", video: "https://www.youtube.com/shorts/6SS6K3lA_6w" },
+          "Bodyweight Diamond Push-Ups": { cues: "Form diamond shape with thumbs and index fingers under chest, lower down.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
+          "Dumbbell Incline Bicep Curls": { cues: "Sit back on incline bench, let arms hang, curl upwards without moving elbows.", video: "https://www.youtube.com/shorts/soxrZlIl35U" },
+          "Dumbbell Lying Skullcrushers": { cues: "Lie flat on bench, lower dumbbells toward ears by bending elbows, press up.", video: "https://www.youtube.com/shorts/d_KZxkY_0aw" },
+          "Plyo Box Tricep Dips": { cues: "Hands on edge of plyo box behind you, lower body by flexing elbows to 90 degrees.", video: "https://www.youtube.com/shorts/c3ZGl4pAwZ4" },
+          "Medicine Ball Bicep Curls": { cues: "Hold heavy med ball with both hands under ball, curl up squeeze biceps.", video: "https://www.youtube.com/shorts/Jvj2wV0vOYU" },
+          "Overhead Dumbbell Tricep Extension": { cues: "Hold single dumbbell overhead with both hands, lower behind head.", video: "https://www.youtube.com/shorts/_gsUck-7M74" },
+          "Pulldown Machine High-Bicep Cable Curl": { cues: "Hold handles from high pulleys, curl towards ears squeezing biceps.", video: "https://www.youtube.com/shorts/N89kS656qA0" },
+          "TRX Tricep Press": { cues: "Lean forward on TRX, bend at elbows bringing thumbs to temple, press out.", video: "https://www.youtube.com/shorts/_gsUck-7M74" },
+          "Bodyweight Chin-Ups (Underhand Biceps Focus)": { cues: "Underhand shoulder-width grip on pull-up bar, pull chin over bar.", video: "https://www.youtube.com/shorts/3-28901_331" },
+          "Dumbbell Concentration Curls": { cues: "Sit, brace elbow against inner thigh, curl dumbbell toward chest.", video: "https://www.youtube.com/shorts/Jvj2wV0vOYU" }
+        }
+      },
+      trapezius: {
+        name: "Trapezius (Traps & Upper Back)",
+        exercises: {
+          "Barbell Shrugs (Squat Rack)": { cues: "Lift bar from rack pins, shrug shoulders straight up to ears and hold.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
+          "Dumbbell Standing Shrugs": { cues: "Hold heavy dumbbells at sides, pull shoulders up vertically without rolling.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" }
         }
       }
     },
@@ -840,26 +936,40 @@
         name: "Quadriceps (Thighs)",
         exercises: {
           "Barbell Back Squat": { cues: "Feet shoulder-width, chest up, lower hips until thighs parallel with floor.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
-          "Dumbbell Goblet Squat": { cues: "Hold dumbbell vertical at chest, sink hips between knees.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" }
+          "Dumbbell Goblet Squat": { cues: "Hold dumbbell vertical at chest, sink hips between knees.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
+          "TRX Single-Leg Pistol Squat": { cues: "Hold TRX handles, extend one leg forward, squat deep on standing leg.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
+          "Plyo Box Jump Overs": { cues: "Stand laterally to box, explosively jump sideways landing softly on balance.", video: "https://www.youtube.com/shorts/NBY9-kTUHEM" },
+          "Bodyweight Walking Lunges": { cues: "Step forward into 90 degree knees, drive off front heel to next step.", video: "https://www.youtube.com/shorts/D7Ka34I-JVA" }
+        }
+      },
+      hamstrings: {
+        name: "Hamstrings & Glutes",
+        exercises: {
+          "Barbell Romanian Deadlift": { cues: "Hinge at hips, keep back flat, slide bar down thighs until hamstrings stretch.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "Dumbbell Bulgarian Split Squat": { cues: "Rear foot elevated on bench, drop back knee straight down, drive off front heel.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
+          "TRX Hamstring Runner Curls": { cues: "Lie on back, heels in TRX loops, elevate hips and curl heels toward glutes.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" }
         }
       }
     },
     core: {
       abs: {
-        name: "Abdominals",
+        name: "Abdominals & Core",
         exercises: {
           "Plank Hold": { cues: "Body in rigid straight line, squeeze glutes and brace core.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
-          "Hanging Leg Raise": { cues: "Hang from bar, raise legs to 90 degrees without swinging.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" }
+          "Hanging Leg Raise": { cues: "Hang from bar, raise legs to 90 degrees without swinging.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
+          "TRX Atomic Crunches": { cues: "Feet in TRX loops, perform plank into double knee tuck.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
+          "Medicine Ball Russian Twists": { cues: "Sit in V-hold, rotate med ball side to side touching floor.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" }
         }
       }
     }
   };
 
-  // INITIALIZATION & URL PARAM PARSING
+  // INITIALIZATION & AUTOMATIC URL CLASS ASSIGNMENT
   window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('workoutDate').valueAsDate = new Date();
     setupInviteLinks();
     checkUrlForClass();
+    updateRequirementsUI();
   });
 
   function setupInviteLinks() {
@@ -873,24 +983,34 @@
     const params = new URLSearchParams(window.location.search);
     const classParam = params.get('class');
     if (classParam === '1st_hour') {
-      document.getElementById('studentClassSelect').value = '1st Hour';
+      assignedClassPeriod = '1st Hour';
     } else if (classParam === '3rd_hour') {
-      document.getElementById('studentClassSelect').value = '3rd Hour';
+      assignedClassPeriod = '3rd Hour';
     } else if (classParam === '7th_hour') {
-      document.getElementById('studentClassSelect').value = '7th Hour';
+      assignedClassPeriod = '7th Hour';
     }
+    document.getElementById('activeClassBadge').innerText = assignedClassPeriod;
   }
 
   function copyClassLink(hourKey) {
-    let inputId = 'link' + hourKey;
-    let toastId = 'toast' + hourKey;
-    let inputEl = document.getElementById(inputId);
+    let inputEl = document.getElementById('link' + hourKey);
+    let toastEl = document.getElementById('toast' + hourKey);
     
     navigator.clipboard.writeText(inputEl.value).then(() => {
-      let toastEl = document.getElementById(toastId);
       toastEl.innerText = 'Link copied to clipboard!';
       setTimeout(() => { toastEl.innerText = ''; }, 3000);
     });
+  }
+
+  function loginStudent() {
+    let name = document.getElementById('studentName').value.trim();
+    if (!name) {
+      alert("Please enter a student name.");
+      return;
+    }
+    currentStudent = name;
+    renderStudentHistory();
+    alert(`Welcome ${currentStudent}! You are signed into ${assignedClassPeriod}.`);
   }
 
   // NAVIGATION SWITCHING
@@ -930,17 +1050,7 @@
     event.target.classList.add('active');
   }
 
-  function loginStudent() {
-    let name = document.getElementById('studentName').value.trim();
-    if (!name) {
-      alert("Please enter a student name.");
-      return;
-    }
-    currentStudent = name;
-    alert(`Logged in as ${currentStudent} (${document.getElementById('studentClassSelect').value})`);
-  }
-
-  // TEACHER LOGS DISPLAY WITH FILTER
+  // TEACHER LOGS & ANALYTICS DISPLAY WITH FILTER
   function renderTeacherLogs() {
     let filterVal = document.getElementById('teacherFilterClass').value;
     let filtered = studentLogs.filter(log => filterVal === 'All' || log.studentClass === filterVal);
@@ -963,7 +1073,6 @@
       tbody.appendChild(tr);
     });
 
-    // Update KPIs
     let uniqueStudents = new Set(studentLogs.map(l => l.studentName)).size;
     document.getElementById('kpiStudents').innerText = uniqueStudents;
     document.getElementById('kpiLogs').innerText = studentLogs.length;
@@ -984,13 +1093,21 @@
     }
   }
 
-  // BUILD ROUTINE SELECTION LOGIC
+  // BUILD ROUTINE DYNAMIC SELECTION PIPELINE
   function handleTargetAreaChange() {
     let area = document.getElementById('targetArea').value;
+    selectedCategory = area;
     let grid = document.getElementById('muscleGroupGrid');
     let container = document.getElementById('muscleGroupContainer');
     grid.innerHTML = '';
     
+    document.getElementById('exerciseGroup').classList.add('hidden');
+    document.getElementById('customExerciseGroup').classList.add('hidden');
+    document.getElementById('previewBtn').classList.add('hidden');
+    document.getElementById('workoutDayGroup').classList.add('hidden');
+    document.getElementById('fitnessGroup').classList.add('hidden');
+    document.getElementById('addToRoutineBtn').classList.add('hidden');
+
     if (!area || !exerciseDB[area]) {
       container.classList.add('hidden');
       return;
@@ -1002,12 +1119,16 @@
       let btn = document.createElement('button');
       btn.className = 'muscle-btn';
       btn.innerText = group.name;
-      btn.onclick = () => selectMuscleGroup(area, groupKey);
+      btn.onclick = () => selectMuscleGroup(area, groupKey, btn);
       grid.appendChild(btn);
     });
   }
 
-  function selectMuscleGroup(area, groupKey) {
+  function selectMuscleGroup(area, groupKey, buttonEl) {
+    document.querySelectorAll('.muscle-btn').forEach(b => b.classList.remove('active'));
+    buttonEl.classList.add('active');
+    selectedMuscleGroupKey = groupKey;
+
     let select = document.getElementById('exerciseSelect');
     select.innerHTML = '<option value="">-- Choose Exercise --</option>';
     let exercises = exerciseDB[area][groupKey].exercises;
@@ -1019,6 +1140,11 @@
       select.appendChild(opt);
     });
 
+    let customOpt = document.createElement('option');
+    customOpt.value = "CUSTOM";
+    customOpt.innerText = "➕ Other / Custom Exercise";
+    select.appendChild(customOpt);
+
     document.getElementById('exerciseGroup').classList.remove('hidden');
     document.getElementById('workoutDayGroup').classList.remove('hidden');
     document.getElementById('fitnessGroup').classList.remove('hidden');
@@ -1027,22 +1153,48 @@
 
   function handleExerciseSelect() {
     let exName = document.getElementById('exerciseSelect').value;
-    if (exName) {
-      document.getElementById('previewBtn').classList.remove('hidden');
+    let customGroup = document.getElementById('customExerciseGroup');
+    let previewBtn = document.getElementById('previewBtn');
+
+    if (exName === "CUSTOM") {
+      customGroup.classList.remove('hidden');
+      previewBtn.classList.add('hidden');
+    } else if (exName) {
+      customGroup.classList.add('hidden');
+      previewBtn.classList.remove('hidden');
+    } else {
+      customGroup.classList.add('hidden');
+      previewBtn.classList.add('hidden');
     }
   }
 
   function addToRoutine() {
     let exName = document.getElementById('exerciseSelect').value;
-    if (!exName) return;
+    if (exName === "CUSTOM") {
+      exName = document.getElementById('customExerciseInput').value.trim();
+    }
+
+    if (!exName) {
+      alert("Please select or enter an exercise name.");
+      return;
+    }
 
     let day = document.getElementById('workoutDaySelect').value;
-    let item = { name: exName, day: day, sets: 3, reps: 10, weight: 0 };
+    let item = { 
+      name: exName, 
+      category: selectedCategory, 
+      muscleGroup: selectedMuscleGroupKey, 
+      day: day, 
+      sets: 3, 
+      reps: 10, 
+      weight: 0 
+    };
     
     if (day === 'A') workoutA.push(item);
     else workoutB.push(item);
 
     renderMasterTables();
+    updateRequirementsUI();
     alert(`Added ${exName} to Workout ${day}!`);
   }
 
@@ -1055,12 +1207,12 @@
     workoutA.forEach((ex, idx) => {
       let tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="checkbox"></td>
-        <td>${ex.name}</td>
-        <td><input type="number" value="${ex.sets}" style="width:50px;"></td>
-        <td><input type="number" value="${ex.reps}" style="width:50px;"></td>
-        <td><input type="number" value="${ex.weight}" style="width:60px;"></td>
-        <td><button class="btn btn-danger" onclick="workoutA.splice(${idx},1); renderMasterTables();">X</button></td>
+        <td><input type="checkbox" onchange="toggleRowComplete(this)"></td>
+        <td><strong>${ex.name}</strong></td>
+        <td><input type="number" value="${ex.sets}" style="width:55px;" onchange="workoutA[${idx}].sets=this.value"></td>
+        <td><input type="number" value="${ex.reps}" style="width:55px;" onchange="workoutA[${idx}].reps=this.value"></td>
+        <td><input type="number" value="${ex.weight}" style="width:65px;" onchange="workoutA[${idx}].weight=this.value"></td>
+        <td><button class="btn btn-danger" onclick="workoutA.splice(${idx},1); renderMasterTables(); updateRequirementsUI();">X</button></td>
       `;
       tbodyA.appendChild(tr);
     });
@@ -1068,15 +1220,54 @@
     workoutB.forEach((ex, idx) => {
       let tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="checkbox"></td>
-        <td>${ex.name}</td>
-        <td><input type="number" value="${ex.sets}" style="width:50px;"></td>
-        <td><input type="number" value="${ex.reps}" style="width:50px;"></td>
-        <td><input type="number" value="${ex.weight}" style="width:60px;"></td>
-        <td><button class="btn btn-danger" onclick="workoutB.splice(${idx},1); renderMasterTables();">X</button></td>
+        <td><input type="checkbox" onchange="toggleRowComplete(this)"></td>
+        <td><strong>${ex.name}</strong></td>
+        <td><input type="number" value="${ex.sets}" style="width:55px;" onchange="workoutB[${idx}].sets=this.value"></td>
+        <td><input type="number" value="${ex.reps}" style="width:55px;" onchange="workoutB[${idx}].reps=this.value"></td>
+        <td><input type="number" value="${ex.weight}" style="width:65px;" onchange="workoutB[${idx}].weight=this.value"></td>
+        <td><button class="btn btn-danger" onclick="workoutB.splice(${idx},1); renderMasterTables(); updateRequirementsUI();">X</button></td>
       `;
       tbodyB.appendChild(tr);
     });
+  }
+
+  function toggleRowComplete(checkbox) {
+    let tr = checkbox.closest('tr');
+    if (checkbox.checked) {
+      tr.classList.add('completed-row');
+    } else {
+      tr.classList.remove('completed-row');
+    }
+  }
+
+  function updateRequirementsUI() {
+    let aLower = workoutA.filter(e => e.category === 'lower').length;
+    let aCore = workoutA.filter(e => e.category === 'core').length;
+    let bUpper = workoutB.filter(e => e.category === 'upper').length;
+    let bCore = workoutB.filter(e => e.category === 'core').length;
+
+    updateReqCard('reqALower', 'countALower', aLower, 4, '🅰️ Workout A Lower Body');
+    updateReqCard('reqACore', 'countACore', aCore, 2, '🅰️ Workout A Core');
+    updateReqCard('reqBUpper', 'countBUpper', bUpper, 4, '🅱️ Workout B Upper Body');
+    updateReqCard('reqBCore', 'countBCore', bCore, 2, '🅱️ Workout B Core');
+
+    let totalMet = Math.min(aLower, 4) + Math.min(aCore, 2) + Math.min(bUpper, 4) + Math.min(bCore, 2);
+    let pct = Math.round((totalMet / 12) * 100);
+    document.getElementById('progressBarFill').style.width = pct + '%';
+    document.getElementById('progressPercentText').innerText = pct + '% Complete';
+  }
+
+  function updateReqCard(cardId, countId, current, target, label) {
+    let card = document.getElementById(cardId);
+    let countEl = document.getElementById(countId);
+    let isComplete = current >= target;
+
+    countEl.innerText = `${current} / ${target} ${isComplete ? '✅' : '❌'}`;
+    if (isComplete) {
+      card.className = 'req-card complete';
+    } else {
+      card.className = 'req-card missing';
+    }
   }
 
   // SPREADSHEET LOG LOGIC
@@ -1090,6 +1281,8 @@
         <select class="sheet-select">
           <option>Muscular Strength</option>
           <option>Muscular Endurance</option>
+          <option>Cardiovascular Endurance</option>
+          <option>Flexibility</option>
         </select>
       </td>
       <td><input type="number" class="sheet-input" value="3"></td>
@@ -1102,32 +1295,38 @@
 
   function saveSpreadsheetLog() {
     if (!currentStudent) {
-      alert("Please enter a student name first.");
+      alert("Please enter your student name at the top before committing your log.");
       return;
     }
 
     let rows = document.querySelectorAll('#editableSheetBody tr');
-    let studentClass = document.getElementById('studentClassSelect').value;
+    let savedCount = 0;
 
     rows.forEach(tr => {
       let inputs = tr.querySelectorAll('input, select');
-      if (inputs[1].value.trim()) {
+      let exName = inputs[1].value.trim();
+      if (exName) {
         studentLogs.push({
           studentName: currentStudent,
-          studentClass: studentClass,
+          studentClass: assignedClassPeriod,
           date: inputs[0].value,
-          exercise: inputs[1].value,
+          exercise: exName,
           component: inputs[2].value,
           sets: inputs[3].value,
           reps: inputs[4].value,
           weight: inputs[5].value
         });
+        savedCount++;
       }
     });
 
-    document.getElementById('editableSheetBody').innerHTML = '';
-    renderStudentHistory();
-    alert("Log saved successfully!");
+    if (savedCount > 0) {
+      document.getElementById('editableSheetBody').innerHTML = '';
+      renderStudentHistory();
+      alert(`Successfully saved ${savedCount} exercise(s) to your history log!`);
+    } else {
+      alert("No exercises were entered in the spreadsheet to save.");
+    }
   }
 
   function renderStudentHistory() {
@@ -1139,7 +1338,7 @@
       let tr = document.createElement('tr');
       tr.innerHTML = `
         <td>${log.date}</td>
-        <td>${log.studentClass}</td>
+        <td><strong>${log.studentClass}</strong></td>
         <td>${log.exercise}</td>
         <td>${log.component}</td>
         <td>${log.sets}</td>
@@ -1150,17 +1349,34 @@
     });
   }
 
-  // MODAL LOGIC
+  // FORM CUES MODAL LOGIC
   function openModal() {
+    let area = document.getElementById('targetArea').value;
     let exName = document.getElementById('exerciseSelect').value;
-    let modal = document.getElementById('cueModal');
+
+    if (!area || !selectedMuscleGroupKey || !exName || exName === "CUSTOM") return;
+
+    let exData = exerciseDB[area][selectedMuscleGroupKey].exercises[exName];
+    if (!exData) return;
+
     document.getElementById('modalTitle').innerText = exName;
-    document.getElementById('modalBody').innerText = "Form Cues: Focus on controlled movement and proper joint alignment.";
-    modal.classList.remove('hidden');
+    document.getElementById('modalBody').innerHTML = `
+      <p><strong>Form Cues:</strong> ${exData.cues}</p>
+      <p style="margin-top: 15px;">
+        <a href="${exData.video}" target="_blank" style="color: var(--primary); font-weight: 700; text-decoration: underline;">
+          📺 Watch Exercise Demonstration Video
+        </a>
+      </p>
+    `;
+    document.getElementById('cueModal').classList.remove('hidden');
   }
 
   function closeModal() {
     document.getElementById('cueModal').classList.add('hidden');
+  }
+
+  function closeTargetModal() {
+    document.getElementById('targetModal').classList.add('hidden');
   }
 </script>
 </body>
