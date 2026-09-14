@@ -1128,6 +1128,12 @@
   let todaysSubmission = null;
   let currentLearningTarget = "Focus on explosive power and full range of motion.";
 
+  function updateRoutineField(id, field, value) {
+    let r = savedRoutines.find(x => x.id === id);
+    if(!r) return;
+    r[field] = value;
+  }
+
   function studentDocId(name) {
     return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   }
@@ -1410,12 +1416,12 @@
       let tr = document.createElement('tr');
       if(r.done) tr.classList.add('completed-row');
       tr.innerHTML = `
-        <td><input type="checkbox" ${r.done ? 'checked' : ''} onchange="r.done=this.checked; toggleCompleteRow(this); saveUserData();"></td>
+        <td><input type="checkbox" ${r.done ? 'checked' : ''} onchange="updateRoutineField(${r.id}, 'done', this.checked); toggleCompleteRow(this); saveUserData();"></td>
         <td><strong>${r.name}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${r.component}</span></td>
         <td>${lastCell}</td>
-        <td><input type="number" class="sheet-input" value="${r.sets}" onchange="r.sets=this.value"></td>
-        <td><input type="number" class="sheet-input" value="${r.reps}" onchange="r.reps=this.value"></td>
-        <td><input type="number" class="sheet-input" value="${r.lbs}" onchange="r.lbs=this.value"></td>
+        <td><input type="number" class="sheet-input" value="${r.sets}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
+        <td><input type="number" class="sheet-input" value="${r.reps}" onchange="updateRoutineField(${r.id}, 'reps', this.value); saveUserData();"></td>
+        <td><input type="number" class="sheet-input" value="${r.lbs}" onchange="updateRoutineField(${r.id}, 'lbs', this.value); saveUserData();"></td>
         <td><button class="btn btn-danger" onclick="deleteRoutineItem(${r.id})">X</button></td>
       `;
 
@@ -1614,6 +1620,16 @@
     if(items.some(r => !r.done)) {
       alert(`You haven't checked off all your Workout ${day} exercises as Done yet. Finish your workout, or set sets/reps to 0 for anything you skipped, check it off, then submit.`);
       return;
+    }
+
+    let seenNames = new Set();
+    for(let r of items) {
+      let key = r.name.trim().toLowerCase();
+      if(seenNames.has(key)) {
+        alert(`"${r.name}" is added twice in Workout ${day}. Delete one copy (the red X button in that row) before submitting.`);
+        return;
+      }
+      seenNames.add(key);
     }
 
     let dateVal = document.getElementById('workoutDate').value;
