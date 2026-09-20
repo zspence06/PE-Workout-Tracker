@@ -2406,7 +2406,11 @@
     if(inviteId) {
       let cls = studentClasses.find(c => c.id === inviteId);
       if(!cls) {
-        alert("That class link isn't valid any more \u2014 pick your class instead.");
+        // Only steer them to the picker if they will actually see one.
+        alert(currentClassId
+          ? "That class link isn't valid any more, so you're still in "
+            + (classNameById(currentClassId) || "your current class") + "."
+          : "That class link isn't valid any more \u2014 pick your class instead.");
       } else if(cls.frozen) {
         alert('"' + cls.name + '" is closed, so you can\'t join it from that link.');
       } else if(currentClassId === cls.id) {
