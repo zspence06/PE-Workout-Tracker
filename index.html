@@ -2214,8 +2214,10 @@
 
   const RECENTLY_MOVED_MS = 7 * 24 * 60 * 60 * 1000;
 
+  // Only a student moving themselves is worth surfacing; Zach does not need
+  // telling about the moves he made himself.
   function movedRecently(stu) {
-    if(!stu.classChangedAt) return false;
+    if(!stu.classChangedAt || stu.classChangedBy !== "student") return false;
     let t = Date.parse(stu.classChangedAt);
     return isFinite(t) && (Date.now() - t) < RECENTLY_MOVED_MS;
   }
@@ -2245,7 +2247,8 @@
     if(!stu) return;
     try {
       await fbUpdateDoc(fbDoc(db, "students", studentId),
-        { classId: classId || null, classChangedAt: new Date().toISOString() });
+        { classId: classId || null, classChangedAt: new Date().toISOString(),
+          classChangedBy: "teacher" });
     } catch(err) {
       alert("Couldn't move that student: " + (err && err.code ? err.code : err.message));
       return;
@@ -2257,7 +2260,8 @@
     let open = expandedStudents.has(stu.id);
     let rows = historyByStudent[stu.id];
     let flag = movedRecently(stu)
-      ? ' <span style="font-size:.72rem; color:var(--danger); font-weight:700;">MOVED RECENTLY</span>' : "";
+      ? ' <span style="font-size:.72rem; color:var(--danger); font-weight:700;" '
+        + 'title="This student changed their own class in the last week">MOVED THEMSELVES</span>' : "";
     let options = '<option value="">Unassigned</option>' + classCache.map(c =>
       '<option value="' + esc(c.id) + '"' + (c.id === stu.classId ? " selected" : "") + '>'
       + esc(c.name) + (c.frozen ? " (archived)" : "") + '</option>').join("");
@@ -2358,6 +2362,7 @@
         name: d.name || docSnap.id,
         classId: d.classId || null,
         classChangedAt: d.classChangedAt || null,
+        classChangedBy: d.classChangedBy || null,
         count: d.logCount || 0,
         lastLogDate: d.lastLogDate || ""
       });
@@ -2408,9 +2413,15 @@
   }
 
   async function assignClass(classId) {
+    // Joining for the first time is not a move, so it is not stamped.
+    let isMove = !!currentClassId && currentClassId !== classId;
+    let patch = { classId: classId };
+    if(isMove) {
+      patch.classChangedAt = new Date().toISOString();
+      patch.classChangedBy = "student";
+    }
     try {
-      await fbUpdateDoc(fbDoc(db, "students", currentDocId),
-        { classId: classId, classChangedAt: new Date().toISOString() });
+      await fbUpdateDoc(fbDoc(db, "students", currentDocId), patch);
     } catch(err) {
       alert("Couldn't save your class: " + (err && err.code ? err.code : err.message)
         + "\n\nCheck your connection and try again.");
