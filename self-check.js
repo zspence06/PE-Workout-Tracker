@@ -16,7 +16,7 @@ function grab(sig) {
   if (j < 0) throw new Error('could not find end of ' + sig);
   return src.slice(i, j + 4);
 }
-const constLines = ['const PIN_ITERATIONS', 'const TARGET_MODAL_INTERVAL_MS'].map(k => {
+const constLines = ['const PIN_ITERATIONS', 'const TARGET_MODAL_INTERVAL_MS', 'const DAILY_TARGET'].map(k => {
   const line = src.split('\n').find(l => l.includes(k));
   if (!line) throw new Error(k + ' not found');
   return line.trim().replace('const ', 'globalThis.');
@@ -26,6 +26,8 @@ eval([
   grab('function esc(v) {'),
   grab('function cleanNumber(value, max) {'),
   grab('function todayLocal() {'),
+  grab('function doneToday(r, date) {'),
+  grab('function composedScore(routines, day, date) {'),
   grab('function shouldShowTarget(now, seen, currentText) {'),
   grab('function nextFreeId(start, existing) {'),
   grab('function normalizeName(name) {'),
@@ -123,6 +125,61 @@ eval([
     assert.strictEqual(new Set(list.map(r => r.id)).size, 6, 'six same-ms adds must all be distinct');
   }
 
+  // Daily progress. The bar scores against the composed program minimum, so six
+  // core exercises are not a Workout A -- and yesterday's ticks are not today's.
+  const T = "2026-09-20", Y = "2026-09-19";
+  const mk = (day, area, date) => ({ day, targetArea: area, done: true, doneDate: date });
+
+  assert.strictEqual(DAILY_TARGET, 6, 'daily target is the composed minimum');
+
+  assert.ok(doneToday({ done: true, doneDate: T }, T), 'ticked today counts');
+  assert.ok(!doneToday({ done: false, doneDate: T }, T), 'unticked does not count');
+  assert.ok(!doneToday({ done: true, doneDate: Y }, T), 'ticked yesterday does not count');
+
+  assert.strictEqual(composedScore([
+    mk("A","core",T), mk("A","core",T), mk("A","core",T),
+    mk("A","core",T), mk("A","core",T), mk("A","core",T)
+  ], "A", T), 2, 'six core exercises are not a complete Workout A');
+
+  assert.strictEqual(composedScore([
+    mk("A","lower",T), mk("A","lower",T), mk("A","lower",T), mk("A","lower",T),
+    mk("A","core",T), mk("A","core",T)
+  ], "A", T), 6, 'four lower plus two core completes Workout A');
+
+  assert.strictEqual(composedScore([
+    mk("A","lower",T), mk("A","lower",T), mk("A","lower",T),
+    mk("A","lower",T), mk("A","lower",T),
+    mk("A","core",T), mk("A","core",T), mk("A","core",T)
+  ], "A", T), 6, 'extra exercises cap the score at 6');
+
+  // The sticky-flag bug: before doneDate these stayed checked forever, so every
+  // day after the first submission would have opened at a full bar.
+  assert.strictEqual(composedScore([
+    mk("A","lower",Y), mk("A","lower",Y), mk("A","lower",Y), mk("A","lower",Y),
+    mk("A","core",Y), mk("A","core",Y)
+  ], "A", T), 0, "yesterday's ticks do not count toward today");
+
+  // Routines saved before this change carry done:true and no doneDate at all.
+  assert.strictEqual(composedScore([
+    { day: "A", targetArea: "lower", done: true },
+    { day: "A", targetArea: "core",  done: true }
+  ], "A", T), 0, 'legacy done flags without a date do not count');
+
+  assert.strictEqual(composedScore([
+    mk("B","upper",T), mk("B","upper",T), mk("B","upper",T), mk("B","upper",T),
+    mk("B","core",T), mk("B","core",T)
+  ], "B", T), 6, 'Workout B completes on upper body');
+
+  assert.strictEqual(composedScore([
+    mk("B","lower",T), mk("B","lower",T), mk("B","lower",T), mk("B","lower",T),
+    mk("B","core",T), mk("B","core",T)
+  ], "B", T), 2, 'lower body does not count toward Workout B');
+
+  assert.strictEqual(composedScore([
+    mk("A","lower",T), mk("A","lower",T), mk("A","lower",T), mk("A","lower",T),
+    mk("A","core",T), mk("A","core",T), mk("B","upper",Y)
+  ], "B", T), 0, 'a finished Workout A does not fill Workout B');
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -134,5 +191,6 @@ eval([
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
   console.log('routineid-check OK - no collision when several exercises are added in the same millisecond');
   console.log('target-check   OK - once per hour per device, and always on a changed target');
+  console.log('daily-check    OK - composition enforced, extras capped, stale and legacy ticks ignored');
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

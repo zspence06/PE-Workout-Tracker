@@ -1226,6 +1226,36 @@
     return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
   }
 
+  const DAILY_TARGET = 6;
+
+  // A tick belongs to the day it was made. `done` used to be a sticky flag that
+  // nothing ever cleared, so the day after a submission every box was still
+  // checked -- a daily bar built on it would have read full before the student
+  // lifted anything. Pairing the flag with its date retires that on its own: no
+  // destructive reset that could wipe a real tick mid-workout, and no migration,
+  // because records saved before this have no doneDate and read as not-done-today.
+  function doneToday(r, date) {
+    return r.done === true && r.doneDate === date;
+  }
+
+  // Scored against the program minimum rather than the length of the student's
+  // own list, so one student's 67% means what another's does. Composed the way
+  // the requirement is -- six core exercises are not a Workout A -- using the
+  // same caps as the Routine Setup card, so the two can never disagree.
+  function composedScore(routines, day, date) {
+    let prime = day === "A" ? "lower" : "upper";
+    let hit = routines.filter(r => r.day === day && doneToday(r, date));
+    return Math.min(hit.filter(r => r.targetArea === prime).length, 4)
+         + Math.min(hit.filter(r => r.targetArea === "core").length, 2);
+  }
+
+  // The date the student is working against is the box, not the wall clock, so a
+  // workout backdated to Friday scores against Friday's ticks.
+  function selectedDate() {
+    let el = document.getElementById('workoutDate');
+    return (el && el.value) ? el.value : todayLocal();
+  }
+
   // Sets, reps and weight are free-entry number boxes. Clamp rather than reject
   // so a student is never blocked mid-workout by a typo.
   function cleanNumber(value, max) {
