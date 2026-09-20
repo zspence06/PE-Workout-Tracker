@@ -39,6 +39,9 @@ eval([
   grab('async function sha256Hex(str) {'),
   grab('async function studentDocId(name, pin) {'),
   grab('function nameKey(name) {'),
+  grab('function lastLoggedDay(history, before) {'),
+  grab('function suggestedDay(history, today) {'),
+  grab('function submissionIdFor(day, date, history) {'),
 ].join('\n'));
 
 (async () => {
@@ -253,9 +256,9 @@ eval([
     assert.deepStrictEqual(warned.warnings.map(w => w.code), ["not-ticked"],
       'but they are warned about, because they will not be logged');
     assert.deepStrictEqual(warned.warnings[0].exercises, ["Calf", "Twist"], 'and named');
-    assert.deepStrictEqual(workoutBlockers(full, "A", D, []).warnings, [],
+    assert.ok(!workoutBlockers(full, "A", D, []).warnings.some(w => w.code === "not-ticked"),
       'nothing unticked, nothing to warn about');
-    assert.deepStrictEqual(workoutBlockers(partial, "A", D, []).warnings, [],
+    assert.ok(!workoutBlockers(partial, "A", D, []).warnings.some(w => w.code === "not-ticked"),
       'a blocked submit does not also nag about unticked rows');
 
     // The spreadsheet commit shares the conflict half and adds its own empty case.
@@ -296,12 +299,105 @@ eval([
 
       // An already-logged exercise that was never ticked is not a conflict at
       // all -- nothing is about to be written twice.
-      assert.deepStrictEqual(workoutBlockers(skipped, "A", D, hist).warnings, [],
+      assert.ok(!workoutBlockers(skipped, "A", D, hist).warnings.some(w => w.code === "not-ticked"),
         'a credited exercise is not warned about as unlogged');
+    }
+
+    // 0 lbs warns but must never block, and must never fire on an exercise the
+    // student did not tick -- nothing unticked is about to be written.
+    {
+      const D = "2026-09-20";
+      const mk = (name, area, lbs, done) => ({ id: name, name, day: "A", targetArea: area,
+        lbs, done, doneDate: done ? D : "" });
+      const six = [mk("Squat","lower",135,true), mk("Press","lower",95,true),
+                   mk("Lunge","lower",0,true), mk("Calf","lower",0,true),
+                   mk("Plank","core",0,true), mk("Twist","core",0,true)];
+      const res = workoutBlockers(six, "A", D, []);
+      assert.deepStrictEqual(res.blockers, [], '0 lbs never blocks a submit');
+      const z = res.warnings.find(w => w.code === "zero-lbs");
+      assert.deepStrictEqual(z.exercises, ["Lunge","Calf","Plank","Twist"], 'names the 0 lbs rows');
+
+      const loaded = six.map(r => ({ ...r, lbs: 45 }));
+      assert.ok(!workoutBlockers(loaded, "A", D, []).warnings.some(w => w.code === "zero-lbs"),
+        'no warning when everything is loaded');
+
+      // An unticked 0 lbs row is not about to be written, so it is not warned
+      // about. Needs a SEVENTH exercise: unticking one of exactly six drops the
+      // routine under the requirement and raises a blocker, which suppresses
+      // every warning by design.
+      const seven = six.concat([mk("Step Up", "lower", 0, false)]);
+      const rz = workoutBlockers(seven, "A", D, []);
+      assert.deepStrictEqual(rz.blockers, [], 'a spare unticked exercise does not block');
+      const zu = rz.warnings.find(w => w.code === "zero-lbs");
+      assert.ok(!zu.exercises.includes("Step Up"), 'an unticked row is not warned about for weight');
+      assert.deepStrictEqual(zu.exercises, ["Lunge","Calf","Plank","Twist"],
+        'only the rows about to be written');
+    }
+
+    // Which day was submitted has to come from the ROWS. A single
+    // last-submission object meant that submitting B after A left A's card
+    // claiming it had never been sent, directly above a panel that correctly
+    // called it a duplicate.
+    {
+      const D = "2026-09-20";
+      const H = [
+        { date: D, day: "A", exercise: "Squat", subId: "sA" },
+        { date: D, day: "A", exercise: "Plank", subId: "sA" },
+        { date: D, day: "B", exercise: "Bench", subId: "sB" },
+        // Hand-logged on the Quick Log tab: no day, no subId. Not a submission.
+        { date: D, exercise: "Mile Run" },
+        { date: "2026-09-18", day: "A", exercise: "Squat", subId: "sOld" },
+      ];
+      assert.strictEqual(submissionIdFor("A", D, H), "sA", 'A is submitted for today');
+      assert.strictEqual(submissionIdFor("B", D, H), "sB", 'and B independently');
+      assert.notStrictEqual(submissionIdFor("A", D, H), submissionIdFor("B", D, H),
+        'the two days must not share a submission id');
+      assert.strictEqual(submissionIdFor("A", "2026-09-19", H), null, 'a day with no rows is not submitted');
+      assert.strictEqual(submissionIdFor("A", "2026-09-18", H), "sOld", 'past days resolve too');
+
+      // A day whose only rows are hand-logged has NOT been submitted -- undo
+      // must not offer to pull someone's Quick Log entries out from under them.
+      const handOnly = [{ date: D, exercise: "Mile Run" }, { date: D, day: "A", exercise: "Sit Up" }];
+      assert.strictEqual(submissionIdFor("A", D, handOnly), null,
+        'rows without a subId are not a submission');
+      assert.strictEqual(submissionIdFor("A", D, []), null, 'empty history');
+      assert.strictEqual(submissionIdFor("A", D, null), null, 'and null-safe');
     }
 
     assert.strictEqual(cleanName("  Back Squat "), "Back Squat", 'names are trimmed');
     assert.strictEqual(cleanName(null), "", 'and null-safe');
+  }
+
+  // A/B alternation. The failure this guards is the one that shipped for months:
+  // every new day defaulted to A, so a student who did A yesterday was pointed
+  // straight back at A and never alternated.
+  {
+    const H = [
+      { date: "2026-09-14", day: "A", exercise: "Back Squat" },
+      { date: "2026-09-16", day: "B", exercise: "Bench Press" },
+      { date: "2026-09-18", day: "A", exercise: "Back Squat" },
+      // A Quick Log row carries no day and must not be mistaken for a workout.
+      { date: "2026-09-19", exercise: "Mile Run" },
+    ];
+    assert.strictEqual(suggestedDay(H, "2026-09-20").day, "B",
+      'after an A, suggest B');
+    assert.strictEqual(lastLoggedDay(H, "2026-09-20").date, "2026-09-18",
+      'a day-less Quick Log row is not the last workout');
+
+    // Today's own rows must not decide today's suggestion -- submitting A this
+    // morning would otherwise flip the toggle to B underneath the student.
+    const withToday = H.concat([{ date: "2026-09-20", day: "B", exercise: "Row" }]);
+    assert.strictEqual(suggestedDay(withToday, "2026-09-20").day, "B",
+      'today\'s own submission is excluded from the suggestion');
+
+    // A brand-new student has nothing to alternate from.
+    assert.strictEqual(suggestedDay([], "2026-09-20").day, "A", 'no history starts at A');
+    assert.strictEqual(suggestedDay([], "2026-09-20").from, null);
+
+    // Out-of-order history must still find the genuinely latest workout.
+    const shuffled = [H[2], H[0], H[1]];
+    assert.strictEqual(lastLoggedDay(shuffled, "2026-09-20").day, "A",
+      'latest by date, not by array position');
   }
 
   // One login must stay fast enough for a school Chromebook.
@@ -316,6 +412,9 @@ eval([
   console.log('routineid-check OK - no collision when several exercises are added in the same millisecond');
   console.log('target-check   OK - once per hour per device, and always on a changed target');
   console.log('blocker-check  OK - every blocker reported at once, short routines reachable, warnings never block');
+  console.log('weight-check   OK - 0 lbs warns on ticked rows only, and never blocks');
   console.log('daily-check    OK - composition enforced, extras capped, stale and legacy ticks ignored');
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
+  console.log('alternate-check OK - A/B alternates off the last real workout, ignoring Quick Log rows and today\'s own');
+  console.log('submitted-check OK - A and B resolve independently from the rows; hand-logged rows are not a submission');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

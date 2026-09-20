@@ -327,10 +327,14 @@
       font-size: 0.95rem;
     }
 
-    .req-card.missing {
-      background-color: var(--danger-bg);
-      border-color: var(--danger);
-      color: #991B1B;
+
+    /* Not-started is not a failure. */
+    .req-card.todo {
+      background-color: #F8FAFC; border-color: var(--border); color: var(--subtle);
+    }
+
+    .req-card.partial {
+      background-color: var(--warn-bg); border-color: var(--warn); color: var(--warn);
     }
 
     .req-card.complete {
@@ -443,11 +447,17 @@
 
     .ab-grid > div { min-width: 0; }
 
+    /* Was line-through at 70% opacity, which is the vocabulary for "removed"
+       or "disabled", not for "you did this". The green and the ticked box
+       already say done; dimming the exercise a student just finished was the
+       one bit of visual feedback in the app that read as a punishment. */
     .completed-row {
       background-color: #F0FDF4 !important;
-      text-decoration: line-through;
-      opacity: 0.7;
     }
+
+    .completed-row .ex-cell strong { color: #166534; }
+
+    .ex-cell .ex-comp { display: block; font-size: 0.75rem; color: var(--subtle); }
 
     .modal-overlay {
       position: fixed;
@@ -471,8 +481,12 @@
 
     .kpi-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+      /* 175px rather than 200px so all five tiles sit on one row inside the
+         1050px container. Submitted + In Progress + Not Started adding up to
+         Registered is the whole point of the row; it does not read as a sum
+         when the fifth tile wraps onto a line of its own. */
+      grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
+      gap: 12px;
       margin-bottom: 20px;
     }
 
@@ -521,12 +535,283 @@
     .mini-label { font-size: 0.8rem; color: var(--subtle); margin-left: 8px; }
     .mini-label.muted { font-style: italic; }
 
+
+    /* A disagreement between the roster summary and the real rows. Rare enough
+       that it should never appear, loud enough that nobody grades past it. */
+    .row-mismatch {
+      background: var(--danger-bg); color: #991B1B;
+      border-left: 5px solid var(--danger); border-radius: 6px;
+      padding: 10px 12px; margin: 4px 4px 10px;
+      font-size: 0.86rem; font-weight: 600; line-height: 1.5;
+    }
+
     .class-summary {
       font-size: 0.82rem;
       font-weight: 600;
       color: var(--subtle);
       margin: 2px 0 6px;
     }
+
+
+
+
+
+
+
+    /* The checkbox a student taps six times a period. A default one is about
+       13px; the accessibility floor for a touch target is 44px, and this is
+       being used with gym hands on a phone propped against a dumbbell rack. */
+    .done-cell { text-align: center; padding: 4px; }
+
+    .done-check {
+      width: 34px; height: 34px; margin: 6px 0;
+      accent-color: var(--success); cursor: pointer;
+    }
+
+    .submit-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: stretch; }
+
+    .btn-submit { flex: 1 1 auto; font-size: 1rem; padding: 14px 18px; }
+
+    /* Undo is a recovery path, not a peer of Submit. Outlined rather than solid
+       red so it reads as "available if you need it" instead of competing. */
+    .btn-undo, .btn-quiet-danger {
+      background: #FFFFFF; color: var(--danger);
+      border: 1px solid var(--danger); font-weight: 600;
+    }
+
+    .btn-undo:hover, .btn-quiet-danger:hover { background: var(--danger-bg); }
+    .btn-quiet-danger { padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
+
+
+
+    .day-suggestion {
+      margin: 10px 0 0; font-size: 0.85rem; font-weight: 600; color: var(--primary);
+      background: var(--accent-light); border-radius: 6px; padding: 7px 10px;
+    }
+
+
+    .still-needs {
+      margin: 0 0 10px; padding: 10px 12px; border-radius: 6px;
+      background: var(--accent-light); color: var(--primary);
+      font-size: 0.88rem; font-weight: 600; line-height: 1.5;
+    }
+
+    .still-needs.done { background: var(--success-bg); color: #166534; }
+
+    .day-match-hint {
+      margin: 8px 0 0; padding: 10px 12px; border-radius: 6px;
+      background: var(--warn-bg); color: var(--warn);
+      font-size: 0.86rem; font-weight: 600; line-height: 1.5;
+    }
+
+    .day-match-hint.ok { background: var(--success-bg); color: #166534; }
+
+
+    .kpi-scope {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; margin-bottom: 10px;
+      font-size: 0.9rem; color: var(--subtle);
+    }
+
+    .kpi-scope strong { color: var(--primary); }
+    .kpi-stamp { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; }
+
+    .kpi-stamp .stamp-aging { color: var(--warn); font-weight: 700; }
+
+    .kpi-stamp .stamp-stale {
+      color: var(--danger); font-weight: 700;
+      background: var(--danger-bg); border-radius: 6px; padding: 4px 8px;
+    }
+
+    .kpi-note { font-size: 0.74rem; font-weight: 700; color: var(--warn); min-height: 1em; }
+
+    .kpi-card.kpi-good { border-left-color: var(--success); }
+    .kpi-card.kpi-good .kpi-value { color: var(--success); }
+    .kpi-card.kpi-warn { border-left-color: var(--warn); }
+    .kpi-card.kpi-warn .kpi-value { color: var(--warn); }
+
+
+    .kpi-card.kpi-progress { border-left-color: var(--accent); }
+    .kpi-card.kpi-progress .kpi-value { color: var(--accent); }
+
+    .print-group {
+      display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+      border: 1px dashed var(--border); border-radius: 8px; padding: 8px 10px;
+    }
+
+    .btn-row-danger { padding: 8px 12px; font-size: 0.85rem; }
+
+    /* An overflowing table gives no hint that it overflows, and the one that
+       overflows worst is the one a teacher opens to settle a dispute. */
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nowrap { white-space: nowrap; }
+    .scroll-hint { display: none; }
+
+    .dash-tools { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 12px 0 8px; }
+    .dash-tools #studentSearch { flex: 1 1 240px; min-width: 0; }
+
+    .status-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    .chip {
+      border: 1px solid var(--border); background: #FFFFFF; color: var(--subtle);
+      border-radius: 16px; padding: 8px 14px; font-weight: 600; font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .chip:hover { background: var(--accent-light); }
+
+    .chip.active {
+      background: var(--primary); color: #FFFFFF; border-color: var(--primary);
+    }
+
+    .dash-filter-note {
+      font-size: 0.85rem; font-weight: 600; color: var(--warn);
+      background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px;
+    }
+
+    /* Help page. Native <details> so there is no JavaScript to go wrong, and it
+       still works on the printed page and with a screen reader. */
+    .help-loop { display: grid; gap: 12px; margin: 16px 0; }
+
+    .help-step {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: var(--accent-light); border: 1px solid var(--accent);
+      border-radius: 8px; padding: 14px 16px;
+    }
+
+    .help-step-n {
+      flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%;
+      background: var(--primary); color: #FFFFFF;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 1.05rem;
+    }
+
+    .help-step strong { color: var(--primary); font-size: 1.02rem; }
+    .help-step p { margin: 4px 0 0; font-size: 0.92rem; line-height: 1.55; }
+
+    .help-callout {
+      background: var(--warn-bg); color: var(--warn);
+      border-left: 6px solid var(--warn); border-radius: 8px;
+      padding: 14px 16px; font-size: 0.95rem; line-height: 1.55;
+    }
+
+    .help-q {
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0 14px; margin-bottom: 10px; background: #FFFFFF;
+    }
+
+    .help-q > summary {
+      cursor: pointer; font-weight: 700; color: var(--primary);
+      padding: 14px 0; list-style: none; font-size: 0.98rem;
+    }
+
+    .help-q > summary::-webkit-details-marker { display: none; }
+    .help-q > summary::before { content: "\25b8  "; color: var(--primary); }
+    .help-q[open] > summary::before { content: "\25be  "; }
+    .help-q[open] > summary { border-bottom: 1px solid var(--border); }
+    .help-q p, .help-q ul { font-size: 0.92rem; line-height: 1.6; }
+    .help-q ul { padding-left: 20px; }
+    .help-q li { margin-bottom: 6px; }
+
+
+    .builder-lock {
+      background: var(--warn-bg); color: var(--warn);
+      border-left: 6px solid var(--warn); border-radius: 8px;
+      padding: 14px 16px; font-size: 0.95rem; line-height: 1.5;
+    }
+
+    .welcome-card { border-left: 6px solid var(--primary); }
+    .welcome-steps { margin: 10px 0 0; padding-left: 22px; line-height: 1.65; }
+    .welcome-steps li { margin-bottom: 8px; }
+
+    .go-to-workout {
+      display: block; width: 100%; margin-top: 14px;
+      font-size: 1.05rem; padding: 14px 16px;
+    }
+
+
+    /* Both workouts are on one screen with a Submit button each, and they were
+       visually identical: same table, same green button. A student scrolling
+       past a finished Workout A could tick and submit B without noticing.
+       The one that is not today's is dimmed and its Submit is demoted -- both
+       stay completely usable, and one tap switches which is which. */
+    .off-day { opacity: 0.55; transition: opacity 0.2s; }
+    .off-day:hover, .off-day:focus-within { opacity: 1; }
+
+    .off-day-switch {
+      display: block; width: 100%; margin: 8px 0 4px;
+      background: var(--warn-bg); color: var(--warn);
+      border: 1px dashed var(--warn); font-size: 0.82rem; font-weight: 700;
+    }
+
+    .off-day-switch:hover { background: #FDE68A; }
+
+    .today-badge {
+      display: inline-block; vertical-align: middle;
+      background: var(--warn-bg); color: var(--warn);
+      border: 1px solid var(--warn); border-radius: 12px;
+      padding: 2px 9px; font-size: 0.68rem; letter-spacing: 0.06em;
+    }
+
+    .help-tab-btn { color: var(--primary); }
+
+    .empty-row td {
+      color: var(--subtle); font-style: italic; text-align: center; padding: 14px 8px;
+    }
+
+
+    .identity-row { display: flex; gap: 20px; flex-wrap: wrap; }
+
+    /* Signed-in identity. Deliberately the loudest thing in the card: the
+       failure it prevents is a student logging a workout into a classmate's
+       account, which nothing downstream can detect or undo. */
+    .signed-in {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      /* A long roster name wrapped the label and crowded the button. */
+      row-gap: 10px;
+      background: var(--success-bg); border: 1px solid var(--success);
+      border-left: 6px solid var(--success);
+      border-radius: 8px; padding: 12px 14px;
+    }
+
+    .signed-in-who { font-size: 1.05rem; color: #166534; font-weight: 600; }
+    .signed-in-who strong { font-size: 1.15rem; }
+    .signed-in-class { font-size: 0.88rem; font-weight: 700; margin-top: 2px; }
+
+    /* Changing the date is how a workout silently lands on the wrong day. */
+    .date-warning {
+      margin: 8px 0 0; padding: 8px 10px; border-radius: 6px;
+      background: var(--warn-bg); color: var(--warn);
+      font-size: 0.85rem; font-weight: 700;
+    }
+
+    /* Toasts and the notice dialog replace alert() for everything that is
+       information rather than a decision. A native alert renders as
+       "zspence06.github.io says", which reads to a student like a browser
+       error -- and it blocks the page until they tap it. */
+    .toast-host {
+      position: fixed; left: 50%; transform: translateX(-50%); bottom: 76px;
+      z-index: 1200; display: flex; flex-direction: column; gap: 8px;
+      align-items: center; width: calc(100% - 24px); max-width: 460px;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: auto; width: 100%; padding: 12px 16px;
+      border-radius: 10px; font-weight: 600; font-size: 0.95rem;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.22); border-left: 6px solid;
+      background: #FFFFFF; color: var(--text); cursor: pointer;
+      animation: toastIn 0.18s ease-out;
+    }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .toast.good { border-left-color: var(--success); background: var(--success-bg); color: #166534; }
+    .toast.warn { border-left-color: var(--warn);    background: var(--warn-bg);    color: var(--warn); }
+    .toast.info { border-left-color: var(--primary); background: var(--accent-light); color: var(--primary); }
 
     /* Students use this on a phone, in a gym. Until now the only media query in
        the file was print, and .ab-grid's 340px minimum overflowed a 375px screen. */
@@ -536,17 +821,42 @@
       header h1 { font-size: 1.15rem; }
       .card { padding: 14px; }
       .ab-grid { grid-template-columns: 1fr; }
-      .req-grid, .kpi-grid { grid-template-columns: 1fr; }
+      .req-grid { grid-template-columns: 1fr; }
+      /* Four full-width KPI blocks pushed the roster two screens down. */
+      .kpi-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+      .kpi-card { padding: 12px 8px; }
+      /* Five tiles leaves a lone half-width one on the last row. */
+      .kpi-grid > .kpi-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+      .kpi-value { font-size: 1.5rem; }
+      /* Squeezing seven columns into 440px wrapped every exercise name onto
+         three lines. The container already scrolls -- let it, and keep the
+         columns legible. */
+      .table-scroll table { min-width: 620px; }
+      .btn-submit { flex: 1 1 100%; }
+      .submit-row .btn-undo { flex: 1 1 100%; }
+      /* The comment above cites a 44px floor; 30px was not it. */
+      .done-check { width: 40px; height: 40px; }
       .muscle-group-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
       .muscle-btn { padding: 12px 8px; font-size: 0.85rem; }
       .btn { padding: 12px 16px; }
       .btn-danger { padding: 10px 12px; font-size: 0.9rem; }
+      /* Thirty student cards, each with a full-width red bar under a neutral
+         button, is more ambient destructive surface than the job needs. */
+      .btn-row-danger { flex: 0 0 auto; align-self: flex-end; }
       .sub-tabs { gap: 4px; }
       .sub-tab-btn { padding: 8px 6px; font-size: 0.82rem; }
       th, td { padding: 6px 4px; font-size: 0.85rem; }
       .mini-bar { width: 90px; }
       .day-btn { padding: 10px 14px; }
       .today-split { gap: 14px; }
+      /* The identity panel is the whole point of the card; at 390px two
+         flex siblings squeezed "Signed in as Jamie Test" into 215px and it
+         wrapped to four lines. Stack instead. */
+      .identity-row { gap: 14px; }
+      .identity-row > .form-group { flex: 1 1 100% !important; min-width: 0 !important; }
+      .signed-in > div { flex: 1 1 100%; }
+      .signed-in .btn { flex: 1 1 100%; }
+      .signed-in-who { font-size: 1rem; }
       /* Four controls on one line squeezed the name box down to "e.g., Alex Sm". */
       .login-row { flex-wrap: wrap; }
       .login-row #studentName { flex: 1 1 100%; }
@@ -554,17 +864,100 @@
       .login-row .btn { flex: 1 1 45%; }
       /* The sets/reps/lbs boxes were clipping mid-digit -- 95 lbs read as "9".
          Give them a floor and let the table scroll inside its card instead. */
-      .sheet-input, .sheet-select { min-width: 58px; padding: 6px 4px; }
+      /* 58px still clipped "135" mid-digit. These live inside a table that
+         scrolls, so they can afford a real width. */
+      .sheet-input, .sheet-select { min-width: 76px; padding: 8px 6px; font-size: 0.95rem; }
+      #editableSheetBody input[type="text"] { min-width: 150px; }
       /* The blocker actions are the way out of a stuck submit, so they have to
          be properly tappable rather than 29px of text. */
       .btn-mini { padding: 11px 14px; font-size: 0.85rem; }
       .blocker-actions { gap: 8px; }
       .blockers { font-size: 0.9rem; }
+      .scroll-hint {
+        display: block; font-size: 0.78rem; color: var(--subtle);
+        font-style: italic; margin: 4px 0 0;
+      }
+      .print-group { width: 100%; }
+    }
+
+
+    /* The workout table is the screen a student uses every single day, and at
+       390px seven columns squeezed exercise names into four lines and clipped
+       "135" in the Lbs box. Below 560px each row becomes a card instead: the
+       standard responsive-table flip, no JS, no columns dropped. Sets/reps/lbs
+       ride on ONE line -- stacking them made a six-exercise workout four
+       screens long. */
+    @media (max-width: 560px) {
+      .ab-grid table, .ab-grid tbody, .ab-grid td { display: block; width: 100%; }
+      .ab-grid thead { position: absolute; left: -9999px; }
+
+      .ab-grid tr {
+        display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 10px;
+        border: 1px solid var(--border); border-radius: 10px;
+        margin-bottom: 12px; padding: 12px; background: #FFFFFF;
+        position: relative;
+      }
+
+      .ab-grid tr.completed-row { border-color: var(--success); border-width: 2px; }
+
+      .ab-grid td { border: none; padding: 0; }
+
+      .ab-grid td::before {
+        content: attr(data-label); display: block;
+        font-size: 0.7rem; font-weight: 700; margin-bottom: 3px;
+        text-transform: uppercase; letter-spacing: 0.04em; color: var(--subtle);
+      }
+
+      /* Name and tick share the top line; the tick is the target, so it is the
+         thing sitting under a thumb on the right. */
+      .ab-grid td.ex-cell {
+        flex: 1 1 100%; padding-right: 56px; font-size: 1.02rem; line-height: 1.35;
+      }
+
+      .ab-grid td.ex-cell::before { display: none; }
+
+      .ab-grid td.done-cell {
+        position: absolute; top: 10px; right: 10px; width: auto; padding: 0;
+      }
+
+      .ab-grid td.done-cell::before { display: none; }
+
+      /* Last Time is the number to beat, so it stays on its own line and reads
+         as a heading rather than as a fourth input. */
+      .ab-grid td[data-label="Last time"] {
+        flex: 1 1 100%; font-size: 0.88rem;
+        border-top: 1px solid var(--border); padding-top: 8px;
+      }
+
+      .ab-grid td[data-label="Sets"],
+      .ab-grid td[data-label="Reps"],
+      .ab-grid td[data-label="Lbs"] { flex: 1 1 0; min-width: 0; }
+
+      .ab-grid td .sheet-input {
+        width: 100%; min-width: 0; text-align: center;
+        font-size: 1.05rem; padding: 10px 4px;
+      }
+
+      /* Deliberately the far corner from both the tick box and the number
+         fields: the most destructive control on the card must not be eight
+         pixels under the box a student is typing a weight into. */
+      .ab-grid td.act-cell {
+        flex: 1 1 100%; display: flex; justify-content: flex-end;
+        margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--border);
+      }
+      .ab-grid td.act-cell::before { display: none; }
+      .ab-grid td.act-cell .btn { padding: 10px 12px; }
+
+      .ab-grid tr.empty-row { display: block; padding: 0; border-style: dashed; }
+      .ab-grid tr.empty-row td { display: block; padding: 16px 10px; }
+      .ab-grid tr.empty-row td::before { display: none; }
     }
 
     .print-only { display: none; }
     @media print {
-      .container, .modal-overlay { display: none !important; }
+      /* #saveStatus and #toastHost are fixed overlays outside .container, so
+         without this a toast that happened to be on screen prints on the report. */
+      .container, .modal-overlay, .toast-host, #saveStatus { display: none !important; }
       .print-only { display: block !important; }
       .rep-class { page-break-before: always; }
       .rep-class:first-child { page-break-before: avoid; }
@@ -605,23 +998,59 @@
   <!-- STUDENT VIEW -->
   <div id="studentView">
     <div class="card">
-      <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        <div class="form-group" style="flex: 1; min-width: 200px;">
+      <div class="identity-row">
+        <div class="form-group" id="loginBox" style="flex: 1; min-width: 200px;">
           <label for="studentName">Student Name:</label>
           <div class="login-row">
-            <input type="text" id="studentName" placeholder="e.g., Alex Smith">
-            <input type="text" id="studentPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" style="max-width: 110px;">
-            <button class="btn btn-primary" onclick="loginStudent()">Log In / Register</button>
-            <button class="btn btn-secondary hidden" id="logoutBtn" onclick="logoutStudent()">Log Out</button>
+            <input type="text" id="studentName" placeholder="e.g., Alex Smith" autocomplete="off"
+                   onkeydown="if(event.key===&#39;Enter&#39;) loginStudent();">
+            <input type="text" id="studentPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric"
+                   aria-label="Your 4-digit PIN"
+                   autocomplete="off" style="max-width: 110px;"
+                   onkeydown="if(event.key===&#39;Enter&#39;) loginStudent();">
+            <button class="btn btn-primary" onclick="loginStudent()">Log In</button>
           </div>
-          <p style="font-size: 0.8rem; color: var(--subtle); margin: 4px 0 0;">First time? Type a new 4-digit PIN and it becomes yours. Forgot it? Ask your teacher to reset it.</p>
-          <p id="studentClassLine" style="font-size: 0.85rem; font-weight: 600; margin: 6px 0 0;"></p>
+          <p style="font-size: 0.8rem; color: var(--subtle); margin: 6px 0 0;">First time? Type your name and any 4-digit PIN &mdash; that PIN becomes yours. Forgot it? Ask Mr.&nbsp;Spencer to reset it.</p>
         </div>
+
+        <!-- Signed-in state. A name still sitting in a text box is not an answer
+             to "whose account am I about to log a workout into?" on a device
+             three students share in one period. -->
+        <div class="form-group hidden" id="signedInBox" style="flex: 1; min-width: 200px;">
+          <div class="signed-in">
+            <div style="flex:1; min-width:0;">
+              <div class="signed-in-who">&#9989; Signed in as <strong id="signedInName"></strong></div>
+              <div id="studentClassLine" class="signed-in-class"></div>
+            </div>
+            <button class="btn btn-secondary" onclick="logoutStudent()">Log Out</button>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--subtle); margin: 6px 0 0;">Not you? Tap <strong>Log Out</strong> before you start.</p>
+        </div>
+
         <div class="form-group" style="flex: 1; min-width: 200px;">
           <label for="workoutDate">Workout Date:</label>
+          <!-- A workout you have not done yet cannot be logged, so the picker
+               simply does not offer tomorrow. The banner still covers past dates,
+               which ARE legitimate for a catch-up. -->
           <input type="date" id="workoutDate" onchange="onDateChange()">
+          <p id="dateWarning" class="date-warning hidden"></p>
         </div>
       </div>
+    </div>
+
+    <!-- Shown only while logged out. Without it the first thing a new student
+         meets is a three-step exercise selector that silently refuses to save
+         anything, because nothing has told them to log in yet. -->
+    <div class="card welcome-card" id="welcomeCard">
+      <h3 style="margin-top:0; color:var(--primary);">&#128075; New here? Three steps.</h3>
+      <ol class="welcome-steps">
+        <li><strong>Log in above.</strong> Type your name and make up a 4-digit PIN. Use the same two every time.</li>
+        <li><strong>Build your routine once.</strong> Workout A needs 4 lower body + 2 core. Workout B needs 4 upper body + 2 core.</li>
+        <li><strong>Every class after that:</strong> open <em>Do My Workout</em>, tick each exercise as you finish it, then hit Submit.</li>
+      </ol>
+      <p style="margin:12px 0 0; font-size:0.9rem; color:var(--subtle);">
+        Stuck at any point? The <strong>&#10067; Help</strong> tab answers it, in plain English.
+      </p>
     </div>
 
     <!-- TODAY'S WORKOUT PROGRESS -->
@@ -633,6 +1062,7 @@
           <button type="button" id="dayBtnB" class="day-btn" onclick="setTodayDay('B')">Workout B</button>
         </div>
       </div>
+      <p id="daySuggestion" class="day-suggestion hidden"></p>
       <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:14px;">
         <span id="todayLabel" style="font-weight:600;">0 of 6</span>
         <span id="todayPct" style="font-weight:700; color:var(--primary);">0%</span>
@@ -647,6 +1077,9 @@
       </div>
       <p id="todayHint" style="margin:10px 0 0; font-size:0.85rem; color:var(--subtle);"></p>
       <p id="todaySubmitNote" style="margin:8px 0 0; font-size:0.85rem; font-weight:600;"></p>
+      <button class="btn btn-primary go-to-workout" id="goToWorkoutBtn" onclick="goToWorkout()">
+        Open Workout <span id="goToWorkoutDay">A</span> &rarr;
+      </button>
     </div>
 
     <!-- ROUTINE SETUP: is the routine BUILT correctly, not today's progress -->
@@ -666,47 +1099,59 @@
       </div>
 
       <div class="req-grid">
-        <div id="reqALower" class="req-card missing">
+        <div id="reqALower" class="req-card todo">
           <div class="req-card-header">
             <span>🅰️ Workout A Lower Body (Min 4):</span>
-            <span id="countALower">0 / 4 ❌</span>
+            <span id="countALower">0 / 4</span>
           </div>
         </div>
 
-        <div id="reqACore" class="req-card missing">
+        <div id="reqACore" class="req-card todo">
           <div class="req-card-header">
             <span>🅰️ Workout A Core (Min 2):</span>
-            <span id="countACore">0 / 2 ❌</span>
+            <span id="countACore">0 / 2</span>
           </div>
         </div>
 
-        <div id="reqBUpper" class="req-card missing">
+        <div id="reqBUpper" class="req-card todo">
           <div class="req-card-header">
             <span>🅱️ Workout B Upper Body (Min 4):</span>
-            <span id="countBUpper">0 / 4 ❌</span>
+            <span id="countBUpper">0 / 4</span>
           </div>
         </div>
 
-        <div id="reqBCore" class="req-card missing">
+        <div id="reqBCore" class="req-card todo">
           <div class="req-card-header">
             <span>🅱️ Workout B Core (Min 2):</span>
-            <span id="countBCore">0 / 2 ❌</span>
+            <span id="countBCore">0 / 2</span>
           </div>
         </div>
       </div>
     </div>
 
     <div class="sub-tabs">
-      <button class="sub-tab-btn active" onclick="switchStudentTab('tab1', event)">1. Build Routine & Library</button>
-      <button class="sub-tab-btn" onclick="switchStudentTab('tab3', event)">2. Master A/B Workout Plan</button>
-      <button class="sub-tab-btn" onclick="switchStudentTab('tab2', event)">3. Spreadsheet Log</button>
-      <button class="sub-tab-btn" onclick="switchStudentTab('tab4', event)">4. History Log</button>
+      <button class="sub-tab-btn active" onclick="switchStudentTab('tab1', event)">1. Build My Routine</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tab3', event)">2. Do My Workout</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tab2', event)">3. Quick Log</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tab4', event)">4. My History</button>
+      <button class="sub-tab-btn help-tab-btn" onclick="switchStudentTab('tabHelp', event)">&#10067; Help</button>
     </div>
 
     <!-- TAB 1: BUILD ROUTINE -->
     <div id="tab1" class="student-tab">
       <div class="card">
-        <h3>Exercise Selector & Form Cues</h3>
+        <h3>Exercise Selector &amp; Form Cues</h3>
+
+        <!-- Nothing here can be saved without an account, and the only thing
+             that used to say so was a toast fired after all five selections had
+             been made. Say it before they start, not after. -->
+        <div id="builderLock" class="builder-lock">
+          <strong>&#128274; Log in first.</strong>
+          <p style="margin:6px 0 0;">Type your name and a 4-digit PIN at the top of the page.
+          Exercises you pick here can&rsquo;t be saved to a routine until you do.</p>
+        </div>
+
+        <div id="builderForm" class="hidden">
         
         <!-- STEP 1: Target Area -->
         <div class="form-group">
@@ -728,27 +1173,35 @@
         <!-- STEP 3: Exercise Selection Dropdown -->
         <div id="exerciseGroup" class="dropdown-box hidden">
           <label id="exerciseSelectLabel" for="exerciseSelect" style="font-weight: 700; color: var(--primary); display:block; margin-bottom:8px;">3. Select Exercise:</label>
-          <select id="exerciseSelect" onchange="handleExerciseSelect()"></select>
+          <select id="exerciseSelect" aria-label="Select an exercise" onchange="handleExerciseSelect()"></select>
         </div>
 
         <!-- Custom Exercise Input -->
         <div id="customExerciseGroup" class="form-group hidden">
-          <label for="customExerciseInput">Enter Custom Exercise Name:</label>
+          <label for="customExerciseInput">Type your exercise name:</label>
           <input type="text" id="customExerciseInput" placeholder="e.g., Incline Dumbbell Flyes">
         </div>
 
         <button id="previewBtn" class="btn btn-secondary hidden" onclick="openModal()" style="margin-bottom: 15px;">🔍 View Exercise Form Cues & Video</button>
 
         <div id="workoutDayGroup" class="form-group hidden">
-          <label for="workoutDaySelect">Assign to Workout Day:</label>
-          <select id="workoutDaySelect">
-            <option value="A">Workout A (Requires Lower Body & Core)</option>
-            <option value="B">Workout B (Requires Upper Body & Core)</option>
+          <label for="workoutDaySelect">4. Put it in which workout?</label>
+          <select id="workoutDaySelect" onchange="renderDayMatchHint(); renderStillNeeds();">
+            <option value="A">Workout A &mdash; 4 Lower Body + 2 Core</option>
+            <option value="B">Workout B &mdash; 4 Upper Body + 2 Core</option>
           </select>
+          <!-- An upper body exercise filed under Workout A is legal, gets logged,
+               and counts toward nothing. The student then cannot work out why the
+               bar will not move. Say so at the moment they choose. -->
+          <p id="dayMatchHint" class="day-match-hint hidden"></p>
         </div>
 
         <div id="fitnessGroup" class="form-group hidden">
-          <label for="fitnessComponent">Target Fitness Component:</label>
+          <label for="fitnessComponent">5. Target Fitness Component:</label>
+          <p style="font-size:0.8rem; color:var(--subtle); margin:-2px 0 6px; font-weight:400;">
+            What this exercise is training. Heavy and low reps is <em>strength</em>; light and
+            high reps is <em>endurance</em>. Ask Mr.&nbsp;Spencer if you are not sure.
+          </p>
           <select id="fitnessComponent">
             <option value="Muscular Strength">Muscular Strength</option>
             <option value="Muscular Endurance">Muscular Endurance</option>
@@ -757,12 +1210,16 @@
           </select>
         </div>
 
+        <!-- The thing a student most needs while building is "how many more?",
+             and it was only answerable by scrolling back up to the setup card. -->
+        <p id="stillNeeds" class="still-needs hidden"></p>
         <button id="addToRoutineBtn" class="btn btn-primary hidden" onclick="addToRoutine()">+ Add to Routine</button>
 
         <div id="routineSavedBox" class="hidden" style="margin-top: 20px;">
           <h4>Your Saved Exercises:</h4>
-          <p style="font-size: 0.85rem; color: var(--subtle);">Click any tag below to send directly to your active spreadsheet.</p>
+          <p style="font-size: 0.85rem; color: var(--subtle);">Tap any tag below to send it to the Quick Log tab.</p>
           <div id="routineTags" class="tag-container"></div>
+        </div>
         </div>
       </div>
     </div>
@@ -778,12 +1235,20 @@
           View and edit your complete routine. Check the box when completed today, or update your targets on the fly! The <strong>Last Time</strong> column shows what you need to beat.
         </p>
 
+        <div class="builder-lock hidden" id="lockWorkout" style="margin-bottom:14px;">
+          <strong>&#128274; Log in first.</strong>
+          <p style="margin:6px 0 0;">Type your name and a 4-digit PIN at the top of the page.
+          Until you do, nothing you tick here is saved and Submit will not work.</p>
+        </div>
+
         <div id="submitStatusBar" class="submit-status pending">⏳ Not submitted yet.</div>
 
         <div class="ab-grid">
           <!-- A DAY COLUMN -->
-          <div>
-            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A</h4>
+          <div id="dayColA">
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A <span class="today-badge hidden" id="todayBadgeA">TODAY</span></h4>
+            <button type="button" class="btn off-day-switch hidden" id="switchToA"
+                    onclick="setTodayDay('A')">Not today's workout &mdash; tap to switch to Workout A</button>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Lower Body + 2 Core</span>
             <div style="overflow-x: auto; margin-top: 5px;">
               <table>
@@ -802,15 +1267,17 @@
               </table>
             </div>
             <div class="blockers" id="blockersA"></div>
-            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
-              <button class="btn btn-primary" onclick="submitWorkout('A')">✅ Submit Workout</button>
-              <button class="btn btn-danger" onclick="undoSubmitWorkout('A')">↩️ Undo Submit</button>
+            <div class="submit-row">
+              <button class="btn btn-primary btn-submit" onclick="submitWorkout('A')">✅ Submit Workout A</button>
+              <button class="btn btn-undo hidden" id="undoBtnA" onclick="undoSubmitWorkout('A')">↩️ Undo Submit</button>
             </div>
           </div>
 
           <!-- B DAY COLUMN -->
-          <div>
-            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B</h4>
+          <div id="dayColB">
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B <span class="today-badge hidden" id="todayBadgeB">TODAY</span></h4>
+            <button type="button" class="btn off-day-switch hidden" id="switchToB"
+                    onclick="setTodayDay('B')">Not today's workout &mdash; tap to switch to Workout B</button>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Upper Body + 2 Core</span>
             <div style="overflow-x: auto; margin-top: 5px;">
               <table>
@@ -829,9 +1296,9 @@
               </table>
             </div>
             <div class="blockers" id="blockersB"></div>
-            <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
-              <button class="btn btn-primary" onclick="submitWorkout('B')">✅ Submit Workout</button>
-              <button class="btn btn-danger" onclick="undoSubmitWorkout('B')">↩️ Undo Submit</button>
+            <div class="submit-row">
+              <button class="btn btn-primary btn-submit" onclick="submitWorkout('B')">✅ Submit Workout B</button>
+              <button class="btn btn-undo hidden" id="undoBtnB" onclick="undoSubmitWorkout('B')">↩️ Undo Submit</button>
             </div>
           </div>
         </div>
@@ -841,11 +1308,22 @@
     <!-- TAB 2: INTERACTIVE LOG SPREADSHEET -->
     <div id="tab2" class="student-tab hidden">
       <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-          <h3 style="margin:0;">Active Workout Log Spreadsheet</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; gap:10px; flex-wrap:wrap;">
+          <h3 style="margin:0;">Quick Log</h3>
           <button class="btn btn-primary" onclick="addBlankSpreadsheetRow()">+ Add Blank Row</button>
         </div>
-        <div style="overflow-x: auto;">
+        <p style="color: var(--subtle); font-size: 0.9rem; margin: 0 0 15px;">
+          For anything that is <strong>not</strong> part of your saved A/B routine &mdash; a fitness test,
+          a make-up day, whatever the sub had you do. Your normal workout goes on
+          <strong>2. Do My Workout</strong> instead.
+        </p>
+        <div class="builder-lock hidden" id="lockSheet" style="margin-bottom:14px;">
+          <strong>&#128274; Log in first.</strong>
+          <p style="margin:6px 0 0;">Type your name and a 4-digit PIN at the top of the page.
+          Rows typed here before you log in are not saved anywhere.</p>
+        </div>
+
+        <div class="table-scroll">
           <table>
             <thead>
               <tr>
@@ -861,16 +1339,21 @@
             <tbody id="editableSheetBody"></tbody>
           </table>
         </div>
+        <p class="scroll-hint">Swipe the table sideways to reach every column.</p>
         <div class="blockers" id="blockersSheet"></div>
-        <button class="btn btn-primary" onclick="saveSpreadsheetLog()" style="margin-top: 15px;">💾 Commit Log to History</button>
+        <button class="btn btn-primary" onclick="saveSpreadsheetLog()" style="margin-top: 15px;">💾 Save These to My History</button>
       </div>
     </div>
 
     <!-- TAB 4: PAST WORKOUT HISTORY -->
     <div id="tab4" class="student-tab hidden">
       <div class="card">
-        <h3>Logged Activity History</h3>
-        <div style="overflow-x: auto;">
+        <h3>My History</h3>
+        <p style="color: var(--subtle); font-size: 0.9rem; margin: 0 0 12px;">
+          Everything you have submitted, all term. The <strong>Last Time</strong> numbers on your
+          workout come from here.
+        </p>
+        <div class="table-scroll">
           <table>
             <thead>
               <tr>
@@ -888,6 +1371,164 @@
         </div>
       </div>
     </div>
+
+    <!-- TAB HELP: STUDENT INSTRUCTIONS -->
+    <div id="tabHelp" class="student-tab hidden">
+      <div class="card">
+        <h3 style="margin-top:0;">&#10067; How to use the tracker</h3>
+        <p style="color:var(--subtle); margin-top:4px;">
+          Two minutes to read. You only have to do steps&nbsp;1 and&nbsp;2 once all term.
+        </p>
+
+        <div class="help-loop">
+          <div class="help-step">
+            <div class="help-step-n">1</div>
+            <div>
+              <strong>Log in</strong>
+              <p>Your name + a 4-digit PIN you make up. Use the <em>same two</em> every single time, on any phone or Chromebook.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-n">2</div>
+            <div>
+              <strong>Build your routine &mdash; once</strong>
+              <p>Pick your exercises on the <em>Build My Routine</em> tab. You need two workouts:<br>
+              <strong>Workout&nbsp;A</strong> = 4 lower body + 2 core.<br>
+              <strong>Workout&nbsp;B</strong> = 4 upper body + 2 core.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-n">3</div>
+            <div>
+              <strong>Every class after that</strong>
+              <p>Pick <em>Workout A</em> or <em>Workout B</em> at the top. Open <em>Do My Workout</em>. Tick each exercise as you finish it. Hit <strong>Submit</strong> before you leave.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-callout">
+          <strong>The one rule that matters:</strong> ticking a box is <em>not</em> the same as submitting.
+          Your teacher only sees the workout once you press <strong>&#9989; Submit Workout</strong>.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Questions people actually ask</h3>
+
+        <details class="help-q">
+          <summary>How do I know whether today is A or B?</summary>
+          <p>The tracker picks for you. It looks at the last workout you actually submitted and
+          offers the <em>other</em> one &mdash; that alternating is the whole point of an A/B program.
+          It tells you why, right under the buttons: <em>&ldquo;Last workout: A on 9/18 &mdash; so today
+          is probably Workout B.&rdquo;</em></p>
+          <p>It is only a suggestion. If Mr.&nbsp;Spencer says otherwise, just tap the other button.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What does &ldquo;4 of 6&rdquo; on the green bar mean?</summary>
+          <p>Six is the daily requirement: <strong>4 from your main area</strong> (lower body on A, upper body on B)
+          <strong>+ 2 core</strong>. The bar counts <em>composed</em> exercises, not just any six.</p>
+          <p>So six core exercises scores <strong>2 of 6</strong>, not 6 &mdash; core is capped at 2 because that is
+          what the program asks for. Doing extra is great and it still gets logged; it just does not push the
+          bar past 6.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>I pressed Submit and it said no. Why?</summary>
+          <p>Look at the red &#10007; list right above the Submit button &mdash; it shows
+          <strong>everything</strong> in your way at once, not one thing at a time. The usual three:</p>
+          <ul>
+            <li><strong>Not enough ticked.</strong> You need 4 + 2 checked off.</li>
+            <li><strong>Already in your history.</strong> You logged that exercise earlier today on the
+            Quick&nbsp;Log tab. Press <strong>Skip it and submit the rest</strong> &mdash; it already counts.</li>
+            <li><strong>Workout is empty.</strong> Nothing added to that day yet. Go build it.</li>
+          </ul>
+        </details>
+
+        <details class="help-q">
+          <summary>What is the difference between &ldquo;Do My Workout&rdquo; and &ldquo;Quick Log&rdquo;?</summary>
+          <p><strong>Do My Workout</strong> is your normal day: your saved A/B routine with tick boxes and a
+          Submit button. Use this one.</p>
+          <p><strong>Quick Log</strong> is for a one-off that is not part of your routine &mdash; a fitness test,
+          a make-up day, something the sub had you do. Type it in and press Commit.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>It says some of my exercises are &ldquo;0 lbs&rdquo;.</summary>
+          <p>That is a heads-up, not a refusal &mdash; you can still submit. It is correct for
+          push-ups, planks and anything bodyweight.</p>
+          <p>But if you actually loaded a bar, type the weight into the <strong>Lbs</strong> box before you
+          submit. A lift saved as 0&nbsp;lbs wrecks your <strong>Last Time</strong> number, and beating
+          Last Time is the entire point.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What is the &ldquo;Last Time&rdquo; column for?</summary>
+          <p>It is the sets, reps and weight you did the last time you performed that exact exercise.
+          <strong>That is the number to beat.</strong> Adding one rep or 5&nbsp;lbs to last time is the whole
+          point of the program &mdash; that is progressive overload, and it is what makes you stronger.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>I forgot my PIN.</summary>
+          <p>Nobody can look it up &mdash; it is not stored anywhere, which is what stops other students getting
+          into your account. Ask Mr.&nbsp;Spencer to <strong>Reset PIN</strong> for you. Your workouts all come
+          across to the new PIN; you lose nothing.</p>
+          <p>Do <em>not</em> just make a new account under a slightly different name. You will lose your history.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>The date at the top is wrong.</summary>
+          <p>It should say today. If it does not, you will see an orange warning &mdash; tap the date box and set
+          it back to today, or your workout gets filed under the wrong day and may not be graded.</p>
+          <p>It is meant to be changed only when you are catching up a day you genuinely missed.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>I picked the wrong class period.</summary>
+          <p>Ask Mr.&nbsp;Spencer &mdash; he can move you from his dashboard in one tap. If you move yourself with
+          a class link, he gets told, so just ask.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Can I do both Workout A and Workout B on the same day?</summary>
+          <p>Yes &mdash; a make-up day, or a double session. Submit one, switch with the
+          <strong>Workout A / Workout B</strong> buttons at the top, and submit the other. Each is
+          tracked separately, and <strong>&#8617;&#65039; Undo Submit</strong> only ever undoes the
+          workout it sits under.</p>
+          <p>The workout that is <em>not</em> the one you picked is dimmed with a
+          &ldquo;tap to switch&rdquo; bar, so you cannot submit the wrong one by accident.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>I submitted by accident.</summary>
+          <p><strong>&#8617;&#65039; Undo Submit</strong> under the same workout, same day. It pulls those rows back
+          out of your history so you can fix them and submit again.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Am I allowed to add an exercise that is not on the list?</summary>
+          <p>Yes. On <em>Build My Routine</em>, choose your muscle group, then pick
+          <strong>+ Add Custom Exercise&hellip;</strong> at the bottom of the exercise list and type the name.
+          Check with Mr.&nbsp;Spencer that it counts for the area you are putting it under.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Can I get my plan on paper?</summary>
+          <p>Yes &mdash; <strong>&#128424; Print Workout Plan</strong> on the <em>Do My Workout</em> tab prints both
+          workouts with blank boxes for sets, reps and weight, plus your Last&nbsp;Time numbers to beat.
+          Good for days the wifi is down.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Is my phone saving this, or is it on the internet?</summary>
+          <p>The internet &mdash; so you can log in on any device and everything is there. Watch the bottom of the
+          screen: <strong>&#9989; Saved</strong> means it went through. If you ever see a red
+          <strong>NOT SAVED</strong> box, keep the tab open and check your wifi; do not close it.</p>
+        </details>
+      </div>
+    </div>
+
   </div>
 
   <!-- TEACHER VIEW -->
@@ -900,20 +1541,47 @@
     </div>
 
     <div class="sub-tabs">
-      <button class="sub-tab-btn active" onclick="switchTeacherTab('teacherTab1', event)">Class Logs Overview</button>
-      <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab2', event)">Learning Target Manager</button>
+      <button class="sub-tab-btn active" onclick="switchTeacherTab('teacherTab1', event)">Today &amp; Roster</button>
+      <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab2', event)">Learning Target</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab3', event)">Class Periods</button>
+      <button class="sub-tab-btn help-tab-btn" onclick="switchTeacherTab('teacherTabHelp', event)">&#10067; Help</button>
     </div>
 
     <!-- TEACHER TAB 1: OVERVIEW & ANALYTICS -->
     <div id="teacherTab1" class="teacher-tab">
+      <div class="kpi-scope">
+        <span id="kpiScopeText">Showing <strong>all classes</strong></span>
+        <span class="kpi-stamp">
+          <span id="kpiStamp"></span>
+          <button class="btn btn-secondary" id="refreshBtn" onclick="renderTeacherLogs()">&#8635; Refresh</button>
+          <button class="btn btn-secondary" id="recountBtn" onclick="recountClass()"
+                  title="Read every workout in this class and correct the term totals">&#10003; Recount totals</button>
+        </span>
+      </div>
+
       <div class="kpi-grid">
         <div class="kpi-card">
           <div>Registered Students</div>
           <div class="kpi-value" id="kpiStudents">0</div>
         </div>
+        <div class="kpi-card kpi-good">
+          <div>Submitted Today</div>
+          <div class="kpi-value" id="kpiSubmitted">0</div>
+          <div class="kpi-note" id="kpiShort"></div>
+        </div>
+        <div class="kpi-card kpi-progress">
+          <div>In Progress Today</div>
+          <div class="kpi-value" id="kpiPartial">0</div>
+        </div>
+        <div class="kpi-card kpi-warn">
+          <div>Not Started Today</div>
+          <div class="kpi-value" id="kpiNotStarted">0</div>
+        </div>
         <div class="kpi-card">
-          <div>Total Workouts Logged</div>
+          <!-- This counts exercise ROWS, not sessions: a student who logs six
+               exercises adds six. Calling it "workouts" made a class look four
+               times busier than it was. -->
+          <div>Exercises Logged (all term)</div>
           <div class="kpi-value" id="kpiLogs">0</div>
         </div>
       </div>
@@ -923,25 +1591,50 @@
           <h3 style="margin:0;">Students by Class</h3>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
             <div class="form-group" style="margin:0; min-width:200px;">
-              <select id="classFilter" onchange="renderTeacherLogs()">
+              <select id="classFilter" aria-label="Filter by class period" onchange="renderTeacherLogs()">
                 <option value="">All classes</option>
               </select>
             </div>
             <div class="form-group" style="margin:0; min-width:150px;">
-              <select id="printRange">
+              <select id="studentSort" onchange="renderDashboardBody()" aria-label="Sort students">
+                <option value="name">Sort: A&ndash;Z</option>
+                <option value="behind">Sort: least done first</option>
+                <option value="term">Sort: fewest logged all term</option>
+              </select>
+            </div>
+            <!-- Grouped and labelled because sitting loose next to the class
+                 filter made it read as though it narrowed the list on screen.
+                 It has only ever affected the printout. -->
+            <div class="print-group">
+              <label for="printRange" style="margin:0; font-size:0.8rem; white-space:nowrap;">Print range</label>
+              <select id="printRange" style="min-width:140px;">
                 <option value="7">Last 7 days</option>
                 <option value="30" selected>Last 30 days</option>
                 <option value="90">Last 90 days</option>
                 <option value="0">Everything</option>
               </select>
+              <button class="btn btn-secondary" id="printReportBtn" onclick="printClassReport()">Print report</button>
             </div>
-            <button class="btn btn-secondary" id="printReportBtn" onclick="printClassReport()">Print report</button>
           </div>
         </div>
         <p style="color: var(--subtle); font-size: 0.9rem;">
           Click a student to see their workouts. Everything here &mdash; moving a student to a
           different class, resetting a PIN, deleting a student &mdash; is done from this page.
         </p>
+
+        <!-- End-of-period question is always "who still owes me one?", so it is
+             one tap, not a scroll through ninety names. -->
+        <div class="dash-tools">
+          <input type="text" id="studentSearch" class="form-control" placeholder="&#128269; Find a student by name&hellip;"
+                 autocomplete="off" oninput="renderDashboardBody()" aria-label="Find a student by name">
+          <div class="status-chips" role="group" aria-label="Filter by today's status">
+            <button type="button" class="chip active" data-status="" onclick="setStatusFilter(&#39;&#39;, this)">Everyone</button>
+            <button type="button" class="chip" data-status="none" onclick="setStatusFilter(&#39;none&#39;, this)">Not started</button>
+            <button type="button" class="chip" data-status="partial" onclick="setStatusFilter(&#39;partial&#39;, this)">In progress</button>
+            <button type="button" class="chip" data-status="submitted" onclick="setStatusFilter(&#39;submitted&#39;, this)">Submitted</button>
+          </div>
+        </div>
+        <p id="dashFilterNote" class="dash-filter-note hidden"></p>
         <div id="dashboardBody"></div>
       </div>
     </div>
@@ -985,6 +1678,228 @@
         <div id="classList"></div>
       </div>
     </div>
+
+    <!-- TEACHER TAB HELP -->
+    <div id="teacherTabHelp" class="teacher-tab hidden">
+      <div class="card">
+        <h3 style="margin-top:0;">&#10067; Running the tracker</h3>
+        <p style="color:var(--subtle); margin-top:4px;">
+          Everything you need is on this page. The Firebase console is only ever needed to publish
+          security rules &mdash; not for day-to-day teaching.
+        </p>
+
+        <div class="help-loop">
+          <div class="help-step">
+            <div class="help-step-n">1</div>
+            <div>
+              <strong>Set up once, at the start of a term</strong>
+              <p>On <em>Class Periods</em>, add a class for each hour you teach. Put them in your real
+              timetable order with the &uarr;&darr; buttons &mdash; that order drives the student picker
+              <em>and</em> the grouping on this page.</p>
+              <p>Then <strong>Copy link</strong> for each class and paste it into that period's Google
+              Classroom. A student who opens it is placed in that class automatically.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-n">2</div>
+            <div>
+              <strong>Start of a period</strong>
+              <p>Set the day's focus on <em>Learning Target</em>. Students see it in the banner and as a
+              pop-up the first time they open the tracker that hour.</p>
+            </div>
+          </div>
+          <div class="help-step">
+            <div class="help-step-n">3</div>
+            <div>
+              <strong>End of a period &mdash; the 10-second check</strong>
+              <p>On <em>Today &amp; Roster</em>, tap <strong>Not started</strong>. Whoever is left on
+              screen has not logged anything today. That is your whole attendance-for-effort check.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="help-callout">
+          <strong>Grading note:</strong> the <em>Exercises Logged</em> number counts individual exercise
+          rows, not sessions. A student who does a full six-exercise workout adds <strong>6</strong>, not 1.
+          To count sessions, use <strong>Print report</strong> and count the dates.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">Reading the roster</h3>
+
+        <details class="help-q">
+          <summary>Do the big tiles at the top follow the class filter?</summary>
+          <p>Yes. Pick <em>3rd Hour</em> and every tile counts only 3rd Hour &mdash; the line above them
+          says which class you are looking at and how many students that is.</p>
+          <p>They deliberately do <strong>not</strong> follow the status chips or the search box. Those
+          are a drill-down inside the class you already chose; a tile that emptied itself as you tapped
+          <em>Not started</em> would not tell you anything.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Does this page update on its own while I watch it?</summary>
+          <p><strong>Nothing polls on a timer</strong> &mdash; that would cost tens of thousands of
+          database reads a day to tell you something you can ask for. Instead the page is loud about
+          its own age: the stamp beside the tiles turns amber after two minutes and red after ten
+          (&ldquo;This is 12 minutes old &mdash; press Refresh&rdquo;).</p>
+          <p>It also refreshes itself when you switch back to this tab. Before an end-of-period call,
+          glance at the stamp; if it is not green, press <strong>&#8635; Refresh</strong>.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What does &ldquo;&#10003; Recount totals&rdquo; do, and when should I use it?</summary>
+          <p>It reads <strong>every workout of every student in the class you have selected</strong> and
+          corrects their term totals against the real rows. It then tells you exactly what it changed
+          &mdash; e.g. <em>&ldquo;Corrected 2 term totals: Alex Smith 48 &rarr; 9&rdquo;</em> &mdash; or
+          says everything already matched.</p>
+          <p><strong>Use it before you grade off the term totals</strong>, not as a refresh. It is the
+          expensive operation on this page, which is why it is a button rather than something that runs
+          on its own.</p>
+          <p>Opening a student's row and printing a report also correct every total they touch, and say
+          so the same way.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What do the green bars next to each name mean?</summary>
+          <p>Progress against <strong>today's</strong> requirement, scored out of 6:
+          4 from the day's main area (lower body on A, upper body on B) + 2 core.
+          It turns solid green at 6 of 6.</p>
+          <p>&ldquo;<strong>+2</strong>&rdquo; after the score means two extra exercises beyond the
+          requirement &mdash; they get logged and graded, they just do not push the bar past 6.</p>
+          <p>A bar only ever describes today. Yesterday's finished workout reads as
+          <em>Not started today</em>, not as a full bar.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Does the tracker make students alternate A and B?</summary>
+          <p>It suggests it. On a new day the toggle pre-selects the opposite of the last workout that
+          student actually submitted, and shows them why. They can override it in one tap, so a student
+          doing two Workout&nbsp;As in a row is a choice, not a trap &mdash; but you will see far fewer
+          of them than you used to.</p>
+          <p>One-off <em>Quick Log</em> entries are ignored by that calculation; only real A/B
+          submissions count as "the last workout".</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What is the difference between &ldquo;6/6&rdquo; and &ldquo;submitted&rdquo;?</summary>
+          <p><strong>6 of 6</strong> means they ticked everything off. <strong>Submitted</strong> means
+          they pressed the button that actually sends it to you.</p>
+          <p>A student sitting at 6/6 and <em>not</em> submitted did the work and forgot the last step.
+          Worth a shout across the gym before the bell &mdash; use the <strong>In progress</strong> chip.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Somebody has a red MOVED THEMSELVES tag.</summary>
+          <p>They used another period's class link and moved themselves in the last seven days.
+          Usually innocent &mdash; a friend sent them a link. If they are in the wrong period, fix it with
+          the dropdown on their row; the tag clears itself after a week.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Students are showing up under a red &ldquo;Unassigned&rdquo; heading.</summary>
+          <p>They registered without picking a class &mdash; normally because they were mid-registration
+          when a class was archived. Use the dropdown on their row to put them in the right period.</p>
+        </details>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0;">The jobs you will actually do</h3>
+
+        <details class="help-q">
+          <summary>A student forgot their PIN.</summary>
+          <p>Press <strong>Reset PIN</strong> on their row, type a new 4-digit PIN, and tell them.
+          <strong>Their entire workout history comes with them</strong> &mdash; nothing is lost.</p>
+          <p>Nobody, including you, can look up an existing PIN. That is deliberate: it is what stops one
+          student opening another's account. Resetting is the only route, and it is fine.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Two students have the same name.</summary>
+          <p>The second one will be told the name is taken and asked to add a middle initial or period
+          number, e.g. &ldquo;Alex Smith B&rdquo;. If one of them registered wrongly, delete the empty
+          account and have them register again.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>How much should I trust the &ldquo;Exercises Logged (all term)&rdquo; tile?</summary>
+          <p>Treat it as a running estimate, not a gradebook figure. It adds up a counter stored on each
+          student record so the dashboard can show a whole class without downloading everyone's workouts.
+          That counter is rebuilt from the real rows <strong>whenever that student next logs in</strong>, so
+          it self-corrects &mdash; but a student who has not opened the app in a fortnight can be carrying a
+          stale number.</p>
+          <p>Anywhere it actually matters, the app reads the real rows instead &mdash; and when it does,
+          it <strong>corrects the stored number</strong>. Opening a student's row and running a
+          <strong>Print report</strong> both fix every count they touch, so the roster gets truer the more
+          you use it. <strong>Delete</strong> counts for real before it asks you, and says so if the
+          dashboard had been showing something different.</p>
+          <p>For a defensible grade, print the report.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>A student has two accounts with real work in both.</summary>
+          <p>There is no merge. Deleting either one deletes its workouts with it.</p>
+          <p>Print both records first (open each row, or print the class), decide which account they keep,
+          reconcile the missing sessions by hand, then delete the other. Rare, but worth doing in that
+          order &mdash; the delete is irreversible.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Printing for grading.</summary>
+          <p>Pick a class in the dropdown (or leave it on <em>All classes</em>), choose a date range, and
+          press <strong>Print report</strong>. You get every workout for every student in that range, one
+          class per page, ready for a gradebook.</p>
+          <p>The report follows whatever you have on screen &mdash; the class dropdown, the status chips
+          and the search box &mdash; and prints the filter it used at the top of every page. Filter to
+          <strong>Not started</strong> and print, and you get exactly that list.</p>
+          <p>Narrow the date range if it warns you about the row count &mdash; &ldquo;last 7 days&rdquo; is
+          usually what you want for a weekly effort grade.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Why can I archive a class but not delete one?</summary>
+          <p>Deliberate. Deleting a class would orphan every workout logged under it. <strong>Archive</strong>
+          kills its invite link and hides it from the student picker; students already in it keep working and
+          you keep all their data.</p>
+          <p><strong>Do not archive every class at once</strong> &mdash; students cannot use the tracker
+          without at least one active class to join.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Deleting a student.</summary>
+          <p>Permanent, double-confirmed, and it removes every workout they logged plus their claim on
+          their name. Use it for test accounts and duplicate registrations, not for students who have left
+          &mdash; for those, just leave the record; it costs nothing.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>A student swears they submitted and I cannot see it.</summary>
+          <p>Three things to check, in order:</p>
+          <ul>
+            <li><strong>The date on their screen.</strong> If it is not today, they filed it under another
+            day. Open their row &mdash; the workout will be there under that date.</li>
+            <li><strong>Did they press Submit</strong>, or only tick the boxes? Ticks alone are not a
+            submission.</li>
+            <li><strong>Which account?</strong> On a shared device, a mistyped name creates a separate
+            record. Search their surname here &mdash; a near-duplicate will show up.</li>
+          </ul>
+        </details>
+
+        <details class="help-q">
+          <summary>Change your teacher password.</summary>
+          <p><strong>&#128273; Change Teacher Password</strong>, top right. This one password is what
+          protects every student's data on this dashboard, so it should not be a school-mascot word.</p>
+          <p>If it refuses, sign out of the dashboard and back in first &mdash; it requires a recent login.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Something is not loading.</summary>
+          <p>Almost always the network. The page tells you when a save fails rather than failing quietly,
+          so if you have no red banner, the data is there. Reload once before assuming anything is wrong.</p>
+        </details>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1162,7 +2077,7 @@
         }
       },
       rhomboids: {
-        name: "Rhomboids",
+        name: "Rhomboids (Upper Back)",
         exercises: {
           "TRX Low Suspension Rows": { cues: "Lean back on TRX, drive elbows past torso squeezing shoulder blades together.", video: "https://www.youtube.com/results?search_query=TRX+Low+Suspension+Rows+proper+form" },
           "Pulldown Machine Seated Rows": { cues: "Pull handle to lower abdomen, pull shoulder blades back forcefully.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Seated+Rows+proper+form" },
@@ -1182,7 +2097,7 @@
         }
       },
       levatorScapulae: {
-        name: "Levator Scapulae",
+        name: "Levator Scapulae (Neck & Upper Back)",
         exercises: {
           "Dumbbell Shrugs with 3-Sec Pause": { cues: "Elevate shoulders straight up toward ears, squeeze firmly for 3 seconds.", video: "https://www.youtube.com/results?search_query=Dumbbell+Shrugs+with+3-Sec+Pause+proper+form" },
           "TRX Neck Retraction Pulls": { cues: "Lean back slightly on TRX, pull body up using gentle scapular elevation.", video: "https://www.youtube.com/results?search_query=TRX+Neck+Retraction+Pulls+proper+form" },
@@ -1473,7 +2388,7 @@
     // one cannot be cleared by removing the other row. Skipping is the way out.
     clashes.forEach(r => out.push({ code: "already-logged", id: r.id,
       exercise: cleanName(r.exercise),
-      text: '"' + cleanName(r.exercise) + '" is already in your History Log for '
+      text: '"' + cleanName(r.exercise) + '" is already in your history for '
         + String(r.date) + '.' }));
     return out;
   }
@@ -1483,7 +2398,7 @@
     let items = routines.filter(r => r.day === day);
     if(items.length === 0) {
       return { blockers: [{ code: "empty-day", text: "Workout " + day + " has no exercises "
-        + "yet. Add some on the Build Routine & Library tab." }], warnings: [] };
+        + "yet. Add some on the \u201c1. Build My Routine\u201d tab." }], warnings: [] };
     }
     let blockers = [], warnings = [];
     let ticked = items.filter(r => doneToday(r, date));
@@ -1529,6 +2444,19 @@
           + " be logged because " + (skipped.length === 1 ? "it isn't" : "they aren't")
           + " checked off: " + skipped.join(", ") + "." });
     }
+    // 0 lbs is correct for a plank and wrong for a back squat, and the app has
+    // no way to tell which. So it asks rather than guessing -- a warning, never
+    // a blocker. Logging a loaded lift as 0 lbs destroys the Last Time number
+    // the whole progressive-overload idea runs on.
+    if(blockers.length === 0) {
+      let zero = ticked.filter(r => Number(r.lbs) === 0).map(r => cleanName(r.name));
+      if(zero.length) {
+        warnings.push({ code: "zero-lbs", exercises: zero,
+          text: zero.length + (zero.length === 1 ? " exercise is" : " exercises are")
+            + " set to 0 lbs: " + zero.join(", ") + ". That is right for bodyweight moves \u2014 "
+            + "but if you loaded a bar, type the weight in before you submit." });
+      }
+    }
     return { blockers: blockers, warnings: warnings };
   }
 
@@ -1536,7 +2464,7 @@
   function spreadsheetBlockers(rows, history) {
     if(rows.length === 0) {
       return { blockers: [{ code: "no-rows", text: "There are no rows to commit. Use "
-        + "\u201c+ Add Blank Row\u201d, or tap an exercise tag to send it here." }], warnings: [] };
+        + "\u201c+ Add Blank Row\u201d, or tap an exercise tag on the Build My Routine tab to send it here." }], warnings: [] };
     }
     return { blockers: rowConflicts(rows, history), warnings: [] };
   }
@@ -1625,8 +2553,19 @@
 
   window.onload = function() {
     let today = todayLocal();
-    document.getElementById('workoutDate').value = today;
+    let dateEl = document.getElementById('workoutDate');
+    dateEl.value = today;
+    dateEl.max = today;
+    renderDateWarning();
     loadLearningTarget().then(maybeShowTargetModal);
+
+    // Every panel that depends on being logged in, painted once up front. The
+    // builder lock used to be drawn only by a later render, so on a cold load
+    // the exercise builder sat there unlocked and unusable.
+    renderSignedInState();
+    renderTodayCard();
+    renderSpreadsheet();
+    renderHistoryTable();
 
     updateKPIs();
   };
@@ -1777,16 +2716,18 @@
     let nameInput = document.getElementById('studentName').value.trim();
     let pinInput = document.getElementById('studentPin').value.trim();
     if(!nameInput) {
-      alert("Please enter a student name.");
+      toast("Type your name first.", "warn");
+      document.getElementById('studentName').focus();
       return;
     }
     if(!/^\d{4}$/.test(pinInput)) {
-      alert("Please enter a 4-digit PIN.");
+      toast("Your PIN has to be exactly 4 numbers.", "warn");
+      document.getElementById('studentPin').focus();
       return;
     }
 
     if(!normalizeName(nameInput)) {
-      alert("Please enter a valid name.");
+      toast("Please enter a valid name.", "warn");
       return;
     }
 
@@ -1795,7 +2736,7 @@
       docId = await studentDocId(nameInput, pinInput);
       nKey = await nameKey(nameInput);
     } catch(err) {
-      alert(err.message);
+      notice(err.message);
       return;
     }
 
@@ -1805,7 +2746,7 @@
       snap = await fbGetDoc(ref);
       nameSnap = await fbGetDoc(fbDoc(db, "names", nKey));
     } catch(err) {
-      alert("Couldn't reach the server — check your internet connection and try again.");
+      notice("Couldn't reach the server — check your internet connection and try again.");
       return;
     }
 
@@ -1816,24 +2757,27 @@
       currentClassId = data.classId || null;
       savedRoutines = data.routines || [];
       todaysSubmission = data.submission || null;
-      // Only today's choice is worth restoring; yesterday's says nothing.
-      applyTodayDay(data.todayDate === todayLocal() ? data.todayDay : "A");
+      let sameDay = data.todayDate === todayLocal();
       try {
         historyLogs = await fetchHistory(docId);
         // Self-heal: if the stored summary disagrees with the real rows, fix it.
         if((data.logCount || 0) !== historyLogs.length) saveUserData();
+        // A choice they already made today stands. Otherwise alternate off the
+        // last workout they actually logged -- which needs history, so it has
+        // to happen after the fetch, not before it.
+        applyTodayDay(sameDay ? data.todayDay : suggestedDay(historyLogs, todayLocal()).day);
       } catch(err) {
         console.error("History load failed:", err);
-        alert("Couldn't load your workout history — check your connection and log in again.");
+        notice("Couldn't load your workout history — check your connection and log in again.");
         currentUser = null; currentDocId = null; currentClassId = null;
         return;
       }
-      alert("Welcome back, " + currentUser + "!");
+      toast("Welcome back, " + currentUser + "!", "good");
     } else if(nameSnap.exists()) {
       // The name is claimed but this PIN does not lead to that record. Creating
       // an account here is exactly how a student silently ends up with a second,
       // empty one and loses their history, so refuse and send them to the teacher.
-      alert(`That PIN doesn't match the record for "${nameInput}".\n\n`
+      notice(`That PIN doesn't match the record for "${nameInput}".\n\n`
         + `Check the PIN and try again, or ask your teacher to reset it.\n\n`
         + `If you are a DIFFERENT student who happens to have the same name, `
         + `add your middle initial or class period so your name is unique `
@@ -1853,16 +2797,20 @@
                               todayDate: "", todayDay: "A", todayScore: 0, todayDone: 0 });
         await fbSetDoc(fbDoc(db, "names", nKey), { name: currentUser });
       } catch(err) {
-        alert("Couldn't create your account — check your internet connection and try again.");
+        notice("Couldn't create your account — check your internet connection and try again.");
         currentUser = null;
         currentDocId = null;
         currentClassId = null;
         return;
       }
-      alert(`Welcome, ${currentUser}! Your PIN is ${pinInput} — remember it, you'll need it to log back in on any device.`);
+      pendingNotice = { title: "You're all set",
+        msg: `Welcome, ${currentUser}! Your PIN is ${pinInput} \u2014 remember it. `
+           + `You will need your name and that PIN to log in on any device, and nobody can look it up for you.` };
     }
 
-    document.getElementById('logoutBtn').classList.remove('hidden');
+    renderSignedInState();
+    document.getElementById('workoutDate').value = todayLocal();
+    renderDateWarning();
     await ensureClassAssigned();
     renderSavedTags();
     renderHistoryTable();
@@ -1870,6 +2818,10 @@
     renderSubmitStatus();
     updateProgressUI();
     renderTodayCard();
+    // Only once the class picker is out of the way, or the two overlays stack.
+    if(document.getElementById('classPickerModal').classList.contains('hidden')) {
+      flushPendingNotice();
+    }
   }
 
   function handleTargetAreaChange() {
@@ -1884,6 +2836,10 @@
     document.getElementById('workoutDayGroup').classList.add('hidden');
     document.getElementById('fitnessGroup').classList.add('hidden');
     document.getElementById('addToRoutineBtn').classList.add('hidden');
+    let hint = document.getElementById('dayMatchHint');
+    if(hint) hint.classList.add('hidden');
+    let needs = document.getElementById('stillNeeds');
+    if(needs) needs.classList.add('hidden');
 
     if(!activeTargetArea) {
       container.classList.add('hidden');
@@ -1946,6 +2902,40 @@
       document.getElementById('workoutDayGroup').classList.remove('hidden');
       document.getElementById('fitnessGroup').classList.remove('hidden');
       document.getElementById('addToRoutineBtn').classList.remove('hidden');
+      // Pre-pick the day this exercise actually counts towards. Core counts on
+      // both, so whatever they already had stands.
+      let sel = document.getElementById('workoutDaySelect');
+      if(activeTargetArea === "lower") sel.value = "A";
+      else if(activeTargetArea === "upper") sel.value = "B";
+      renderDayMatchHint();
+      renderStillNeeds();
+    }
+  }
+
+  // Workout A's requirement is 4 LOWER + 2 core; Workout B's is 4 UPPER + 2 core.
+  // Anything else in a day is logged and graded but counts toward neither, which
+  // from the student's side looks like a progress bar that refuses to move.
+  function renderDayMatchHint() {
+    let el = document.getElementById('dayMatchHint');
+    if(!el) return;
+    let day = document.getElementById('workoutDaySelect').value;
+    if(!activeTargetArea) { el.classList.add('hidden'); return; }
+    let wanted = day === "A" ? "lower" : "upper";
+    el.classList.remove('hidden');
+    if(activeTargetArea === "core") {
+      el.className = "day-match-hint ok";
+      el.innerText = "\u2713 Core counts in both workouts. You need 2 in each.";
+    } else if(activeTargetArea === wanted) {
+      el.className = "day-match-hint ok";
+      el.innerText = "\u2713 Good match \u2014 this counts toward Workout " + day + "'s 4 "
+        + (wanted === "lower" ? "lower body" : "upper body") + ".";
+    } else {
+      let other = day === "A" ? "B" : "A";
+      el.className = "day-match-hint";
+      el.innerText = "\u26a0 That is an " + (activeTargetArea === "upper" ? "upper" : "lower")
+        + " body exercise, and Workout " + day + " needs "
+        + (wanted === "lower" ? "lower" : "upper") + " body. It will still be logged, but it "
+        + "will NOT count toward the 6 you need. Switch to Workout " + other + " if you want it to count.";
     }
   }
 
@@ -1970,13 +2960,13 @@
 
   function addToRoutine() {
     if(!currentUser) {
-      alert("Please enter student name first.");
+      toast("Please enter student name first.", "warn");
       return;
     }
 
     let exName = activeExercise === "CUSTOM" ? document.getElementById('customExerciseInput').value.trim() : activeExercise;
     if(!exName) {
-      alert("Please provide an exercise name.");
+      toast("Please provide an exercise name.", "warn");
       return;
     }
 
@@ -1998,11 +2988,40 @@
 
     savedRoutines.push(item);
     saveUserData();
+    renderStillNeeds();
     renderSavedTags();
     renderMasterWorkoutPlan();
     updateProgressUI();
     renderTodayCard();
-    alert("Added " + exName + " to Workout " + day + "!");
+    toast("Added " + exName + " to Workout " + day + "!", "good");
+  }
+
+
+  // What the day they are filing into still needs, counted the same way the
+  // Routine Setup card counts it. Shown beside the Add button so the answer is
+  // where the question gets asked.
+  function renderStillNeeds() {
+    let el = document.getElementById('stillNeeds');
+    if(!el) return;
+    let day = document.getElementById('workoutDaySelect').value;
+    if(!currentUser || !activeTargetArea) { el.classList.add('hidden'); return; }
+    let prime = day === "A" ? "lower" : "upper";
+    let primeLabel = day === "A" ? "lower body" : "upper body";
+    let have = savedRoutines.filter(r => r.day === day);
+    let needPrime = Math.max(0, 4 - have.filter(r => r.targetArea === prime).length);
+    let needCore = Math.max(0, 2 - have.filter(r => r.targetArea === "core").length);
+    el.classList.remove('hidden');
+    if(needPrime === 0 && needCore === 0) {
+      el.className = "still-needs done";
+      el.innerText = "\u2713 Workout " + day + " is complete \u2014 " + have.length
+        + " exercise" + (have.length === 1 ? "" : "s") + ". Extras are welcome.";
+      return;
+    }
+    let bits = [];
+    if(needPrime) bits.push(needPrime + " more " + primeLabel);
+    if(needCore) bits.push(needCore + " more core");
+    el.className = "still-needs";
+    el.innerText = "Workout " + day + " still needs: " + bits.join(" and ") + ".";
   }
 
   function renderSavedTags() {
@@ -2039,13 +3058,15 @@
       let tr = document.createElement('tr');
       if(doneToday(r, date)) tr.classList.add('completed-row');
       tr.innerHTML = `
-        <td><input type="checkbox" ${doneToday(r, date) ? 'checked' : ''} onchange="setRoutineDone(${r.id}, this.checked)"></td>
-        <td><strong>${esc(r.name)}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${esc(r.component)}</span></td>
-        <td>${lastCell}</td>
-        <td><input type="number" class="sheet-input" value="${r.sets}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
-        <td><input type="number" class="sheet-input" value="${r.reps}" onchange="updateRoutineField(${r.id}, 'reps', this.value); saveUserData();"></td>
-        <td><input type="number" class="sheet-input" value="${r.lbs}" onchange="updateRoutineField(${r.id}, 'lbs', this.value); saveUserData();"></td>
-        <td><button class="btn btn-danger" onclick="deleteRoutineItem(${r.id})">X</button></td>
+        <td class="done-cell" data-label="Done"><input type="checkbox" class="done-check" ${doneToday(r, date) ? 'checked' : ''}
+            aria-label="Mark ${esc(r.name)} done today"
+            onchange="setRoutineDone(${r.id}, this.checked)"></td>
+        <td class="ex-cell" data-label="Exercise"><strong>${esc(r.name)}</strong><span class="ex-comp">${esc(r.component)}</span></td>
+        <td data-label="Last time">${lastCell}</td>
+        <td data-label="Sets"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="99" value="${r.sets}" aria-label="Sets for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
+        <td data-label="Reps"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="999" value="${r.reps}" aria-label="Reps for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'reps', this.value); saveUserData();"></td>
+        <td data-label="Lbs"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="2000" value="${r.lbs}" aria-label="Lbs for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'lbs', this.value); saveUserData();"></td>
+        <td data-label="" class="act-cell"><button class="btn btn-quiet-danger" aria-label="Remove ${esc(r.name)} from this workout" title="Remove from routine" onclick="deleteRoutineItem(${r.id})">✕</button></td>
       `;
 
       if(r.day === "A") {
@@ -2053,6 +3074,17 @@
       } else {
         bodyB.appendChild(tr);
       }
+    });
+
+    // An empty table under a heading reads as "broken", not as "you have not
+    // built this yet". Say which, and say where to go.
+    [["A", bodyA], ["B", bodyB]].forEach(([day, body]) => {
+      if(body.children.length) return;
+      let tr = document.createElement('tr');
+      tr.className = "empty-row";
+      tr.innerHTML = '<td colspan="7">No exercises in Workout ' + day
+        + ' yet \u2014 add them on the <strong>1. Build My Routine</strong> tab.</td>';
+      body.appendChild(tr);
     });
   }
 
@@ -2143,9 +3175,18 @@
       </div>`;
   }
 
+  // Was a bare, unconfirmed, permanent delete sitting eight pixels under the Lbs
+  // box on a phone -- the field a student is typing into mid-workout. Removing
+  // an exercise can drop them under the 4+2 minimum and lock the submit until
+  // they rebuild it on another tab, and nothing anywhere undid it.
   function deleteRoutineItem(id) {
+    let r = savedRoutines.find(x => x.id === id);
+    if(r && !confirm('Remove "' + cleanName(r.name) + '" from Workout ' + r.day + '?\n\n'
+      + 'This takes it out of your routine for good. Workouts you have already '
+      + 'submitted keep it.')) return;
     savedRoutines = savedRoutines.filter(r => r.id !== id);
     saveUserData();
+    renderStillNeeds();
     renderSavedTags();
     renderMasterWorkoutPlan();
     updateProgressUI();
@@ -2184,11 +3225,19 @@
     let tbody = document.getElementById('editableSheetBody');
     tbody.innerHTML = "";
 
+    if(spreadsheetRows.length === 0) {
+      let tr = document.createElement('tr');
+      tr.className = "empty-row";
+      tr.innerHTML = '<td colspan="7">Nothing here yet. Tap <strong>+ Add Blank Row</strong> above, '
+        + 'or tap any saved exercise tag on the <strong>1. Build My Routine</strong> tab to send it here.</td>';
+      tbody.appendChild(tr);
+    }
+
     spreadsheetRows.forEach((row, idx) => {
       let tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="date" class="sheet-input" value="${row.date}" onchange="spreadsheetRows[${idx}].date = this.value; renderAllBlockers();"></td>
-        <td><input type="text" class="sheet-input" value="${esc(row.exercise)}" placeholder="Exercise Name" onchange="spreadsheetRows[${idx}].exercise = this.value; renderAllBlockers();"></td>
+        <td><input type="date" class="sheet-input" value="${row.date}" aria-label="Date for row ${idx + 1}" onchange="spreadsheetRows[${idx}].date = this.value; renderAllBlockers();"></td>
+        <td><input type="text" class="sheet-input" value="${esc(row.exercise)}" placeholder="Exercise Name" aria-label="Exercise name for row ${idx + 1}" onchange="spreadsheetRows[${idx}].exercise = this.value; renderAllBlockers();"></td>
         <td>
           <select class="sheet-select" onchange="spreadsheetRows[${idx}].component = this.value">
             <option value="Muscular Strength" ${row.component==='Muscular Strength'?'selected':''}>Muscular Strength</option>
@@ -2197,10 +3246,10 @@
             <option value="Flexibility" ${row.component==='Flexibility'?'selected':''}>Flexibility</option>
           </select>
         </td>
-        <td><input type="number" class="sheet-input" value="${row.sets}" onchange="spreadsheetRows[${idx}].sets = cleanNumber(this.value, 99); renderSpreadsheet();"></td>
-        <td><input type="number" class="sheet-input" value="${row.reps}" onchange="spreadsheetRows[${idx}].reps = cleanNumber(this.value, 999); renderSpreadsheet();"></td>
-        <td><input type="number" class="sheet-input" value="${row.lbs}" onchange="spreadsheetRows[${idx}].lbs = cleanNumber(this.value, 2000); renderSpreadsheet();"></td>
-        <td><button class="btn btn-danger" onclick="deleteSpreadsheetRow(${idx})">X</button></td>
+        <td><input type="number" class="sheet-input" inputmode="numeric" min="0" max="99" value="${row.sets}" aria-label="Sets for row ${idx + 1}" onchange="spreadsheetRows[${idx}].sets = cleanNumber(this.value, 99); renderSpreadsheet();"></td>
+        <td><input type="number" class="sheet-input" inputmode="numeric" min="0" max="999" value="${row.reps}" aria-label="Reps for row ${idx + 1}" onchange="spreadsheetRows[${idx}].reps = cleanNumber(this.value, 999); renderSpreadsheet();"></td>
+        <td><input type="number" class="sheet-input" inputmode="numeric" min="0" max="2000" value="${row.lbs}" aria-label="Lbs for row ${idx + 1}" onchange="spreadsheetRows[${idx}].lbs = cleanNumber(this.value, 2000); renderSpreadsheet();"></td>
+        <td><button class="btn btn-quiet-danger" aria-label="Delete row ${idx + 1}" title="Delete row" onclick="deleteSpreadsheetRow(${idx})">✕</button></td>
       `;
       tbody.appendChild(tr);
     });
@@ -2217,14 +3266,14 @@
     for(let row of rows) {
       let key = row.date + "||" + (row.exercise || "").trim().toLowerCase();
       if(seen.has(key)) {
-        alert(`"${row.exercise}" is on the log twice for ${row.date}. Each exercise can only be logged once per day — remove the duplicate and try again.`);
+        notice(`"${row.exercise}" is on the log twice for ${row.date}. Each exercise can only be logged once per day — remove the duplicate and try again.`);
         return false;
       }
       seen.add(key);
     }
     for(let row of rows) {
       if(getLastLogForDay(row.exercise, row.date)) {
-        alert(`"${row.exercise}" was already logged for ${row.date}. Each exercise can only be logged once per day.`);
+        notice(`"${row.exercise}" was already logged for ${row.date}. Each exercise can only be logged once per day.`);
         return false;
       }
     }
@@ -2243,7 +3292,7 @@
     } catch(err) {
       console.error("History write failed:", err);
       setSaveStatus("error", err && err.code ? err.code : "");
-      alert("Your workout could NOT be saved — check your connection and try again.");
+      notice("Your workout could NOT be saved — check your connection and try again.");
       return false;
     }
     setSaveStatus("saved");
@@ -2251,19 +3300,28 @@
     historyLogs.push(...stamped);
     saveUserData();
     renderHistoryTable();
+    renderMasterWorkoutPlan();
     updateKPIs();
     return true;
   }
 
   async function saveSpreadsheetLog() {
     if(!currentUser) {
-      alert("Please log in with student name.");
+      toast("Please log in with student name.", "warn");
+      return;
+    }
+    let today = todayLocal();
+    let ahead = spreadsheetRows.filter(r => String(r.date || "") > today).map(r => r.date);
+    if(ahead.length) {
+      notice("Some rows are dated in the future (" + [...new Set(ahead)].join(", ")
+        + "), which cannot have happened yet.\n\nFix those dates and try again.",
+        "Future dates");
       return;
     }
     let res = spreadsheetBlockers(spreadsheetRows, historyLogs);
     if(res.blockers.length) {
       flashBlockers("Sheet");
-      alert(blockerAlert("these rows", res));
+      notice(blockerAlert("these rows", res, "save"));
       return;
     }
 
@@ -2271,23 +3329,40 @@
 
     spreadsheetRows = [];
     renderSpreadsheet();
-    alert("Workout logs committed successfully to History!");
+    toast("Saved to your history.", "good");
   }
 
   async function submitWorkout(day) {
     if(!currentUser) {
-      alert("Please log in with student name first.");
+      toast("Please log in with student name first.", "warn");
       return;
     }
 
     let dateVal = document.getElementById('workoutDate').value;
+    // The input carries max=today, but that only constrains the picker widget --
+    // it does not stop a value arriving any other way, and a future-dated row
+    // then becomes the "Last Time -- beat this" benchmark on every later
+    // workout. Guard where it actually matters.
+    let today = todayLocal();
+    if(dateVal > today) {
+      notice("You cannot log a workout for " + formatDateShort(dateVal)
+        + " because it has not happened yet.\n\nSet the date back to today.",
+        "That date is in the future");
+      document.getElementById('workoutDate').value = today;
+      onDateChange();
+      return;
+    }
+    if(dateVal !== today && !confirm("You are about to log this workout for "
+      + formatDateShort(dateVal) + ", not today.\n\nIs that right?")) {
+      return;
+    }
     // Every guard that used to live inline here now lives in workoutBlockers,
     // which the live checklist also reads -- so the button and the panel can
     // never disagree, and a student sees ALL of it rather than the first one.
     let res = workoutBlockers(savedRoutines, day, dateVal, historyLogs);
     if(res.blockers.length) {
       flashBlockers(day);
-      alert(blockerAlert("Workout " + day, res));
+      notice(blockerAlert("Workout " + day, res));
       return;
     }
 
@@ -2308,44 +3383,50 @@
     if(!await commitRowsToHistory(rows)) return;
 
     todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: logged.map(r => r.name) };
-    saveUserData();
+    let summarySaved = await saveUserData();
     renderSubmitStatus();
     renderTodayCard();
-    alert(`Workout ${day} submitted \u2014 ${rows.length} exercise`
-      + `${rows.length === 1 ? "" : "s"} sent to your teacher.`);
+    if(summarySaved) {
+      toast(`Workout ${day} submitted \u2014 ${rows.length} exercise`
+        + `${rows.length === 1 ? "" : "s"} sent to your teacher.`, "good");
+    } else {
+      // The workout rows themselves did land; it is the summary the dashboard
+      // reads that did not. Say exactly that rather than claiming success.
+      notice(`Your ${rows.length} exercise${rows.length === 1 ? " was" : "s were"} saved, but the `
+        + `page could not tell your teacher's dashboard about it.\n\n`
+        + `Check your wifi and press Submit again \u2014 it is safe to press it twice.`,
+        "Saved, but not sent yet");
+    }
   }
 
   async function undoSubmitWorkout(day) {
-    if(!todaysSubmission) {
-      alert("Nothing to undo — you haven't submitted a workout yet today.");
-      return;
-    }
-    // There is an Undo button under each column but only ever one submission to
-    // undo. Without this, the button under Workout B silently undid an A submit.
-    if(day && todaysSubmission.day !== day) {
-      alert(`Your last submission was Workout ${todaysSubmission.day}, not ${day}.`
-        + `\n\nUse the Undo button under Workout ${todaysSubmission.day}.`);
-      return;
-    }
     let dateVal = document.getElementById('workoutDate').value;
-    if(todaysSubmission.date !== dateVal) {
-      alert("You can only undo today's submission, not a past day.");
+    // Resolved from the rows, so BOTH days can be undone independently on a day
+    // a student did two sessions -- and so the button under Workout B can never
+    // reach into Workout A's submission.
+    let subId = submissionIdFor(day, dateVal, historyLogs);
+    let legacy = (!subId && todaysSubmission && todaysSubmission.day === day
+      && todaysSubmission.date === dateVal) ? todaysSubmission : null;
+
+    if(!subId && !legacy) {
+      toast("Nothing to undo \u2014 you haven't submitted Workout " + day
+        + " for " + formatDateShort(dateVal) + ".", "warn");
       return;
     }
-    if(!confirm(`Undo your Workout ${todaysSubmission.day} submission for ${formatDateShort(todaysSubmission.date)}? This removes it from your history.`)) {
+    if(!confirm(`Undo your Workout ${day} submission for ${formatDateShort(dateVal)}? This removes it from your history.`)) {
       return;
     }
 
     let before = historyLogs.length;
     let doomed;
-    if(todaysSubmission.subId) {
-      doomed = historyLogs.filter(h => h.subId === todaysSubmission.subId);
-      historyLogs = historyLogs.filter(h => h.subId !== todaysSubmission.subId);
+    if(subId) {
+      doomed = historyLogs.filter(h => h.subId === subId);
+      historyLogs = historyLogs.filter(h => h.subId !== subId);
     } else {
       // Submission predates subId tagging: fall back to the old match, but keep
       // it to the same workout day so hand-logged rows are less likely to go.
-      let names = new Set(todaysSubmission.exercises.map(n => n.trim().toLowerCase()));
-      let hit = h => h.date === todaysSubmission.date && h.day === todaysSubmission.day
+      let names = new Set(legacy.exercises.map(n => n.trim().toLowerCase()));
+      let hit = h => h.date === legacy.date && h.day === legacy.day
         && names.has((h.exercise || "").trim().toLowerCase());
       doomed = historyLogs.filter(hit);
       historyLogs = historyLogs.filter(h => !hit(h));
@@ -2361,23 +3442,30 @@
       try { await batch.commit(); }
       catch(err) {
         console.error("Undo delete failed:", err);
-        alert("Couldn't undo the submission on the server — reload and try again.");
+        notice("Couldn't undo the submission on the server — reload and try again.");
         return;
       }
     }
 
-    todaysSubmission = null;
+    if(todaysSubmission && todaysSubmission.day === day && todaysSubmission.date === dateVal) {
+      todaysSubmission = null;
+    }
     saveUserData();
     renderHistoryTable();
+    // The A/B tables carry the "Last Time -- beat this" column, which is read
+    // straight from history. Without this the rows just deleted are still shown
+    // as the number to beat, at the exact moment a student is fixing a mistake.
+    renderMasterWorkoutPlan();
     updateKPIs();
     renderSubmitStatus();
     renderTodayCard();
-    alert(`Submission undone (${removed} log ${removed === 1 ? "row" : "rows"} removed). Fix your workout and resubmit when ready.`);
+    toast(`Workout ${day} submission undone (${removed} log ${removed === 1 ? "row" : "rows"} removed). Fix it and submit again when ready.`, "good");
   }
 
   // Changing the date changes which ticks count, so the table and the bar both
   // have to be recomputed -- not just the submitted banner.
   function onDateChange() {
+    renderDateWarning();
     renderSubmitStatus();
     renderMasterWorkoutPlan();
     renderTodayCard();
@@ -2403,6 +3491,16 @@
     let tbody = document.getElementById('historyTable');
     tbody.innerHTML = "";
     let today = selectedDate();
+    if(historyLogs.length === 0) {
+      let tr = document.createElement('tr');
+      tr.className = "empty-row";
+      tr.innerHTML = '<td colspan="7">' + (currentUser
+        ? "Nothing logged yet. Every workout you submit shows up here \u2014 including how many "
+          + "sets, reps and pounds, so you can see yourself getting stronger."
+        : "Log in above to see your workout history.") + '</td>';
+      tbody.appendChild(tr);
+      return;
+    }
     historyLogs.forEach(h => {
       let tr = document.createElement('tr');
       // Flag the row a blocked submit is colliding with, so "Show me" lands on
@@ -2440,16 +3538,54 @@
     saveUserData();
   }
 
+  // The whole point of an A/B program is that you alternate. Defaulting every
+  // new day to "A" quietly pushed a student who did A yesterday straight back
+  // into A. Look at what they last actually logged and offer the other one.
+  // Only A/B submissions carry a `day`; Quick Log rows do not and are ignored.
+  function lastLoggedDay(history, before) {
+    let best = null;
+    history.forEach(h => {
+      if(h.day !== "A" && h.day !== "B") return;
+      let d = String(h.date || "");
+      if(before && d >= before) return;
+      if(!best || d > best.date) best = { date: d, day: h.day };
+    });
+    return best;
+  }
+
+  function suggestedDay(history, today) {
+    let last = lastLoggedDay(history, today);
+    if(!last) return { day: "A", from: null };
+    return { day: last.day === "A" ? "B" : "A", from: last };
+  }
+
+  // A suggestion a student cannot see is just a silent default, so say where it
+  // came from -- and never say it on a day they have already chosen for.
+  function renderDaySuggestion() {
+    let el = document.getElementById('daySuggestion');
+    if(!el) return;
+    let date = selectedDate();
+    let last = currentUser ? lastLoggedDay(historyLogs, date) : null;
+    if(!last) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.innerText = "Last workout: " + last.day + " on " + formatDateShort(last.date)
+      + " \u2014 so today is probably Workout " + (last.day === "A" ? "B" : "A") + ".";
+  }
+
   // One renderer for all three panels. Every string it shows comes out of the
   // blocker functions, so the checklist cannot promise something the button
   // then refuses -- the same guarantee composedScore gives the two progress bars.
-  function blockerHtml(res, label) {
+  function blockerHtml(res, label, verb) {
     let html = "";
+    // The verb has to be the one on the button underneath, or the panel and the
+    // control it describes read as two different things.
+    verb = verb || "submit";
     if(res.blockers.length === 0) {
       html += '<p class="blockers-head" style="color:var(--success);">'
-        + '\u2713 Ready to submit ' + esc(label) + '</p>';
+        + '\u2713 Ready to ' + esc(verb) + ' ' + esc(label) + '</p>';
     } else {
-      html += '<p class="blockers-head">Before you can submit ' + esc(label) + ':</p><ul>';
+      html += '<p class="blockers-head">Before you can ' + esc(verb) + ' '
+        + esc(label) + ':</p><ul>';
       res.blockers.forEach(b => {
         html += '<li class="bad"><span class="mark">\u2717</span><span>' + esc(b.text)
           + (b.code === "already-logged" && b.id != null ? blockerActionsHtml(b) : "")
@@ -2474,28 +3610,59 @@
       + '</div>';
   }
 
+  // A submission is a finished state, not a blocked one. Every row it wrote is
+  // now sitting in history, so the plain blocker pass would greet a student who
+  // just did everything right with a red cross per exercise saying "already
+  // logged". Answer the question they actually have instead.
+  // `todaysSubmission` holds only the MOST RECENT submission, so submitting A and
+  // then B left Workout A's card insisting it had never been sent -- while the
+  // blocker panel, which reads the rows, correctly called it a duplicate. Two
+  // contradictory answers on one screen, with the wrong one on top.
+  //
+  // The rows are the truth: a submitted day has history rows carrying that date,
+  // that day, and a subId (hand-logged Quick Log rows carry no subId).
+  function submissionIdFor(day, date, history) {
+    let hit = (history || []).find(h => String(h.date) === String(date)
+      && h.day === day && h.subId);
+    return hit ? hit.subId : null;
+  }
+
+  function submittedFor(day, date) {
+    return !!submissionIdFor(day, date, historyLogs);
+  }
+
+  function submittedHtml(day, date) {
+    return '<p class="blockers-head" style="color:var(--success);">\u2705 Workout ' + day
+      + ' submitted for ' + esc(formatDateShort(date)) + ' \u2014 your teacher can see it.</p>'
+      + '<p style="margin:4px 0 0; font-size:0.86rem; color:var(--subtle);">'
+      + 'Logged something wrong? Use <strong>Undo Submit</strong> below, fix it, and submit again.</p>';
+  }
+
   function renderAllBlockers() {
     let date = selectedDate();
     ["A", "B"].forEach(day => {
       let host = document.getElementById("blockers" + day);
       if(!host) return;
-      host.innerHTML = currentUser
-        ? blockerHtml(workoutBlockers(savedRoutines, day, date, historyLogs), "Workout " + day)
-        : "";
+      host.innerHTML = !currentUser ? ""
+        : submittedFor(day, date) ? submittedHtml(day, date)
+        : blockerHtml(workoutBlockers(savedRoutines, day, date, historyLogs), "Workout " + day);
     });
     let sheet = document.getElementById("blockersSheet");
     if(sheet) {
       sheet.innerHTML = currentUser
-        ? blockerHtml(spreadsheetBlockers(spreadsheetRows, historyLogs), "these rows")
+        ? blockerHtml(spreadsheetBlockers(spreadsheetRows, historyLogs), "these rows", "save")
         : "";
     }
     let note = document.getElementById("todaySubmitNote");
     if(note) {
-      let n = currentUser
+      let n = (currentUser && !submittedFor(todayDay, date))
         ? workoutBlockers(savedRoutines, todayDay, date, historyLogs).blockers.length : 0;
       note.style.color = "var(--warn)";
+      // There is now a button to that tab directly underneath this line, so
+      // point at it rather than naming a tab they then have to go find.
       note.innerText = n === 0 ? "" : "\u26a0 " + n + (n === 1 ? " thing" : " things")
-        + " to fix before you can submit \u2014 see the Master A/B Workout Plan tab.";
+        + " to fix before you can submit \u2014 open Workout " + todayDay + " below to see "
+        + (n === 1 ? "it" : "them") + ".";
     }
   }
 
@@ -2510,8 +3677,8 @@
     host.classList.add("flash");
   }
 
-  function blockerAlert(label, res) {
-    return "Can't submit " + label + " yet \u2014 "
+  function blockerAlert(label, res, verb) {
+    return "Can't " + (verb || "submit") + " " + label + " yet \u2014 "
       + res.blockers.length + (res.blockers.length === 1 ? " thing" : " things") + " to fix:\n\n"
       + res.blockers.map((b, i) => (i + 1) + ". " + b.text).join("\n\n");
   }
@@ -2520,6 +3687,17 @@
   // cannot be cleared -- skipping it is the only way out, and it is one tick.
   function skipBlockedExercise(id) {
     setRoutineDone(id, false);
+  }
+
+  // The Today card answers "how am I doing"; this is the button that answers
+  // "so where do I actually do it". Lands on the column the day toggle picked,
+  // not just on the tab.
+  function goToWorkout() {
+    switchStudentTab('tab3');
+    let host = document.getElementById("blockers" + todayDay);
+    let table = document.getElementById("workout" + todayDay + "Table");
+    let target = (table && table.closest("div")) || host;
+    if(target) target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function showHistoryFor(id) {
@@ -2540,6 +3718,38 @@
     // land on four red requirement boxes.
     card.classList.toggle('hidden', !currentUser);
     if(setup) setup.classList.toggle('hidden', !currentUser);
+    // The welcome panel is the logged-out half of the same decision.
+    let welcome = document.getElementById('welcomeCard');
+    if(welcome) welcome.classList.toggle('hidden', !!currentUser);
+    // Every tab that looks live but silently is not, gets the same banner.
+    ['builderLock', 'lockWorkout', 'lockSheet'].forEach(id => {
+      let el = document.getElementById(id);
+      if(el) el.classList.toggle('hidden', !!currentUser);
+    });
+    let form = document.getElementById('builderForm');
+    if(form) form.classList.toggle('hidden', !currentUser);
+    // Which of the two columns on the workout tab is the one they chose.
+    ["A", "B"].forEach(d => {
+      let b = document.getElementById('todayBadge' + d);
+      if(b) b.classList.toggle('hidden', todayDay !== d);
+      let col = document.getElementById('dayCol' + d);
+      if(col) col.classList.toggle('off-day', !!currentUser && todayDay !== d);
+      let sw = document.getElementById('switchTo' + d);
+      if(sw) sw.classList.toggle('hidden', !currentUser || todayDay === d);
+      // Undo is a recovery path. Showing it on a day nothing was ever submitted
+      // is chrome on the screen a first-timer is staring at.
+      let un = document.getElementById('undoBtn' + d);
+      if(un) un.classList.toggle('hidden', !currentUser || !submittedFor(d, selectedDate()));
+      // Two identical primary buttons is the actual trap; demote the other one.
+      let sub = col && col.querySelector('.btn-submit');
+      if(sub) {
+        let off = !!currentUser && todayDay !== d;
+        sub.classList.toggle('btn-primary', !off);
+        sub.classList.toggle('btn-secondary', off);
+      }
+    });
+    let goDay = document.getElementById('goToWorkoutDay');
+    if(goDay) goDay.innerText = todayDay;
     if(!currentUser) return;
 
     let date = selectedDate();
@@ -2564,17 +3774,36 @@
 
     let planned = savedRoutines.filter(r => r.day === todayDay).length;
     let extra = hit.length - score;
+    // Ticking six boxes and SENDING six boxes are different things, and the bar
+    // looks identical either way. This is the only place that says which -- and
+    // it has to ask the same question the blocker panel asks, or the card and
+    // the panel contradict each other on a day with two submissions.
+    let sent = submittedFor(todayDay, date);
     let hint;
-    if(planned === 0) {
+    if(sent) {
+      hint = "\u2705 Sent to Mr. Spencer. Nothing else to do today \u2014 you can close this.";
+    } else if(planned === 0) {
       hint = "Nothing in Workout " + todayDay + " yet \u2014 add exercises on the "
-        + "\"Build Routine & Library\" tab.";
+        + "\"1. Build My Routine\" tab.";
     } else if(score >= DAILY_TARGET) {
-      hint = "Requirement met \u2014 ready to submit"
+      hint = "Requirement met \u2014 now press Submit to send it"
         + (extra > 0 ? " (" + extra + " extra will be logged too)." : ".");
     } else {
       hint = (DAILY_TARGET - score) + " more to meet the requirement.";
     }
-    document.getElementById('todayHint').innerText = hint;
+    renderDaySuggestion();
+    let hintEl = document.getElementById('todayHint');
+    hintEl.innerText = hint;
+    hintEl.style.color = sent ? "#166534" : "var(--subtle)";
+    hintEl.style.fontWeight = sent ? "700" : "400";
+
+    let go = document.getElementById('goToWorkoutBtn');
+    if(go) {
+      go.innerHTML = (sent ? "Review Workout " : "Open Workout ")
+        + '<span id="goToWorkoutDay">' + todayDay + '</span> \u2192';
+      go.classList.toggle('btn-secondary', sent);
+      go.classList.toggle('btn-primary', !sent);
+    }
   }
 
   function updateProgressUI() {
@@ -2597,6 +3826,10 @@
     document.getElementById('progressPercentText').innerText = totalScore + " of 12 slots filled";
   }
 
+  // Three states, not two. A student who has just registered has built nothing
+  // yet, and four red crosses tell them they have done something wrong on their
+  // first screen. Nothing started is neutral; part-way is amber; done is green.
+  // Red is kept for the one case it belongs to -- see the submit blockers.
   function updateReqCard(cardId, countId, current, required, label) {
     let card = document.getElementById(cardId);
     let count = document.getElementById(countId);
@@ -2604,9 +3837,12 @@
     if(current >= required) {
       card.className = "req-card complete";
       count.innerText = `${current} / ${required} ✅`;
+    } else if(current > 0) {
+      card.className = "req-card partial";
+      count.innerText = `${current} / ${required}`;
     } else {
-      card.className = "req-card missing";
-      count.innerText = `${current} / ${required} ❌`;
+      card.className = "req-card todo";
+      count.innerText = `${current} / ${required}`;
     }
   }
 
@@ -2635,7 +3871,7 @@
   const DOC_WARN_BYTES = 800000;
 
   function saveUserData() {
-    if(!currentUser || !currentDocId) return;
+    if(!currentUser || !currentDocId) return Promise.resolve(false);
     // logCount and lastLogDate are a summary of the history subcollection, kept
     // on the record so the teacher dashboard can list a whole class without
     // downloading anyone's workouts. They are derived, never authoritative:
@@ -2663,19 +3899,25 @@
     try { approx = new Blob([JSON.stringify(payload)]).size; } catch(e) { approx = 0; }
     if(approx > DOC_WARN_BYTES && !sizeWarned) {
       sizeWarned = true;
-      alert("Your workout history is getting very large and is close to the limit "
+      notice("Your workout history is getting very large and is close to the limit "
         + "where saving stops working.\n\nLet your teacher know so older logs can be "
         + "cleared out.");
     }
 
     savesInFlight++;
     setSaveStatus("saving");
-    fbUpdateDoc(fbDoc(db, "students", currentDocId), payload)
-      .then(() => { savesInFlight--; if(savesInFlight === 0) setSaveStatus("saved"); })
+    // Returns a promise resolving true/false rather than being fire-and-forget,
+    // so a caller that is about to promise the student something ("sent to your
+    // teacher") can wait and find out whether that is true. The dashboard reads
+    // THIS document, not the history rows, so a silent failure here is exactly
+    // the "I swear I submitted it" case.
+    return fbUpdateDoc(fbDoc(db, "students", currentDocId), payload)
+      .then(() => { savesInFlight--; if(savesInFlight === 0) setSaveStatus("saved"); return true; })
       .catch(err => {
         savesInFlight--;
         console.error("Save failed:", err);
         setSaveStatus("error", err && err.code ? err.code : "");
+        return false;
       });
   }
 
@@ -2688,16 +3930,29 @@
     sizeWarned = false;
     document.getElementById('studentName').value = "";
     document.getElementById('studentPin').value = "";
-    document.getElementById('logoutBtn').classList.add('hidden');
-    document.getElementById('classPickerModal').classList.add('hidden');
+    renderSignedInState();
+    // Every modal, not just the picker. The account-creation dialog carries a
+    // PIN in clear text and used to survive a logout, so the next student in
+    // the queue for a shared Chromebook could read a classmate's PIN off it.
+    document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+    // A date left on a past make-up day was inherited by the next student and
+    // silently filed their workout under the wrong day.
+    document.getElementById('workoutDate').value = todayLocal();
+    renderDateWarning();
     document.getElementById('studentClassLine').innerText = "";
     document.getElementById('saveStatus').style.display = "none";
     applyTodayDay("A");
+    // The next student's first view of the builder was the last one's leftover
+    // selection, which flatly contradicts the "New here? Three steps" panel.
+    document.getElementById('targetArea').value = "";
+    document.getElementById('customExerciseInput').value = "";
+    activeTargetArea = ""; activeMuscleGroup = ""; activeExercise = "";
+    handleTargetAreaChange();
     renderSavedTags(); renderHistoryTable(); renderMasterWorkoutPlan();
     renderSpreadsheet(); renderSubmitStatus(); updateProgressUI();
     renderTodayCard();
     switchStudentTab('tab1');
-    alert("Logged out. The next student can log in now.");
+    toast("Logged out. The next student can log in now.", "good");
   }
 
   function switchStudentTab(tabId, evt) {
@@ -2711,6 +3966,14 @@
     let target = evt ? evt.target
       : [...btns].find(b => (b.getAttribute('onclick') || "").indexOf("'" + tabId + "'") !== -1);
     if(target) target.classList.add('active');
+
+    // The summary cards above the tab bar are two screens tall on a phone, so
+    // tapping a tab used to leave a student staring at the cards they had just
+    // scrolled past rather than at the panel they asked for.
+    if(evt) {
+      let bar = document.querySelector('#studentView .sub-tabs');
+      if(bar) bar.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   }
 
   function switchTeacherTab(tabId, evt) {
@@ -2726,8 +3989,8 @@
 
   async function updateLearningTarget() {
     let val = document.getElementById('newLearningTarget').value.trim();
-    if(!val) { alert("Type a learning target first."); return; }
-    if(val.length > 480) { alert("That target is too long — keep it under 480 characters."); return; }
+    if(!val) { toast("Type a learning target first.", "warn"); return; }
+    if(val.length > 480) { toast("That target is too long — keep it under 480 characters.", "warn"); return; }
 
     let btn = document.getElementById('updateTargetBtn');
     if(btn) { btn.disabled = true; btn.innerText = "Saving\u2026"; }
@@ -2735,14 +3998,14 @@
       await fbSetDoc(fbDoc(db, "settings", "learningTarget"),
         { text: val, updatedAt: new Date().toISOString() });
     } catch(err) {
-      alert("Couldn't save the learning target: " + (err && err.code ? err.code : err.message)
+      notice("Couldn't save the learning target: " + (err && err.code ? err.code : err.message)
         + "\n\nIt has NOT been sent to students.");
       return;
     } finally {
       if(btn) { btn.disabled = false; btn.innerText = "Update Target for Class"; }
     }
     await loadLearningTarget();
-    alert("Learning target updated. Every student will see it the next time they open the tracker.");
+    toast("Learning target updated. Every student will see it the next time they open the tracker.", "good");
   }
 
   // The dashboard lists students only. A student's workouts are fetched when
@@ -2773,6 +4036,7 @@
         if(host) host.innerHTML = '<p style="color:var(--subtle); padding:8px;">Loading workouts...</p>';
         try {
           historyByStudent[studentId] = await fetchHistory(studentId);
+          reconcileCount(studentId, historyByStudent[studentId].length);
         } catch(err) {
           if(host) host.innerHTML = '<p style="color:var(--danger); padding:8px;">Could not load workouts: '
             + esc(err.code || err.message) + '</p>';
@@ -2780,7 +4044,72 @@
         }
       }
     }
+    // Reconciling a count changes a tile as well as a row.
+    renderKPIs();
     renderDashboardBody();
+    reportDrift();
+  }
+
+  // logCount is a summary that only self-heals when the STUDENT next logs in, so
+  // from the teacher's side it can sit stale for a fortnight -- on the very
+  // number a participation grade gets read off. Anywhere the dashboard has just
+  // read the real rows anyway (opening a student, building a report) it corrects
+  // both the screen and the stored value. No extra reads, and it converges.
+  // Corrections are collected rather than applied silently: a number changing
+  // under a teacher with no notice is how two people end up quoting different
+  // totals for the same class on the same day. The console is not a
+  // teacher-facing channel.
+  let driftFixed = [];
+
+  function reconcileCount(studentId, realCount) {
+    let stu = teacherCache.find(x => x.id === studentId);
+    if(!stu || stu.count === realCount) return;
+    driftFixed.push({ name: stu.name, from: stu.count, to: realCount });
+    stu.count = realCount;
+    fbUpdateDoc(fbDoc(db, "students", studentId), { logCount: realCount })
+      .catch(err => console.error("Count reconcile failed:", err));
+  }
+
+  function reportDrift() {
+    if(!driftFixed.length) return;
+    let fixed = driftFixed;
+    driftFixed = [];
+    let one = fixed.length === 1;
+    toast("Corrected " + (one ? "" : fixed.length + " ") + "term total"
+      + (one ? "" : "s") + ": "
+      + fixed.map(f => f.name + " " + f.from + " \u2192 " + f.to).join(", ")
+      + ".", "warn");
+  }
+
+  // The honest answer to "is 48 the real number?". Reads every student in the
+  // class currently selected -- the one operation that deliberately costs what
+  // the roster listing avoids costing -- and says what it found either way.
+  async function recountClass() {
+    let btn = document.getElementById('recountBtn');
+    let { rows, label } = kpiPopulation();
+    if(!rows.length) { toast("Nobody to recount.", "warn"); return; }
+    if(rows.length > 40 && !confirm("Recount " + rows.length + " students in " + label
+      + "?\n\nThis reads every one of their workout histories. Use it before grading, "
+      + "not as a refresh.")) return;
+    if(btn) { btn.disabled = true; btn.innerText = "Counting\u2026"; }
+    try {
+      let got = await Promise.all(rows.map(st =>
+        fetchHistory(st.id).catch(err => { console.error("Recount failed for", st.name, err); return null; })));
+      let failed = 0;
+      rows.forEach((st, i) => {
+        if(got[i] === null) { failed++; return; }
+        historyByStudent[st.id] = got[i];
+        reconcileCount(st.id, got[i].length);
+      });
+      renderKPIs();
+      renderDashboardBody();
+      if(driftFixed.length) reportDrift();
+      else toast("Every total in " + label + " already matched. Nothing to correct.", "good");
+      if(failed) notice("Could not read " + failed + " student"
+        + (failed === 1 ? "" : "s") + ", so their totals were left alone.", "Partly counted");
+    } finally {
+      if(btn) { btn.disabled = false; btn.innerText = "\u2713 Recount totals"; }
+    }
   }
 
   async function reassignStudent(studentId, classId) {
@@ -2791,7 +4120,7 @@
         { classId: classId || null, classChangedAt: new Date().toISOString(),
           classChangedBy: "teacher" });
     } catch(err) {
-      alert("Couldn't move that student: " + (err && err.code ? err.code : err.message));
+      notice("Couldn't move that student: " + (err && err.code ? err.code : err.message));
       return;
     }
     await renderTeacherLogs();
@@ -2827,13 +4156,35 @@
         + '<span class="mini-label">' + t.score + ' of ' + DAILY_TARGET
         + (t.day ? ' &middot; ' + esc(t.day) : "")
         + (extra > 0 ? ' &middot; +' + extra : "")
-        + (t.submitted ? ' &middot; submitted &#9989;' : "") + '</span>'
+        + (t.submitted ? (t.complete ? ' &middot; submitted &#9989;'
+            : ' &middot; submitted <span style="color:var(--warn); font-weight:700;">below 6 &#9888;</span>') : "")
+        + '</span>'
       : '<span class="mini-label muted">Not started today'
         + (stu.lastLogDate ? ' &middot; last ' + esc(stu.lastLogDate) : "") + '</span>';
 
     let options = '<option value="">Unassigned</option>' + classCache.map(c =>
       '<option value="' + esc(c.id) + '"' + (c.id === stu.classId ? " selected" : "") + '>'
       + esc(c.name) + (c.frozen ? " (archived)" : "") + '</option>').join("");
+
+    // The roster line is drawn from summary fields on the student record. Those
+    // are derived and written after the history rows they describe, so the app
+    // cannot normally produce a disagreement -- but "cannot normally" is not
+    // "never": an undo that deletes rows and then fails to save the summary
+    // leaves exactly that. Whenever a row is open the real history is already
+    // in hand, so check, and say so in the same vocabulary as "below 6".
+    let mismatch = "";
+    if(open && rows) {
+      let todayRows = rows.filter(h => String(h.date || "") === todayLocal()).length;
+      if(t.submitted && todayRows === 0) {
+        mismatch = '<div class="row-mismatch">\u26a0 This row says <strong>submitted today</strong>, but '
+          + 'there are no workouts logged for today. Do not grade off the checkmark \u2014 '
+          + 'the rows below are the record.</div>';
+      } else if(!t.submitted && t.started && todayRows > 0) {
+        mismatch = '<div class="row-mismatch">\u26a0 ' + todayRows + ' workout row'
+          + (todayRows === 1 ? "" : "s") + ' logged today but never submitted. The work is real; '
+          + 'the student did not press Submit.</div>';
+      }
+    }
 
     let detail = "";
     if(open) {
@@ -2843,13 +4194,20 @@
         detail = '<p style="color:var(--subtle); padding:8px;">No workouts logged yet.</p>';
       } else {
         let sorted = rows.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
-        detail = '<div style="overflow-x:auto;"><table><thead><tr>'
+        // Sessions, not a flat list of rows: "how many workouts has this student
+        // actually done" was previously a counting job done by eye.
+        let days = new Set(sorted.map(h => String(h.date || "") + "|" + String(h.day || "")));
+        detail = '<p class="rep-meta" style="margin:6px 4px;"><strong>' + days.size
+            + '</strong> session' + (days.size === 1 ? "" : "s") + ' &middot; <strong>'
+            + rows.length + '</strong> exercise row' + (rows.length === 1 ? "" : "s") + '</p>'
+          + '<div class="table-scroll"><table><thead><tr>'
           + '<th>Date</th><th>Workout</th><th>Exercise</th><th>Component</th>'
           + '<th>Sets</th><th>Reps</th><th>Weight</th></tr></thead><tbody>'
-          + sorted.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
+          + sorted.map(h => '<tr><td class="nowrap">' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
               + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
-              + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td></tr>').join("")
-          + '</tbody></table></div>';
+              + '</td><td>' + esc(h.reps) + '</td><td class="nowrap">' + esc(h.lbs) + ' lbs</td></tr>').join("")
+          + '</tbody></table></div>'
+          + '<p class="scroll-hint">Swipe the table sideways to see every column.</p>';
       }
     }
 
@@ -2861,42 +4219,182 @@
       + '<br><span style="margin-left:18px;">' + progress + '</span>'
       + '<br><span style="font-size:.76rem; color:var(--subtle); margin-left:18px;">'
       + stu.count + ' exercise' + (stu.count === 1 ? "" : "s") + ' logged all term'
+      // The red tag expires after seven days; the fact that they moved
+      // themselves does not, and at semester roll-over it is worth seeing.
+      + (stu.classChangedBy === "student" && !movedRecently(stu) && stu.classChangedAt
+          ? ' &middot; moved themselves ' + esc(String(stu.classChangedAt).slice(0, 10)) : "")
       + '</span></div>'
       + '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">'
-      + '<select class="sheet-select" style="max-width:190px;" onchange="reassignStudent(\'' + esc(stu.id) + '\', this.value)">'
+      + '<select class="sheet-select" style="max-width:190px;" aria-label="Class period for ' + esc(stu.name) + '" onchange="reassignStudent(\'' + esc(stu.id) + '\', this.value)">'
       + options + '</select>'
-      + '<button class="btn btn-secondary" onclick="resetStudentPin(\'' + esc(stu.id) + '\')">Reset PIN</button>'
-      + '<button class="btn btn-danger" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
+      + '<button class="btn btn-secondary" aria-label="Reset PIN for ' + esc(stu.name) + '" onclick="resetStudentPin(\'' + esc(stu.id) + '\')">Reset PIN</button>'
+      + '<button class="btn btn-danger btn-row-danger" aria-label="Delete ' + esc(stu.name) + ' and all their data" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
       + '</div></div>'
-      + (open ? '<div id="logs-' + esc(stu.id) + '" style="border-top:1px solid var(--border); padding:6px;">' + detail + '</div>' : "")
+      + (open ? '<div id="logs-' + esc(stu.id) + '" style="border-top:1px solid var(--border); padding:6px;">'
+          + mismatch + detail + '</div>' : "")
       + '</div>';
   }
+
+  // "" = everyone. Kept out of the DOM so a re-render cannot lose it.
+  let statusFilter = "";
+
+  function setStatusFilter(value, btn) {
+    statusFilter = value;
+    document.querySelectorAll('.status-chips .chip').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    renderDashboardBody();
+  }
+
+  // Which bucket a student is in TODAY. Submitted wins over in-progress: a
+  // submitted workout is finished business whatever the bar says.
+  function studentStatus(stu, today) {
+    let t = todayStats(stu, today);
+    if(t.submitted) return "submitted";
+    if(t.started) return "partial";
+    return "none";
+  }
+
+  let lastLoadedAt = null;
+
+  // The tiles describe THE CLASS YOU ARE LOOKING AT. They used to be whole-roster
+  // totals whatever the class dropdown said, so filtering to 1st Hour and reading
+  // "2 not started" off the top of the page actually counted 3rd and 7th Hour
+  // students who had not had the lesson yet.
+  //
+  // They deliberately do NOT follow the status chips or the search box: those are
+  // a drill-down INSIDE this class, and a tile that emptied itself as you tapped
+  // "Not started" would answer nothing.
+  function kpiPopulation() {
+    let filter = document.getElementById('classFilter').value;
+    if(filter === "") return { rows: teacherCache, label: "all classes" };
+    if(filter === "__none") {
+      return { rows: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)),
+               label: "Unassigned" };
+    }
+    let cls = classCache.find(c => c.id === filter);
+    return { rows: teacherCache.filter(s => s.classId === filter),
+             label: cls ? cls.name : "this class" };
+  }
+
+  function renderKPIs() {
+    let today = todayLocal();
+    let { rows, label } = kpiPopulation();
+    let stat = s => studentStatus(s, today);
+    let submitted = rows.filter(s => stat(s) === "submitted");
+    let short = submitted.filter(s => !todayStats(s, today).complete).length;
+
+    document.getElementById('kpiScopeText').innerHTML = 'Showing <strong>' + esc(label)
+      + '</strong> \u2014 ' + rows.length + ' student' + (rows.length === 1 ? "" : "s");
+    document.getElementById('kpiStudents').innerText = rows.length;
+    document.getElementById('kpiLogs').innerText = rows.reduce((n, s) => n + s.count, 0);
+    document.getElementById('kpiSubmitted').innerText = submitted.length;
+    // A submission below the day's requirement is not the same as a finished
+    // workout, and grading off the tile alone would credit them identically.
+    document.getElementById('kpiShort').innerText = short
+      ? short + (short === 1 ? " is" : " are") + " below 6" : "";
+    document.getElementById('kpiPartial').innerText = rows.filter(s => stat(s) === "partial").length;
+    document.getElementById('kpiNotStarted').innerText = rows.filter(s => stat(s) === "none").length;
+
+    renderStamp();
+  }
+
+  // Nothing polls on a timer: a roster read is one document per student, and a
+  // 60-second poll across three periods would burn tens of thousands of reads a
+  // day to tell a teacher something they can ask for. So instead the age of the
+  // data is made loud, and a tab coming back into view refreshes itself.
+  // ponytail: swap to onSnapshot if live updates ever matter more than quota.
+  function renderStamp() {
+    let stamp = document.getElementById('kpiStamp');
+    if(!stamp) return;
+    if(!lastLoadedAt) { stamp.innerText = ""; stamp.className = ""; return; }
+    let mins = Math.floor((Date.now() - lastLoadedAt.getTime()) / 60000);
+    let at = lastLoadedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    if(mins >= 10) {
+      stamp.className = "stamp-stale";
+      stamp.innerText = "\u26a0 This is " + mins + " minutes old \u2014 press Refresh";
+    } else if(mins >= 2) {
+      stamp.className = "stamp-aging";
+      stamp.innerText = "Loaded " + at + " (" + mins + " min ago)";
+    } else {
+      stamp.className = "";
+      stamp.innerText = "Loaded " + at;
+    }
+  }
+
+  setInterval(renderStamp, 30000);
+
+  // Coming back to the tab is the moment a teacher is about to read it.
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState !== "visible") return;
+    if(document.getElementById('teacherView').classList.contains('hidden')) return;
+    if(lastLoadedAt && Date.now() - lastLoadedAt.getTime() < 60000) return;
+    renderTeacherLogs();
+  });
 
   function renderDashboardBody() {
     let host = document.getElementById('dashboardBody');
     if(!host) return;
     let filter = document.getElementById('classFilter').value;
+    let searchEl = document.getElementById('studentSearch');
+    let q = searchEl ? searchEl.value.trim().toLowerCase() : "";
+    let sortEl = document.getElementById('studentSort');
+    let sort = sortEl ? sortEl.value : "name";
+    let today = todayLocal();
 
     // Group by class in the teacher's own ordering, with anyone unassigned last
-    // but impossible to miss.
+    // but impossible to miss. The unassigned bucket is keyed the same way the
+    // class dropdown and the print report key it, or picking "Unassigned" in
+    // the filter matches no group and the page reads as empty.
     let groups = classCache.map(c => ({ id: c.id, name: c.name, frozen: c.frozen,
-      students: teacherCache.filter(s => s.classId === c.id) }));
-    groups.push({ id: "", name: "Unassigned", frozen: false,
-      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)) });
+      all: teacherCache.filter(s => s.classId === c.id) }));
+    groups.push({ id: "__none", name: "Unassigned", frozen: false,
+      all: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)) });
 
     if(filter !== "") groups = groups.filter(g => g.id === filter);
+
+    // The summary line always describes the WHOLE class. Searching for one name
+    // must not make it look like the period only has one student in it.
+    let hiddenCount = 0;
+    groups.forEach(g => {
+      let rows = g.all;
+      if(statusFilter) rows = rows.filter(st => studentStatus(st, today) === statusFilter);
+      if(q) rows = rows.filter(st => String(st.name || "").toLowerCase().includes(q));
+      hiddenCount += g.all.length - rows.length;
+      if(sort === "behind") {
+        rows = rows.slice().sort((a, b) =>
+          todayStats(a, today).score - todayStats(b, today).score
+          || a.name.localeCompare(b.name));
+      } else if(sort === "term") {
+        rows = rows.slice().sort((a, b) => (a.count || 0) - (b.count || 0)
+          || a.name.localeCompare(b.name));
+      }
+      g.students = rows;
+    });
+
+    let note = document.getElementById('dashFilterNote');
+    if(note) {
+      let active = statusFilter || q;
+      note.classList.toggle('hidden', !active || hiddenCount === 0);
+      if(active && hiddenCount > 0) {
+        note.innerText = hiddenCount + " student" + (hiddenCount === 1 ? " is" : "s are")
+          + " hidden by the filter above. Class totals below still count everyone.";
+      }
+    }
+
     groups = groups.filter(g => g.students.length > 0 || g.id === filter);
 
     if(groups.length === 0 || groups.every(g => g.students.length === 0)) {
-      host.innerHTML = '<p style="color:var(--subtle);">No students yet'
-        + (filter ? " in this class." : ". They appear here as soon as they log in.") + '</p>';
+      let why = q || statusFilter
+        ? "Nobody matches that filter. Tap \u201cEveryone\u201d to clear it."
+        : (filter ? " in this class." : ". They appear here as soon as they log in.");
+      host.innerHTML = '<p style="color:var(--subtle);">'
+        + (q || statusFilter ? esc(why) : "No students yet" + esc(why)) + '</p>';
       return;
     }
 
-    let today = todayLocal();
     host.innerHTML = groups.map(g => {
-      let isUnassigned = g.id === "";
-      let stats = g.students.map(s => todayStats(s, today));
+      let isUnassigned = g.id === "__none";
+      let stats = g.all.map(s => todayStats(s, today));
       let started = stats.filter(x => x.started);
       let atFull = stats.filter(x => x.complete).length;
       let sent = stats.filter(x => x.submitted).length;
@@ -2905,26 +4403,28 @@
       let avg = started.length
         ? Math.round(started.reduce((n, x) => n + x.score, 0) / started.length / DAILY_TARGET * 100)
         : 0;
-      let summary = g.students.length
+      let summary = g.all.length
         ? '<p class="class-summary">' + started.length + ' started &middot; '
           + atFull + ' at ' + DAILY_TARGET + '/' + DAILY_TARGET + ' &middot; '
-          + sent + ' submitted</p>'
+          + sent + ' submitted &middot; ' + (g.all.length - started.length) + ' not started</p>'
           + (started.length
               ? '<div class="progress-bar-container" style="height:10px; margin:0 0 4px;">'
                 + '<div class="progress-bar-fill" style="width:' + avg + '%;"></div></div>'
-                + '<p class="class-summary">' + avg + '% average of '
-                + started.length + ' active</p>'
+                + '<p class="class-summary">' + avg + '% average progress, counting only the '
+                + started.length + ' who started today</p>'
               : "")
         : "";
       let heading = esc(g.name)
         + (g.frozen ? ' <span style="font-size:.72rem; color:var(--danger);">ARCHIVED</span>' : "")
         + ' <span style="font-weight:400; color:var(--subtle); font-size:.9rem;">('
-        + g.students.length + ')</span>';
+        + g.all.length + ')</span>';
       let body = g.students.length
         ? g.students.map(studentRowHtml).join("")
-        : '<p style="color:var(--subtle);">Nobody in this class yet.</p>';
+        : '<p style="color:var(--subtle);">'
+          + (g.all.length ? "Nobody in this class matches the filter."
+                          : "Nobody in this class yet.") + '</p>';
       return '<div style="margin-bottom:18px;">'
-        + '<h4 style="margin:0 0 8px; color:' + (isUnassigned && g.students.length ? "var(--danger)" : "var(--primary)") + ';">'
+        + '<h4 style="margin:0 0 8px; color:' + (isUnassigned && g.all.length ? "var(--danger)" : "var(--primary)") + ';">'
         + heading + '</h4>' + summary + body + '</div>';
     }).join("");
   }
@@ -2940,7 +4440,7 @@
     try {
       snap = await fbGetDocs(fbCollection(db, "students"));
     } catch(err) {
-      alert("Couldn't load student data: " + err.message);
+      notice("Couldn't load student data: " + err.message);
       return;
     }
 
@@ -2975,8 +4475,8 @@
       filterEl.value = [...filterEl.options].some(o => o.value === chosen) ? chosen : "";
     }
 
-    document.getElementById('kpiStudents').innerText = teacherCache.length;
-    document.getElementById('kpiLogs').innerText = teacherCache.reduce((n, s) => n + s.count, 0);
+    lastLoadedAt = new Date();
+    renderKPIs();
     renderDashboardBody();
   }
 
@@ -2999,12 +4499,34 @@
     if(!currentUser) { el.innerText = ""; return; }
     let name = classNameById(currentClassId);
     if(name) {
-      el.style.color = "var(--primary)";
-      el.innerText = "Class: " + name;
+      el.style.color = "#166534";
+      el.innerText = name;
     } else {
       el.style.color = "var(--danger)";
       el.innerText = "No class picked yet.";
     }
+  }
+
+  // The login card has two states and only ever shows one of them.
+  function renderSignedInState() {
+    let login = document.getElementById('loginBox');
+    let box = document.getElementById('signedInBox');
+    if(!login || !box) return;
+    login.classList.toggle('hidden', !!currentUser);
+    box.classList.toggle('hidden', !currentUser);
+    if(currentUser) document.getElementById('signedInName').innerText = currentUser;
+  }
+
+  // A date that is not today is almost always a mis-tap, and the cost of not
+  // noticing is a workout filed under a day the teacher is not grading.
+  function renderDateWarning() {
+    let el = document.getElementById('dateWarning');
+    if(!el) return;
+    let picked = selectedDate(), today = todayLocal();
+    if(picked === today) { el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.innerText = (picked < today ? "\u26a0 You are logging for " : "\u26a0 This date is in the future: ")
+      + formatDateShort(picked) + ", not today. Tap the date to change it back.";
   }
 
   async function assignClass(classId) {
@@ -3018,13 +4540,14 @@
     try {
       await fbUpdateDoc(fbDoc(db, "students", currentDocId), patch);
     } catch(err) {
-      alert("Couldn't save your class: " + (err && err.code ? err.code : err.message)
+      notice("Couldn't save your class: " + (err && err.code ? err.code : err.message)
         + "\n\nCheck your connection and try again.");
       return false;
     }
     currentClassId = classId;
     renderStudentClassLine();
     document.getElementById('classPickerModal').classList.add('hidden');
+    flushPendingNotice();
     return true;
   }
 
@@ -3061,20 +4584,20 @@
       let cls = studentClasses.find(c => c.id === inviteId);
       if(!cls) {
         // Only steer them to the picker if they will actually see one.
-        alert(currentClassId
+        notice(currentClassId
           ? "That class link isn't valid any more, so you're still in "
             + (classNameById(currentClassId) || "your current class") + "."
           : "That class link isn't valid any more \u2014 pick your class instead.");
       } else if(cls.frozen) {
-        alert('"' + cls.name + '" is closed, so you can\'t join it from that link.');
+        notice('"' + cls.name + '" is closed, so you can\'t join it from that link.');
       } else if(currentClassId === cls.id) {
         // already where the link points; nothing to do
       } else if(!currentClassId) {
-        if(await assignClass(cls.id)) alert("You've joined " + cls.name + ".");
+        if(await assignClass(cls.id)) toast("You've joined " + cls.name + ".", "good");
       } else {
         let current = classNameById(currentClassId) || "another class";
         if(confirm("You are in " + current + ".\n\nMove to " + cls.name + "?")) {
-          if(await assignClass(cls.id)) alert("Moved to " + cls.name + ".");
+          if(await assignClass(cls.id)) toast("Moved to " + cls.name + ".", "good");
         }
       }
     }
@@ -3108,10 +4631,10 @@
   async function createClass() {
     let input = document.getElementById('newClassName');
     let name = input.value.trim();
-    if(!name) { alert("Give the class a name first."); return; }
-    if(name.length > 90) { alert("Keep the class name under 90 characters."); return; }
+    if(!name) { toast("Give the class a name first.", "warn"); return; }
+    if(name.length > 90) { toast("Keep the class name under 90 characters.", "warn"); return; }
     if(classCache.some(c => (c.name || "").trim().toLowerCase() === name.toLowerCase())) {
-      alert('You already have a class called "' + name + '".');
+      toast('You already have a class called "' + name + '".', "warn");
       return;
     }
     let btn = document.getElementById('createClassBtn');
@@ -3121,7 +4644,7 @@
       await fbSetDoc(fbDoc(db, "classes", newClassId()),
         { name: name, sortOrder: maxOrder + 1, frozen: false, createdAt: new Date().toISOString() });
     } catch(err) {
-      alert("Couldn't add the class: " + (err && err.code ? err.code : err.message));
+      notice("Couldn't add the class: " + (err && err.code ? err.code : err.message));
       return;
     } finally {
       if(btn) { btn.disabled = false; btn.innerText = "Add Class"; }
@@ -3133,13 +4656,15 @@
   async function renameClass(classId) {
     let cls = classCache.find(c => c.id === classId);
     if(!cls) return;
-    let name = prompt("Rename this class:", cls.name);
+    let name = await askFor({
+      title: "Rename class", label: "Class name", value: cls.name, maxlength: 90,
+      validate: v => !v ? "A class needs a name."
+        : v.length > 90 ? "Keep it under 90 characters." : null
+    });
     if(name === null) return;
-    name = name.trim();
-    if(!name) { alert("A class needs a name."); return; }
     try {
       await fbUpdateDoc(fbDoc(db, "classes", classId), { name: name });
-    } catch(err) { alert("Couldn't rename: " + (err && err.code ? err.code : err.message)); return; }
+    } catch(err) { notice("Couldn't rename: " + (err && err.code ? err.code : err.message)); return; }
     await renderClasses();
   }
 
@@ -3152,7 +4677,7 @@
       + (inClass === 1 ? "" : "s") + ' already in it keep working normally, and you keep all their data.')) return;
     try {
       await fbUpdateDoc(fbDoc(db, "classes", classId), { frozen: !!frozen });
-    } catch(err) { alert("Couldn't update: " + (err && err.code ? err.code : err.message)); return; }
+    } catch(err) { notice("Couldn't update: " + (err && err.code ? err.code : err.message)); return; }
     await renderClasses();
   }
 
@@ -3169,7 +4694,7 @@
       batch.update(fbDoc(db, "classes", a.id), { sortOrder: (b.sortOrder || j) });
       batch.update(fbDoc(db, "classes", b.id), { sortOrder: (a.sortOrder || i) });
       await batch.commit();
-    } catch(err) { alert("Couldn't reorder: " + (err && err.code ? err.code : err.message)); return; }
+    } catch(err) { notice("Couldn't reorder: " + (err && err.code ? err.code : err.message)); return; }
     await renderClasses();
   }
 
@@ -3177,9 +4702,10 @@
     let link = inviteLink(classId);
     try {
       await navigator.clipboard.writeText(link);
-      alert("Invite link copied:\n\n" + link);
+      toast("Invite link copied:\n\n" + link, "good");
     } catch(e) {
-      prompt("Copy this invite link:", link);
+      await askFor({ title: "Invite link", help: "Copy this and paste it into Google Classroom.",
+        label: "Link", value: link });
     }
   }
 
@@ -3207,16 +4733,17 @@
       let idx = active.findIndex(x => x.id === c.id);
       let link = inviteLink(c.id);
       let arrows = c.frozen ? "" :
-        '<button class="btn btn-secondary" onclick="moveClass(\'' + esc(c.id) + '\', -1)"'
+        '<button class="btn btn-secondary" aria-label="Move ' + esc(c.name) + ' earlier in the day" title="Move up" onclick="moveClass(\'' + esc(c.id) + '\', -1)"'
         + (idx <= 0 ? " disabled" : "") + '>&uarr;</button>'
-        + '<button class="btn btn-secondary" onclick="moveClass(\'' + esc(c.id) + '\', 1)"'
+        + '<button class="btn btn-secondary" aria-label="Move ' + esc(c.name) + ' later in the day" title="Move down" onclick="moveClass(\'' + esc(c.id) + '\', 1)"'
         + (idx >= active.length - 1 ? " disabled" : "") + '>&darr;</button>';
       let freezeBtn = c.frozen
         ? '<button class="btn btn-primary" onclick="setClassFrozen(\'' + esc(c.id) + '\', false)">Unarchive</button>'
-        : '<button class="btn btn-danger" onclick="setClassFrozen(\'' + esc(c.id) + '\', true)">Archive</button>';
+        : '<button class="btn btn-secondary" onclick="setClassFrozen(\'' + esc(c.id) + '\', true)">Archive</button>';
       let linkRow = c.frozen ? "" :
         '<div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">'
         + '<input type="text" class="sheet-input" readonly value="' + esc(link) + '"'
+        + ' aria-label="Invite link for ' + esc(c.name) + '"'
         + ' onclick="this.select()" style="flex:1; min-width:240px; font-size:.85rem;">'
         + '<button class="btn btn-secondary" onclick="copyInvite(\'' + esc(c.id) + '\')">Copy link</button></div>';
       return '<div class="card" style="margin-bottom:12px;' + (c.frozen ? "opacity:.65;" : "") + '">'
@@ -3248,14 +4775,34 @@
     let days = parseInt(document.getElementById('printRange').value, 10) || 0;
     let cutoff = rangeCutoff(days);
 
+    // The report used to rebuild its own list from teacherCache and ignore the
+    // status chips and the search box entirely. Filtering to "Not started" and
+    // pressing Print handed you every student's whole term, which is not just
+    // wasted paper -- it reads as "here is who is behind" when it is everyone.
+    let today = todayLocal();
+    let searchEl = document.getElementById('studentSearch');
+    let q = searchEl ? searchEl.value.trim().toLowerCase() : "";
+    let keep = st => (!statusFilter || studentStatus(st, today) === statusFilter)
+      && (!q || String(st.name || "").toLowerCase().includes(q));
+
     let groups = classCache.map(c => ({ id: c.id, name: c.name,
-      students: teacherCache.filter(s => s.classId === c.id) }));
+      students: teacherCache.filter(s => s.classId === c.id).filter(keep) }));
     groups.push({ id: "__none", name: "Unassigned",
-      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)) });
+      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)).filter(keep) });
     if(filter !== "") groups = groups.filter(g => g.id === filter);
     groups = groups.filter(g => g.students.length > 0);
 
-    if(groups.length === 0) { alert("Nothing to print for that selection."); return; }
+    let scope = [];
+    if(statusFilter) scope.push({ none: "not started today", partial: "in progress today",
+      submitted: "submitted today" }[statusFilter]);
+    if(q) scope.push('name contains "' + q + '"');
+    let scopeText = scope.length ? " &middot; filtered to " + esc(scope.join(" and ")) : "";
+
+    if(groups.length === 0) {
+      toast(scope.length ? "Nobody matches that filter, so there is nothing to print."
+                         : "Nothing to print for that selection.", "warn");
+      return;
+    }
 
     let everyone = groups.flatMap(g => g.students);
     let rough = everyone.reduce((n, s) => n + s.count, 0);
@@ -3272,6 +4819,13 @@
       missing.forEach((s, i) => {
         if(fetched[i] === null) failed.push(s.name); else historyByStudent[s.id] = fetched[i];
       });
+      // The report is the one operation that reads everybody for real, so it is
+      // also the cheapest chance to true up the whole roster's counters.
+      everyone.forEach(s => {
+        if(historyByStudent[s.id]) reconcileCount(s.id, historyByStudent[s.id].length);
+      });
+      renderKPIs();
+      reportDrift();
       if(failed.length && !confirm("Couldn't load workouts for: " + failed.join(", ")
         + "\n\nPrint anyway, without them?")) return;
 
@@ -3289,7 +4843,7 @@
               + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th></tr></thead><tbody>'
               + rows.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
                   + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
-                  + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + '</td></tr>').join("")
+                  + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td></tr>').join("")
               + '</tbody></table>';
           return '<div class="rep-student"><h3 class="rep-name">' + esc(stu.name) + '</h3>'
             + '<p class="rep-meta">' + rows.length + ' workout row'
@@ -3300,14 +4854,15 @@
         return '<div class="rep-class"><h1 class="rep-h1">' + esc(g.name) + '</h1>'
           + '<p class="rep-sub">' + students.length + ' student' + (students.length === 1 ? "" : "s")
           + " &middot; " + (days ? "last " + days + " days" : "all workouts to date")
+          + scopeText
           + " &middot; printed " + todayLocal() + '</p>' + bodies + '</div>';
       }).join("");
 
       document.getElementById('printSheet').innerHTML = html;
-      if(printed === 0) alert("No workouts fall in that date range \u2014 the report will be empty.");
+      if(printed === 0) notice("No workouts fall in that date range \u2014 the report will be empty.");
       window.print();
     } catch(err) {
-      alert("Couldn't build the report: " + (err && err.code ? err.code : err.message));
+      notice("Couldn't build the report: " + (err && err.code ? err.code : err.message));
     } finally {
       if(btn) { btn.disabled = false; btn.innerText = "Print report"; }
     }
@@ -3320,16 +4875,29 @@
   // and nobody can ever register it again.
   async function deleteStudent(studentId) {
     let stu = teacherCache.find(s => s.id === studentId);
-    if(!stu) { alert("Student not found."); return; }
+    if(!stu) { toast("Student not found.", "warn"); return; }
+    // logCount is a derived summary that self-heals only when the STUDENT logs
+    // in, so from the teacher's side it can be stale. Counting the real rows
+    // before asking means the warning on an irreversible action is never a
+    // guess -- and the read was going to happen anyway.
+    let ids = [];
+    try {
+      let snap = await fbGetDocs(historyCol(studentId));
+      snap.forEach(d => ids.push(d.id));
+    } catch(err) {
+      notice("Couldn't check how much data " + stu.name + " has, so nothing was deleted.\n\n"
+        + (err && err.code ? err.code : err.message), "Delete cancelled");
+      return;
+    }
+    let drift = ids.length !== stu.count
+      ? "\n\n(The dashboard was showing " + stu.count + "; " + ids.length + " is the real count.)"
+      : "";
     if(!confirm('Permanently delete "' + stu.name + '"?\n\nThis removes their '
-      + stu.count + ' workout log' + (stu.count === 1 ? "" : "s")
-      + ' and frees up their name. This cannot be undone.')) return;
+      + ids.length + ' workout row' + (ids.length === 1 ? "" : "s")
+      + ' and frees up their name. This cannot be undone.' + drift)) return;
     if(!confirm('Last check: delete "' + stu.name + '" and all their data?')) return;
 
     try {
-      let snap = await fbGetDocs(historyCol(studentId));
-      let ids = [];
-      snap.forEach(d => ids.push(d.id));
       // Batches cap at 500 writes, so a long semester is chunked.
       for(let i = 0; i < ids.length; i += 400) {
         let batch = fbWriteBatch(db);
@@ -3344,40 +4912,48 @@
         // The record is already gone; a stranded name entry only blocks reuse
         // of that name, so report it rather than failing the whole delete.
         console.error("Name registry cleanup failed:", err);
-        alert('Deleted "' + stu.name + '", but their name could not be released. '
+        notice('Deleted "' + stu.name + '", but their name could not be released. '
           + 'They may not be able to register under the same name again.');
         await renderTeacherLogs();
         return;
       }
     } catch(err) {
-      alert("Couldn't delete: " + (err && err.code ? err.code : err.message));
+      notice("Couldn't delete: " + (err && err.code ? err.code : err.message));
       return;
     }
     await renderTeacherLogs();
-    alert('Deleted "' + stu.name + '".');
+    notice('Deleted "' + stu.name + '".');
   }
 
   async function resetStudentPin(studentId) {
     let ref = fbDoc(db, "students", studentId);
     try {
       let snap = await fbGetDoc(ref);
-      if(!snap.exists()) { alert("Student not found."); return; }
+      if(!snap.exists()) { toast("Student not found.", "warn"); return; }
       let data = snap.data();
       let name = data.name;
-      if(!name) { alert("That record has no name stored, so it can't be re-keyed."); return; }
+      if(!name) { toast("That record has no name stored, so it can't be re-keyed.", "warn"); return; }
 
-      let newPin = prompt(`New 4-digit PIN for ${name}:`);
+      let newPin = await askFor({
+        title: "Reset PIN",
+        help: `${name} will use this the next time they log in. Their workout history comes with them.`,
+        label: "New 4-digit PIN", numeric: true, maxlength: 4,
+        validate: v => /^\d{4}$/.test(v) ? null : "The PIN has to be exactly 4 digits."
+      });
       if(!newPin) return;
-      if(!/^\d{4}$/.test(newPin)) { alert("PIN must be exactly 4 digits."); return; }
+      // Delete asks twice; this changes the only credential a student has and
+      // used to apply on the first keystroke of a fat-fingered prompt.
+      if(!confirm(`Set ${name}'s PIN to ${newPin}?\n\n`
+        + `Their old PIN stops working immediately, so tell them the new one.`)) return;
 
       // The PIN is half the address, so changing it relocates the whole record --
       // and Firestore does not carry a document's subcollections along with it.
       // The workout history has to be copied across explicitly, or a student who
       // forgets their PIN loses every workout they have ever logged.
       let newId = await studentDocId(name, newPin);
-      if(newId === studentId) { alert(`${name} already has that PIN.`); return; }
+      if(newId === studentId) { toast(`${name} already has that PIN.`, "warn"); return; }
       if((await fbGetDoc(fbDoc(db, "students", newId))).exists()) {
-        alert("That PIN is already in use by another record. Pick a different one.");
+        toast("That PIN is already in use by another record. Pick a different one.", "warn");
         return;
       }
 
@@ -3408,16 +4984,16 @@
       } catch(err) {
         console.error("Old record cleanup failed:", err);
         await renderTeacherLogs();
-        alert(`${name}'s new PIN ${newPin} works and their ${rows.length} workout `
+        notice(`${name}'s new PIN ${newPin} works and their ${rows.length} workout `
           + `log${rows.length === 1 ? "" : "s"} came across, but the old record could not `
           + `be removed, so the OLD PIN STILL WORKS TOO.\n\nRun the reset again to clear it.`);
         return;
       }
       await renderTeacherLogs();
-      alert(`${name}'s PIN has been reset to ${newPin}, and their ${rows.length} workout `
+      notice(`${name}'s PIN has been reset to ${newPin}, and their ${rows.length} workout `
         + `log${rows.length === 1 ? "" : "s"} came with it. Let them know.`);
     } catch(err) {
-      alert("Couldn't reset PIN: " + err.message);
+      notice("Couldn't reset PIN: " + err.message);
     }
   }
 
@@ -3431,15 +5007,181 @@
     // Same reason as sign-in: never echo a password in clear text.
     let newP = await promptPassword("Enter a new teacher password:");
     if(!newP) return;
-    if(newP.length < 6) { alert("Firebase requires at least 6 characters."); return; }
+    if(newP.length < 6) { toast("Firebase requires at least 6 characters.", "warn"); return; }
     try {
       await fbUpdatePassword(auth.currentUser, newP);
-      alert("Password updated.");
+      toast("Password updated.", "good");
     } catch(err) {
-      alert("Couldn't update password: " + err.message + "\n\nTry logging out and back into the Teacher Dashboard first, then retry — Firebase requires a recent login to change your password.");
+      notice("Couldn't update password: " + err.message + "\n\nTry logging out and back into the Teacher Dashboard first, then retry — Firebase requires a recent login to change your password.");
     }
   }
+
+  // ---------------------------------------------------------- notifications
+  // Two levels, deliberately. A toast is for something that HAPPENED and needs
+  // no reply -- it never blocks a student mid-workout. The notice dialog is for
+  // something they have to read before carrying on, and looks like the app
+  // rather than like the browser.
+  // ponytail: confirm() is left native. It is a stop-and-think moment where the
+  // OS dialog is genuinely the right tool, and converting every call site to a
+  // promise buys nothing. Swap it if the look ever matters more than the diff.
+  function toast(msg, kind) {
+    let host = document.getElementById('toastHost');
+    if(!host) { alert(msg); return; }
+    let el = document.createElement('div');
+    el.className = 'toast ' + (kind || 'info');
+    el.setAttribute('role', 'status');
+    el.innerText = msg;
+    el.onclick = () => el.remove();
+    host.appendChild(el);
+    // A warning is worth a couple more seconds than a confirmation.
+    setTimeout(() => el.remove(), kind === 'warn' ? 5600 : 3600);
+    // Two is already more than anyone reads, and a taller stack covered the
+    // progress card while a student was adding a dozen exercises in a row.
+    while(host.children.length > 2) host.removeChild(host.firstChild);
+  }
+
+  // A message that must not land on top of a gating dialog waits for it. Set
+  // here, flushed once the student is through the class picker.
+  let pendingNotice = null;
+
+  function flushPendingNotice() {
+    if(!pendingNotice) return;
+    let n = pendingNotice;
+    pendingNotice = null;
+    notice(n.msg, n.title);
+  }
+
+  function notice(msg, title) {
+    let body = document.getElementById('noticeBody');
+    if(!body) { alert(msg); return; }
+    // A second notice while one is open used to overwrite it, so the first
+    // message was never read. Queue behind it instead -- these are the messages
+    // that were judged important enough to interrupt someone.
+    let modal = document.getElementById('noticeModal');
+    if(!modal.classList.contains('hidden') && body.innerText !== msg) {
+      pendingNotice = { msg: msg, title: title };
+      return;
+    }
+    document.getElementById('noticeTitle').innerText = title || "Heads up";
+    body.innerText = msg;
+    document.getElementById('noticeModal').classList.remove('hidden');
+    let ok = document.getElementById('noticeOkBtn');
+    if(ok) ok.focus();
+  }
+
+
+  // Promise-based stand-in for prompt(). `validate` returns an error string to
+  // keep the dialog open, or null/"" to accept.
+  function askFor(opts) {
+    return new Promise(resolve => {
+      let modal = document.getElementById('inputModal');
+      let field = document.getElementById('inputField');
+      let err = document.getElementById('inputError');
+      let ok = document.getElementById('inputOk');
+      let cancel = document.getElementById('inputCancel');
+
+      document.getElementById('inputTitle').innerText = opts.title || "";
+      document.getElementById('inputHelp').innerText = opts.help || "";
+      document.getElementById('inputHelp').style.display = opts.help ? "" : "none";
+      document.getElementById('inputLabel').innerText = opts.label || "";
+      field.value = opts.value || "";
+      field.setAttribute('inputmode', opts.numeric ? "numeric" : "text");
+      if(opts.maxlength) field.setAttribute('maxlength', opts.maxlength);
+      else field.removeAttribute('maxlength');
+      err.style.display = "none";
+
+      function done(val) {
+        modal.classList.add('hidden');
+        ok.onclick = null; cancel.onclick = null; field.onkeydown = null;
+        resolve(val);
+      }
+      function accept() {
+        let v = field.value.trim();
+        let problem = opts.validate ? opts.validate(v) : null;
+        if(problem) { err.innerText = problem; err.style.display = "block"; field.focus(); return; }
+        done(v);
+      }
+      ok.onclick = accept;
+      cancel.onclick = () => done(null);
+      field.onkeydown = e => {
+        if(e.key === "Enter") accept();
+        else if(e.key === "Escape") done(null);
+      };
+      modal.classList.remove('hidden');
+      field.focus();
+      field.select();
+    });
+  }
+
+  function closeNotice() {
+    document.getElementById('noticeModal').classList.add('hidden');
+    // Anything that arrived while this one was up gets its turn now.
+    if(pendingNotice) setTimeout(flushPendingNotice, 0);
+  }
+
+  // Every modal on the page was dismissable only by finding its button. Escape,
+  // and a tap on the dark area, are what people already try first.
+  // The class picker and the teacher sign-in are deliberately NOT in this list:
+  // both are gates, and dismissing them leaves someone in a half-state.
+  const CLOSABLE_MODALS = [
+    ["noticeModal", closeNotice],
+    ["cueModal", closeModal],
+    ["targetModal", closeTargetModal]
+  ];
+
+  function closeTopModal() {
+    for(let [id, close] of CLOSABLE_MODALS) {
+      let el = document.getElementById(id);
+      if(el && !el.classList.contains('hidden')) { close(); return true; }
+    }
+    return false;
+  }
+
+  document.addEventListener('keydown', e => {
+    if(e.key === "Escape") closeTopModal();
+  });
+
+  // Delegated, not bound per element: #noticeModal is declared AFTER this script
+  // runs, so a getElementById loop here would bind nothing and fail silently.
+  document.addEventListener('click', e => {
+    // Only a click on the overlay itself, never one that bubbled out of the card.
+    let hit = CLOSABLE_MODALS.find(([id]) => e.target && e.target.id === id);
+    if(hit) hit[1]();
+  });
 </script>
+
+<!-- INPUT DIALOG: the app-styled stand-in for prompt(). Used where a raw
+     browser prompt sat on a sensitive action and looked least trustworthy
+     exactly where it mattered most. -->
+<div id="inputModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="inputTitle">
+  <div class="modal-content">
+    <h3 id="inputTitle" style="margin-top:0; color:var(--primary);"></h3>
+    <p id="inputHelp" style="color:var(--subtle); font-size:0.9rem; margin:0 0 12px;"></p>
+    <div class="form-group">
+      <label for="inputField" id="inputLabel"></label>
+      <input type="text" id="inputField" autocomplete="off">
+    </div>
+    <p id="inputError" style="color:var(--danger); font-weight:600; display:none; margin:0 0 10px;"></p>
+    <div style="text-align:right;">
+      <button class="btn btn-secondary" id="inputCancel">Cancel</button>
+      <button class="btn btn-primary" id="inputOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="false"></div>
+
+<!-- NOTICE DIALOG: the app-styled stand-in for alert() when the message is
+     something the student or teacher genuinely has to read. -->
+<div id="noticeModal" class="modal-overlay hidden" role="alertdialog" aria-modal="true" aria-labelledby="noticeTitle">
+  <div class="modal-content">
+    <h3 id="noticeTitle" style="margin-top:0; color:var(--primary);">Heads up</h3>
+    <p id="noticeBody" style="white-space:pre-wrap; line-height:1.55; margin:0; color:var(--text);"></p>
+    <div style="text-align:right; margin-top:20px;">
+      <button class="btn btn-primary" id="noticeOkBtn" onclick="closeNotice()">OK</button>
+    </div>
+  </div>
+</div>
 
 <div id="saveStatus" aria-live="polite" style="position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:900; padding:10px 18px; border-radius:6px; font-weight:600; font-size:0.9rem; box-shadow:0 4px 10px rgba(0,0,0,.18); display:none;"></div>
 
