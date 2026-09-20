@@ -685,7 +685,7 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="submitWorkout('A')">✅ Submit Workout</button>
-              <button class="btn btn-danger" onclick="undoSubmitWorkout()">↩️ Undo Submit</button>
+              <button class="btn btn-danger" onclick="undoSubmitWorkout('A')">↩️ Undo Submit</button>
             </div>
           </div>
 
@@ -711,7 +711,7 @@
             </div>
             <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="submitWorkout('B')">✅ Submit Workout</button>
-              <button class="btn btn-danger" onclick="undoSubmitWorkout()">↩️ Undo Submit</button>
+              <button class="btn btn-danger" onclick="undoSubmitWorkout('B')">↩️ Undo Submit</button>
             </div>
           </div>
         </div>
@@ -2050,13 +2050,27 @@
       alert(`Add exercises to Workout ${day} before submitting.`);
       return;
     }
-    if(items.some(r => !r.done)) {
-      alert(`You haven't checked off all your Workout ${day} exercises as Done yet. Finish your workout, or set sets/reps to 0 for anything you skipped, check it off, then submit.`);
+    let dateVal = document.getElementById('workoutDate').value;
+    let score = composedScore(savedRoutines, day, dateVal);
+    let allTicked = items.every(r => doneToday(r, dateVal));
+    // Either the requirement is met, or they have ticked the lot. The second
+    // half is load-bearing: a student whose Workout A holds only 3 lower + 2
+    // core can never reach 6, and this is what keeps them able to submit at all.
+    if(score < DAILY_TARGET && !allTicked) {
+      alert(`Workout ${day} isn't finished yet.\n\n`
+        + `You're at ${score} of ${DAILY_TARGET} \u2014 Workout ${day} needs `
+        + `${day === "A" ? "4 lower body" : "4 upper body"} + 2 core.\n\n`
+        + `Check off what you did today, or tick every exercise in Workout ${day} `
+        + `to submit the whole list.`);
       return;
     }
 
+    // Only what was actually ticked gets logged; a skipped exercise is no longer
+    // written as a 0x0 @ 0lbs row.
+    let logged = items.filter(r => doneToday(r, dateVal));
+
     let seenNames = new Set();
-    for(let r of items) {
+    for(let r of logged) {
       let key = r.name.trim().toLowerCase();
       if(seenNames.has(key)) {
         alert(`"${r.name}" is added twice in Workout ${day}. Delete one copy (the red X button in that row) before submitting.`);
@@ -2065,27 +2079,35 @@
       seenNames.add(key);
     }
 
-    let dateVal = document.getElementById('workoutDate').value;
     // Tag every row with the submission that created it, so an undo removes
     // exactly these rows and not an identically-named row logged by hand on the
     // spreadsheet tab the same day.
     let subId = "s" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
-    let rows = items.map(r => ({
+    let rows = logged.map(r => ({
       date: dateVal, exercise: r.name, component: r.component,
       sets: r.sets, reps: r.reps, lbs: r.lbs, day: day, subId: subId
     }));
 
     if(!await commitRowsToHistory(rows)) return;
 
-    todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: items.map(r => r.name) };
+    todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: logged.map(r => r.name) };
     saveUserData();
     renderSubmitStatus();
-    alert(`Workout ${day} submitted! Your teacher can now see it.`);
+    renderTodayCard();
+    alert(`Workout ${day} submitted \u2014 ${rows.length} exercise`
+      + `${rows.length === 1 ? "" : "s"} sent to your teacher.`);
   }
 
-  async function undoSubmitWorkout() {
+  async function undoSubmitWorkout(day) {
     if(!todaysSubmission) {
       alert("Nothing to undo — you haven't submitted a workout yet today.");
+      return;
+    }
+    // There is an Undo button under each column but only ever one submission to
+    // undo. Without this, the button under Workout B silently undid an A submit.
+    if(day && todaysSubmission.day !== day) {
+      alert(`Your last submission was Workout ${todaysSubmission.day}, not ${day}.`
+        + `\n\nUse the Undo button under Workout ${todaysSubmission.day}.`);
       return;
     }
     let dateVal = document.getElementById('workoutDate').value;
@@ -2132,6 +2154,7 @@
     renderHistoryTable();
     updateKPIs();
     renderSubmitStatus();
+    renderTodayCard();
     alert(`Submission undone (${removed} log ${removed === 1 ? "row" : "rows"} removed). Fix your workout and resubmit when ready.`);
   }
 
