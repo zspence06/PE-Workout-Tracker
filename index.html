@@ -124,6 +124,13 @@
       margin-bottom: 15px;
     }
 
+    .login-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .login-row #studentName { min-width: 150px; }
+
     .form-group label {
       display: block;
       margin-bottom: 6px;
@@ -253,11 +260,15 @@
       letter-spacing: 0.5px;
     }
 
+    /* These used to be transparent until :hover, which does not exist on a
+       phone -- students saw no input boxes at all. Faint by default, firm on
+       interaction, so the spreadsheet still reads as a sheet. */
     .sheet-input, .sheet-select {
       width: 100%;
       padding: 6px;
-      border: 1px solid transparent;
-      background: transparent;
+      border: 1px solid #E2E8F0;
+      border-radius: 4px;
+      background: #FFFFFF;
       font-size: 0.9rem;
       color: var(--text);
     }
@@ -467,6 +478,35 @@
       margin: 2px 0 6px;
     }
 
+    /* Students use this on a phone, in a gym. Until now the only media query in
+       the file was print, and .ab-grid's 340px minimum overflowed a 375px screen. */
+    @media (max-width: 640px) {
+      body { padding: 10px; }
+      header { padding: 14px; }
+      header h1 { font-size: 1.15rem; }
+      .card { padding: 14px; }
+      .ab-grid { grid-template-columns: 1fr; }
+      .req-grid, .kpi-grid { grid-template-columns: 1fr; }
+      .muscle-group-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+      .muscle-btn { padding: 12px 8px; font-size: 0.85rem; }
+      .btn { padding: 12px 16px; }
+      .btn-danger { padding: 10px 12px; font-size: 0.9rem; }
+      .sub-tabs { gap: 4px; }
+      .sub-tab-btn { padding: 8px 6px; font-size: 0.82rem; }
+      th, td { padding: 6px 4px; font-size: 0.85rem; }
+      .mini-bar { width: 90px; }
+      .day-btn { padding: 10px 14px; }
+      .today-split { gap: 14px; }
+      /* Four controls on one line squeezed the name box down to "e.g., Alex Sm". */
+      .login-row { flex-wrap: wrap; }
+      .login-row #studentName { flex: 1 1 100%; }
+      .login-row #studentPin { max-width: none !important; flex: 1 1 40%; }
+      .login-row .btn { flex: 1 1 45%; }
+      /* The sets/reps/lbs boxes were clipping mid-digit -- 95 lbs read as "9".
+         Give them a floor and let the table scroll inside its card instead. */
+      .sheet-input, .sheet-select { min-width: 58px; padding: 6px 4px; }
+    }
+
     .print-only { display: none; }
     @media print {
       .container, .modal-overlay { display: none !important; }
@@ -513,7 +553,7 @@
       <div style="display: flex; gap: 20px; flex-wrap: wrap;">
         <div class="form-group" style="flex: 1; min-width: 200px;">
           <label for="studentName">Student Name:</label>
-          <div style="display: flex; gap: 8px;">
+          <div class="login-row">
             <input type="text" id="studentName" placeholder="e.g., Alex Smith">
             <input type="text" id="studentPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" style="max-width: 110px;">
             <button class="btn btn-primary" onclick="loginStudent()">Log In / Register</button>
@@ -687,7 +727,7 @@
         <div class="ab-grid">
           <!-- A DAY COLUMN -->
           <div>
-            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A (6 Exercises Total Required)</h4>
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A</h4>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Lower Body + 2 Core</span>
             <div style="overflow-x: auto; margin-top: 5px;">
               <table>
@@ -713,7 +753,7 @@
 
           <!-- B DAY COLUMN -->
           <div>
-            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B (6 Exercises Total Required)</h4>
+            <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B</h4>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Upper Body + 2 Core</span>
             <div style="overflow-x: auto; margin-top: 5px;">
               <table>
