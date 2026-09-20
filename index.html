@@ -711,6 +711,7 @@
     <div class="sub-tabs">
       <button class="sub-tab-btn active" onclick="switchTeacherTab('teacherTab1', event)">Class Logs Overview</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab2', event)">Learning Target Manager</button>
+      <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab3', event)">Class Periods</button>
     </div>
 
     <!-- TEACHER TAB 1: OVERVIEW & ANALYTICS -->
@@ -728,13 +729,18 @@
 
       <div class="card">
         <h3>Manage Students</h3>
-        <p style="color: var(--subtle); font-size: 0.9rem;">Reset a student's PIN if they forget it.</p>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          Reset a PIN if a student forgets it, or delete a student to remove them and all
+          their logs. Everything here is permanent and does not need the Firebase console.
+        </p>
         <div style="overflow-x: auto;">
           <table>
             <thead>
               <tr>
                 <th>Student Name</th>
-                <th>Action</th>
+                <th>Class</th>
+                <th>Logs</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="manageStudentsTable"></tbody>
@@ -781,6 +787,33 @@
         </div>
         <button class="btn btn-primary" id="updateTargetBtn" onclick="updateLearningTarget()">Update Target for Class</button>
         <p id="targetUpdatedAt" style="color: var(--subtle); font-size: 0.9rem; margin-top: 10px;"></p>
+      </div>
+    </div>
+
+    <!-- TEACHER TAB 3: CLASS PERIODS -->
+    <div id="teacherTab3" class="teacher-tab hidden">
+      <div class="card">
+        <h3>Add a Class Period</h3>
+        <div class="form-group">
+          <label for="newClassName">Class name</label>
+          <input type="text" id="newClassName" placeholder="e.g., 3rd Period - Weight Training"
+                 onkeydown="if(event.key===&#39;Enter&#39;) createClass();">
+        </div>
+        <button class="btn btn-primary" id="createClassBtn" onclick="createClass()">Add Class</button>
+      </div>
+
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h3 style="margin:0;">Your Classes</h3>
+          <label style="font-weight:600; font-size:0.9rem;">
+            <input type="checkbox" id="showArchivedClasses" onchange="renderClasses()"> Show archived
+          </label>
+        </div>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          Classes are never deleted, only archived. Archiving closes the invite link and hides
+          the class from the student picker; students already in it keep working normally.
+        </p>
+        <div id="classList"></div>
       </div>
     </div>
   </div>
@@ -2142,6 +2175,7 @@
   function switchTeacherTab(tabId, evt) {
     document.querySelectorAll('.teacher-tab').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
+    if(tabId === 'teacherTab3') renderClasses();
 
     if(evt) {
       document.querySelectorAll('#teacherView .sub-tab-btn').forEach(b => b.classList.remove('active'));
@@ -2191,6 +2225,11 @@
       alert("Couldn't load student data: " + err.message);
       return;
     }
+
+    // The roster shows each student's class name, so the class list has to be
+    // in hand before it renders.
+    try { classCache = await fetchClasses(); }
+    catch(err) { console.error("Class load failed:", err); classCache = []; }
 
     teacherCache = [];
     let allLogs = [];
@@ -2251,16 +2290,217 @@
     }
 
     teacherCache.forEach(stu => {
+      let cls = classCache.find(c => c.id === stu.classId);
+      let clsLabel = cls
+        ? esc(cls.name) + (cls.frozen ? ' <span style="color:var(--danger); font-size:.75rem;">(archived)</span>' : "")
+        : '<span style="color:var(--danger); font-weight:600;">Unassigned</span>';
       let str = document.createElement('tr');
       str.innerHTML = `
         <td><strong>${esc(stu.name)}</strong></td>
-        <td><button class="btn btn-danger" onclick="resetStudentPin('${esc(stu.id)}')">Reset PIN</button></td>
+        <td>${clsLabel}</td>
+        <td>${stu.count}</td>
+        <td style="white-space:nowrap;">
+          <button class="btn btn-secondary" onclick="resetStudentPin('${esc(stu.id)}')">Reset PIN</button>
+          <button class="btn btn-danger" onclick="deleteStudent('${esc(stu.id)}')">Delete</button>
+        </td>
       `;
       studentsBody.appendChild(str);
     });
 
     document.getElementById('kpiStudents').innerText = snap.size;
     document.getElementById('kpiLogs').innerText = allLogs.length;
+  }
+
+  // ---------------------------------------------------------------- classes
+  let classCache = [];
+
+  function newClassId() {
+    return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  // Built from wherever the page is actually served, so a link pasted into a
+  // school document keeps working if the site ever moves.
+  function inviteLink(classId) {
+    return location.origin + location.pathname + "?class=" + encodeURIComponent(classId);
+  }
+
+  async function fetchClasses() {
+    let snap = await fbGetDocs(fbCollection(db, "classes"));
+    let rows = [];
+    snap.forEach(d => rows.push({ ...d.data(), id: d.id }));
+    rows.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)
+      || String(a.name || "").localeCompare(String(b.name || "")));
+    return rows;
+  }
+
+  async function createClass() {
+    let input = document.getElementById('newClassName');
+    let name = input.value.trim();
+    if(!name) { alert("Give the class a name first."); return; }
+    if(name.length > 90) { alert("Keep the class name under 90 characters."); return; }
+    if(classCache.some(c => (c.name || "").trim().toLowerCase() === name.toLowerCase())) {
+      alert('You already have a class called "' + name + '".');
+      return;
+    }
+    let btn = document.getElementById('createClassBtn');
+    if(btn) { btn.disabled = true; btn.innerText = "Adding..."; }
+    try {
+      let maxOrder = classCache.reduce((m, c) => Math.max(m, c.sortOrder || 0), 0);
+      await fbSetDoc(fbDoc(db, "classes", newClassId()),
+        { name: name, sortOrder: maxOrder + 1, frozen: false, createdAt: new Date().toISOString() });
+    } catch(err) {
+      alert("Couldn't add the class: " + (err && err.code ? err.code : err.message));
+      return;
+    } finally {
+      if(btn) { btn.disabled = false; btn.innerText = "Add Class"; }
+    }
+    input.value = "";
+    await renderClasses();
+  }
+
+  async function renameClass(classId) {
+    let cls = classCache.find(c => c.id === classId);
+    if(!cls) return;
+    let name = prompt("Rename this class:", cls.name);
+    if(name === null) return;
+    name = name.trim();
+    if(!name) { alert("A class needs a name."); return; }
+    try {
+      await fbUpdateDoc(fbDoc(db, "classes", classId), { name: name });
+    } catch(err) { alert("Couldn't rename: " + (err && err.code ? err.code : err.message)); return; }
+    await renderClasses();
+  }
+
+  async function setClassFrozen(classId, frozen) {
+    let cls = classCache.find(c => c.id === classId);
+    if(!cls) return;
+    let inClass = teacherCache.filter(s => s.classId === classId).length;
+    if(frozen && !confirm('Archive "' + cls.name + '"?\n\nIts invite link stops working and it '
+      + 'disappears from the student picker. The ' + inClass + ' student'
+      + (inClass === 1 ? "" : "s") + ' already in it keep working normally, and you keep all their data.')) return;
+    try {
+      await fbUpdateDoc(fbDoc(db, "classes", classId), { frozen: !!frozen });
+    } catch(err) { alert("Couldn't update: " + (err && err.code ? err.code : err.message)); return; }
+    await renderClasses();
+  }
+
+  // Ordering drives both the student picker and the dashboard grouping, so it
+  // wants to match the real school day rather than the order they were created.
+  async function moveClass(classId, delta) {
+    let active = classCache.filter(c => !c.frozen);
+    let i = active.findIndex(c => c.id === classId);
+    let j = i + delta;
+    if(i < 0 || j < 0 || j >= active.length) return;
+    let a = active[i], b = active[j];
+    try {
+      let batch = fbWriteBatch(db);
+      batch.update(fbDoc(db, "classes", a.id), { sortOrder: (b.sortOrder || j) });
+      batch.update(fbDoc(db, "classes", b.id), { sortOrder: (a.sortOrder || i) });
+      await batch.commit();
+    } catch(err) { alert("Couldn't reorder: " + (err && err.code ? err.code : err.message)); return; }
+    await renderClasses();
+  }
+
+  async function copyInvite(classId) {
+    let link = inviteLink(classId);
+    try {
+      await navigator.clipboard.writeText(link);
+      alert("Invite link copied:\n\n" + link);
+    } catch(e) {
+      prompt("Copy this invite link:", link);
+    }
+  }
+
+  async function renderClasses() {
+    let host = document.getElementById('classList');
+    if(!host) return;
+    try {
+      classCache = await fetchClasses();
+    } catch(err) {
+      host.innerHTML = "<p style='color:var(--danger);'>Couldn't load classes: "
+        + esc(err.code || err.message) + "</p>";
+      return;
+    }
+    let showArchived = document.getElementById('showArchivedClasses').checked;
+    let shown = classCache.filter(c => showArchived || !c.frozen);
+    if(shown.length === 0) {
+      host.innerHTML = classCache.length === 0
+        ? "<p style='color:var(--subtle);'>No classes yet. Add your first one above &mdash; students can't use the tracker until at least one exists.</p>"
+        : "<p style='color:var(--subtle);'>All your classes are archived. Tick &ldquo;Show archived&rdquo; to see them.</p>";
+      return;
+    }
+    let active = classCache.filter(c => !c.frozen);
+    host.innerHTML = shown.map(c => {
+      let count = teacherCache.filter(s => s.classId === c.id).length;
+      let idx = active.findIndex(x => x.id === c.id);
+      let link = inviteLink(c.id);
+      let arrows = c.frozen ? "" :
+        '<button class="btn btn-secondary" onclick="moveClass(\'' + esc(c.id) + '\', -1)"'
+        + (idx <= 0 ? " disabled" : "") + '>&uarr;</button>'
+        + '<button class="btn btn-secondary" onclick="moveClass(\'' + esc(c.id) + '\', 1)"'
+        + (idx >= active.length - 1 ? " disabled" : "") + '>&darr;</button>';
+      let freezeBtn = c.frozen
+        ? '<button class="btn btn-primary" onclick="setClassFrozen(\'' + esc(c.id) + '\', false)">Unarchive</button>'
+        : '<button class="btn btn-danger" onclick="setClassFrozen(\'' + esc(c.id) + '\', true)">Archive</button>';
+      let linkRow = c.frozen ? "" :
+        '<div style="margin-top:10px; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">'
+        + '<input type="text" class="sheet-input" readonly value="' + esc(link) + '"'
+        + ' onclick="this.select()" style="flex:1; min-width:240px; font-size:.85rem;">'
+        + '<button class="btn btn-secondary" onclick="copyInvite(\'' + esc(c.id) + '\')">Copy link</button></div>';
+      return '<div class="card" style="margin-bottom:12px;' + (c.frozen ? "opacity:.65;" : "") + '">'
+        + '<div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">'
+        + '<div><strong style="font-size:1.05rem;">' + esc(c.name) + '</strong>'
+        + (c.frozen ? '<span style="font-size:.8rem; color:var(--danger); font-weight:700;">&nbsp;ARCHIVED</span>' : "")
+        + '<br><span style="font-size:.85rem; color:var(--subtle);">' + count + ' student'
+        + (count === 1 ? "" : "s") + '</span></div>'
+        + '<div style="display:flex; gap:6px; flex-wrap:wrap;">' + arrows
+        + '<button class="btn btn-secondary" onclick="renameClass(\'' + esc(c.id) + '\')">Rename</button>'
+        + freezeBtn + '</div></div>' + linkRow + '</div>';
+    }).join("");
+  }
+
+  // ------------------------------------------------------- student cleanup
+  // Deleting a student means three things, and Firestore does not cascade:
+  // every row in their history subcollection, the record itself, and their
+  // entry in the name registry -- without that last one the name stays claimed
+  // and nobody can ever register it again.
+  async function deleteStudent(studentId) {
+    let stu = teacherCache.find(s => s.id === studentId);
+    if(!stu) { alert("Student not found."); return; }
+    if(!confirm('Permanently delete "' + stu.name + '"?\n\nThis removes their '
+      + stu.count + ' workout log' + (stu.count === 1 ? "" : "s")
+      + ' and frees up their name. This cannot be undone.')) return;
+    if(!confirm('Last check: delete "' + stu.name + '" and all their data?')) return;
+
+    try {
+      let snap = await fbGetDocs(historyCol(studentId));
+      let ids = [];
+      snap.forEach(d => ids.push(d.id));
+      // Batches cap at 500 writes, so a long semester is chunked.
+      for(let i = 0; i < ids.length; i += 400) {
+        let batch = fbWriteBatch(db);
+        ids.slice(i, i + 400).forEach(id =>
+          batch.delete(fbDoc(db, "students", studentId, "history", id)));
+        await batch.commit();
+      }
+      await fbDeleteDoc(fbDoc(db, "students", studentId));
+      try {
+        await fbDeleteDoc(fbDoc(db, "names", await nameKey(stu.name)));
+      } catch(err) {
+        // The record is already gone; a stranded name entry only blocks reuse
+        // of that name, so report it rather than failing the whole delete.
+        console.error("Name registry cleanup failed:", err);
+        alert('Deleted "' + stu.name + '", but their name could not be released. '
+          + 'They may not be able to register under the same name again.');
+        await renderTeacherLogs();
+        return;
+      }
+    } catch(err) {
+      alert("Couldn't delete: " + (err && err.code ? err.code : err.message));
+      return;
+    }
+    await renderTeacherLogs();
+    alert('Deleted "' + stu.name + '".');
   }
 
   async function resetStudentPin(studentId) {
