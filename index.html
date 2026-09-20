@@ -2516,25 +2516,52 @@
       if(!newPin) return;
       if(!/^\d{4}$/.test(newPin)) { alert("PIN must be exactly 4 digits."); return; }
 
-      // The PIN is half the address, so changing it relocates the whole record.
+      // The PIN is half the address, so changing it relocates the whole record --
+      // and Firestore does not carry a document's subcollections along with it.
+      // The workout history has to be copied across explicitly, or a student who
+      // forgets their PIN loses every workout they have ever logged.
       let newId = await studentDocId(name, newPin);
       if(newId === studentId) { alert(`${name} already has that PIN.`); return; }
       if((await fbGetDoc(fbDoc(db, "students", newId))).exists()) {
         alert("That PIN is already in use by another record. Pick a different one.");
         return;
       }
+
+      let rows = await fetchHistory(studentId);
+
+      // Copy everything to the new address BEFORE removing anything from the old
+      // one, so a failure here leaves the student exactly where they started.
+      for(let i = 0; i < rows.length; i += 400) {
+        let batch = fbWriteBatch(db);
+        rows.slice(i, i + 400).forEach(r => {
+          let { logId, ...fields } = r;
+          batch.set(fbDoc(db, "students", newId, "history", logId), fields);
+        });
+        await batch.commit();
+      }
       await fbSetDoc(fbDoc(db, "students", newId), data);
+
+      // Past this point the new PIN already works, so failing to tidy up the old
+      // address is leftovers, not a failed reset. Nothing has been lost either way.
       try {
+        for(let i = 0; i < rows.length; i += 400) {
+          let batch = fbWriteBatch(db);
+          rows.slice(i, i + 400).forEach(r =>
+            batch.delete(fbDoc(db, "students", studentId, "history", r.logId)));
+          await batch.commit();
+        }
         await fbDeleteDoc(ref);
       } catch(err) {
+        console.error("Old record cleanup failed:", err);
         await renderTeacherLogs();
-        alert(`${name}'s new PIN ${newPin} works, but the old record could not be `
-          + `removed — so the OLD PIN STILL WORKS TOO.\n\nRun the reset again, or `
-          + `delete the leftover record in the Firebase console.`);
+        alert(`${name}'s new PIN ${newPin} works and their ${rows.length} workout `
+          + `log${rows.length === 1 ? "" : "s"} came across, but the old record could not `
+          + `be removed, so the OLD PIN STILL WORKS TOO.\n\nRun the reset again to clear it.`);
         return;
       }
       await renderTeacherLogs();
-      alert(`${name}'s PIN has been reset to ${newPin}. Let them know.`);
+      alert(`${name}'s PIN has been reset to ${newPin}, and their ${rows.length} workout `
+        + `log${rows.length === 1 ? "" : "s"} came with it. Let them know.`);
     } catch(err) {
       alert("Couldn't reset PIN: " + err.message);
     }
