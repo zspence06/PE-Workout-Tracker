@@ -453,6 +453,7 @@
             <button class="btn btn-secondary hidden" id="logoutBtn" onclick="logoutStudent()">Log Out</button>
           </div>
           <p style="font-size: 0.8rem; color: var(--subtle); margin: 4px 0 0;">First time? Type a new 4-digit PIN and it becomes yours. Forgot it? Ask your teacher to reset it.</p>
+          <p id="studentClassLine" style="font-size: 0.85rem; font-weight: 600; margin: 6px 0 0;"></p>
         </div>
         <div class="form-group" style="flex: 1; min-width: 200px;">
           <label for="workoutDate">Workout Date:</label>
@@ -837,6 +838,23 @@
     <p id="targetModalBody" style="font-size: 1.1rem; line-height: 1.5; color: var(--text);"></p>
     <div style="text-align: right; margin-top: 20px;">
       <button class="btn btn-primary" onclick="closeTargetModal()">Got It!</button>
+    </div>
+  </div>
+</div>
+
+<!-- CLASS PICKER MODAL -->
+<div id="classPickerModal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color:var(--primary);">Which class are you in?</h3>
+    <p id="classPickerIntro" style="color: var(--subtle);">
+      Pick your class period to start using the tracker.
+    </p>
+    <div id="classPickerOptions" style="display:flex; flex-direction:column; gap:8px;"></div>
+    <p id="classPickerNote" style="font-size:0.85rem; color: var(--subtle); margin-top:14px;">
+      Picked the wrong one? Your teacher can move you.
+    </p>
+    <div style="text-align:right; margin-top:10px;">
+      <button class="btn btn-secondary" onclick="logoutStudent()">Log Out</button>
     </div>
   </div>
 </div>
@@ -1523,6 +1541,7 @@
     }
 
     document.getElementById('logoutBtn').classList.remove('hidden');
+    await ensureClassAssigned();
     renderSavedTags();
     renderHistoryTable();
     renderMasterWorkoutPlan();
@@ -2155,6 +2174,8 @@
     document.getElementById('studentName').value = "";
     document.getElementById('studentPin').value = "";
     document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('classPickerModal').classList.add('hidden');
+    document.getElementById('studentClassLine').innerText = "";
     document.getElementById('saveStatus').style.display = "none";
     renderSavedTags(); renderHistoryTable(); renderMasterWorkoutPlan();
     renderSpreadsheet(); renderSubmitStatus(); updateProgressUI();
@@ -2309,6 +2330,99 @@
 
     document.getElementById('kpiStudents').innerText = snap.size;
     document.getElementById('kpiLogs').innerText = allLogs.length;
+  }
+
+  // ------------------------------------------------- student class assignment
+  let studentClasses = [];
+
+  function inviteClassIdFromUrl() {
+    try { return new URLSearchParams(location.search).get("class"); }
+    catch(e) { return null; }
+  }
+
+  function classNameById(id) {
+    let c = studentClasses.find(x => x.id === id);
+    return c ? c.name : null;
+  }
+
+  function renderStudentClassLine() {
+    let el = document.getElementById('studentClassLine');
+    if(!el) return;
+    if(!currentUser) { el.innerText = ""; return; }
+    let name = classNameById(currentClassId);
+    if(name) {
+      el.style.color = "var(--primary)";
+      el.innerText = "Class: " + name;
+    } else {
+      el.style.color = "var(--danger)";
+      el.innerText = "No class picked yet.";
+    }
+  }
+
+  async function assignClass(classId) {
+    try {
+      await fbUpdateDoc(fbDoc(db, "students", currentDocId),
+        { classId: classId, classChangedAt: new Date().toISOString() });
+    } catch(err) {
+      alert("Couldn't save your class: " + (err && err.code ? err.code : err.message)
+        + "\n\nCheck your connection and try again.");
+      return false;
+    }
+    currentClassId = classId;
+    renderStudentClassLine();
+    document.getElementById('classPickerModal').classList.add('hidden');
+    return true;
+  }
+
+  function showClassPicker() {
+    let active = studentClasses.filter(c => !c.frozen);
+    let box = document.getElementById('classPickerOptions');
+    let intro = document.getElementById('classPickerIntro');
+    let note = document.getElementById('classPickerNote');
+
+    if(active.length === 0) {
+      // Requiring a class means no classes at all locks everyone out, so say
+      // what is actually wrong rather than showing an empty list.
+      intro.innerText = "Mr. Spencer hasn't set up any class periods yet.";
+      box.innerHTML = "";
+      note.innerText = "Check back once he has, or let him know you're stuck.";
+    } else {
+      intro.innerText = "Pick your class period to start using the tracker.";
+      box.innerHTML = active.map(c =>
+        '<button class="btn btn-primary" onclick="assignClass(\'' + esc(c.id) + '\')">'
+        + esc(c.name) + '</button>').join("");
+      note.innerText = "Picked the wrong one? Your teacher can move you.";
+    }
+    document.getElementById('classPickerModal').classList.remove('hidden');
+  }
+
+  // Runs after a student logs in. An invite link decides for them where it can;
+  // otherwise they pick, and they cannot get past this without a class.
+  async function ensureClassAssigned() {
+    try { studentClasses = await fetchClasses(); }
+    catch(err) { console.error("Class list unavailable:", err); studentClasses = []; }
+
+    let inviteId = inviteClassIdFromUrl();
+    if(inviteId) {
+      let cls = studentClasses.find(c => c.id === inviteId);
+      if(!cls) {
+        alert("That class link isn't valid any more \u2014 pick your class instead.");
+      } else if(cls.frozen) {
+        alert('"' + cls.name + '" is closed, so you can\'t join it from that link.');
+      } else if(currentClassId === cls.id) {
+        // already where the link points; nothing to do
+      } else if(!currentClassId) {
+        if(await assignClass(cls.id)) alert("You've joined " + cls.name + ".");
+      } else {
+        let current = classNameById(currentClassId) || "another class";
+        if(confirm("You are in " + current + ".\n\nMove to " + cls.name + "?")) {
+          if(await assignClass(cls.id)) alert("Moved to " + cls.name + ".");
+        }
+      }
+    }
+
+    renderStudentClassLine();
+    if(!currentClassId) showClassPicker();
   }
 
   // ---------------------------------------------------------------- classes
