@@ -359,6 +359,10 @@
     .blockers ul { list-style: none; margin: 0; padding: 0; }
     .blockers li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; }
     .blockers .mark { flex: 0 0 auto; font-weight: 700; line-height: 1.5; }
+    /* A flex child defaults to min-width:auto and will not shrink below its
+       content, so without this the blocker text runs off a phone screen instead
+       of wrapping -- and does it silently, past a scrollWidth check. */
+    .blockers li > span:last-child { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
     .blockers .bad .mark { color: var(--danger); }
     .blockers .good .mark { color: var(--success); }
     .blockers-head { font-weight: 700; margin: 0 0 4px; }
@@ -436,6 +440,8 @@
       grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
       gap: 20px;
     }
+
+    .ab-grid > div { min-width: 0; }
 
     .completed-row {
       background-color: #F0FDF4 !important;
@@ -549,6 +555,11 @@
       /* The sets/reps/lbs boxes were clipping mid-digit -- 95 lbs read as "9".
          Give them a floor and let the table scroll inside its card instead. */
       .sheet-input, .sheet-select { min-width: 58px; padding: 6px 4px; }
+      /* The blocker actions are the way out of a stuck submit, so they have to
+         be properly tappable rather than 29px of text. */
+      .btn-mini { padding: 11px 14px; font-size: 0.85rem; }
+      .blocker-actions { gap: 8px; }
+      .blockers { font-size: 0.9rem; }
     }
 
     .print-only { display: none; }
