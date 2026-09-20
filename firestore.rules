@@ -1,10 +1,10 @@
 rules_version = '2';
 
-// Memorial PE Workout Tracker — Firestore security rules
+// Memorial PE Workout Tracker -- Firestore security rules
 //
 // Model: a student record's DOCUMENT ID is the secret.
 //   id = PBKDF2(pin, salt = normalized name, 100k iterations, SHA-256)
-// No PIN — and no hash of a PIN — is stored in any document. Reaching a record
+// No PIN -- and no hash of a PIN -- is stored in any document. Reaching a record
 // requires already knowing both the student's name and their PIN.
 
 service cloud.firestore {
@@ -35,7 +35,7 @@ service cloud.firestore {
     }
 
     // "Is this name already claimed?" Keyed by sha256("name:" + name), so the
-    // roster cannot be listed out — only checked for a name already known.
+    // roster cannot be listed out -- only checked for a name already known.
     // Holds no PIN information whatsoever. This is what stops a mistyped PIN
     // from silently creating a second, empty account for an existing student.
     match /names/{nameKey} {
