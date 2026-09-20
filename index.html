@@ -807,6 +807,27 @@
   </div>
 </div>
 
+<!-- TEACHER SIGN-IN MODAL -->
+<div id="teacherLoginModal" class="modal-overlay hidden">
+  <div class="modal-content">
+    <h3 style="margin-top:0; color:var(--primary);">Teacher Sign In</h3>
+    <div class="form-group">
+      <label for="teacherEmail">Email</label>
+      <input type="email" id="teacherEmail" autocomplete="username">
+    </div>
+    <div class="form-group">
+      <label for="teacherPassword">Password</label>
+      <input type="password" id="teacherPassword" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter') submitTeacherLogin();">
+    </div>
+    <p id="teacherLoginError" style="color:var(--danger); font-weight:600; display:none;"></p>
+    <div style="text-align: right; margin-top: 20px;">
+      <button class="btn btn-secondary" onclick="cancelTeacherLogin()">Cancel</button>
+      <button class="btn btn-primary" onclick="submitTeacherLogin()">Sign In</button>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
@@ -1243,20 +1264,75 @@
       return;
     }
 
-    let email = prompt("Teacher email:", "");
-    if(!email) { resetToStudentNav(); return; }
-    let password = prompt("Teacher password:", "");
-    if(!password) { resetToStudentNav(); return; }
+    // A password typed into prompt() is rendered in clear text, which in a gym
+    // with the projector on puts it on the wall. Real password field instead.
+    document.getElementById('teacherLoginError').style.display = "none";
+    document.getElementById('teacherPassword').value = "";
+    document.getElementById('teacherLoginModal').classList.remove('hidden');
+    document.getElementById('teacherEmail').focus();
+  }
 
+  // Minimal masked prompt, reusing the sign-in modal's password field.
+  function promptPassword(label) {
+    return new Promise(resolve => {
+      let modal = document.getElementById('teacherLoginModal');
+      let emailGroup = document.getElementById('teacherEmail').parentElement;
+      let title = modal.querySelector('h3');
+      let pw = document.getElementById('teacherPassword');
+      let errEl = document.getElementById('teacherLoginError');
+      let signIn = modal.querySelector('.btn-primary');
+      let cancel = modal.querySelector('.btn-secondary');
+      let prevTitle = title.innerText;
+
+      function restore() {
+        modal.classList.add('hidden');
+        emailGroup.style.display = ""; title.innerText = prevTitle;
+        pw.value = ""; errEl.style.display = "none";
+        signIn.onclick = null; cancel.onclick = null;
+        signIn.setAttribute('onclick', 'submitTeacherLogin()');
+        cancel.setAttribute('onclick', 'cancelTeacherLogin()');
+      }
+      emailGroup.style.display = "none";
+      title.innerText = label;
+      errEl.style.display = "none";
+      pw.value = "";
+      signIn.removeAttribute('onclick');
+      cancel.removeAttribute('onclick');
+      signIn.onclick = () => { let v = pw.value; restore(); resolve(v); };
+      cancel.onclick = () => { restore(); resolve(null); };
+      modal.classList.remove('hidden');
+      pw.focus();
+    });
+  }
+
+  function cancelTeacherLogin() {
+    document.getElementById('teacherLoginModal').classList.add('hidden');
+    document.getElementById('teacherPassword').value = "";
+    resetToStudentNav();
+  }
+
+  async function submitTeacherLogin() {
+    let email = document.getElementById('teacherEmail').value.trim();
+    let password = document.getElementById('teacherPassword').value;
+    let errEl = document.getElementById('teacherLoginError');
+    if(!email || !password) {
+      errEl.innerText = "Enter both an email and a password.";
+      errEl.style.display = "block";
+      return;
+    }
     try {
       await fbSignIn(auth, email, password);
-      document.getElementById('studentView').classList.add('hidden');
-      document.getElementById('teacherView').classList.remove('hidden');
-      await renderTeacherLogs();
     } catch(err) {
-      alert("Login failed: " + err.message);
-      resetToStudentNav();
+      errEl.innerText = "Sign in failed: " + (err && err.code ? err.code : err.message);
+      errEl.style.display = "block";
+      document.getElementById('teacherPassword').value = "";
+      return;
     }
+    document.getElementById('teacherPassword').value = "";
+    document.getElementById('teacherLoginModal').classList.add('hidden');
+    document.getElementById('studentView').classList.add('hidden');
+    document.getElementById('teacherView').classList.remove('hidden');
+    await renderTeacherLogs();
   }
 
   function resetToStudentNav() {
@@ -2067,8 +2143,10 @@
   }
 
   async function changeTeacherPassword() {
-    let newP = prompt("Enter new teacher password:");
+    // Same reason as sign-in: never echo a password in clear text.
+    let newP = await promptPassword("Enter a new teacher password:");
     if(!newP) return;
+    if(newP.length < 6) { alert("Firebase requires at least 6 characters."); return; }
     try {
       await fbUpdatePassword(auth.currentUser, newP);
       alert("Password updated.");
