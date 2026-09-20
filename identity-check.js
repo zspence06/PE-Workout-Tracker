@@ -19,6 +19,7 @@ const constLine = src.split('\n').find(l => l.includes('const PIN_ITERATIONS'));
 if (!constLine) throw new Error('PIN_ITERATIONS not found');
 eval([
   constLine.replace('const ', 'globalThis.'),
+  grab('function esc(v) {'),
   grab('function normalizeName(name) {'),
   grab('async function sha256Hex(str) {'),
   grab('async function studentDocId(name, pin) {'),
@@ -52,6 +53,18 @@ eval([
     for (const p of ['0000', '1234', '9999']) ids.add(await studentDocId(n, p));
   assert.strictEqual(ids.size, 9, 'all name/PIN pairs must be distinct');
 
+  // Escaping: student names and custom exercise names reach the teacher's
+  // dashboard through innerHTML, inside her authenticated session.
+  const payload = '<img src=x onerror=alert(1)>';
+  assert.ok(!esc(payload).includes('<'), 'must neutralize angle brackets');
+  assert.ok(!esc(payload).includes('>'), 'must neutralize angle brackets');
+  assert.strictEqual(esc('a&b'), 'a&amp;b', 'ampersand first, or escapes double-encode');
+  assert.strictEqual(esc('" onmouseover="x'), '&quot; onmouseover=&quot;x', 'attribute breakout');
+  assert.strictEqual(esc("' onfocus='x"), '&#39; onfocus=&#39;x', 'single-quote breakout');
+  assert.strictEqual(esc(null), '', 'null renders empty, not "null"');
+  assert.strictEqual(esc(undefined), '', 'undefined renders empty');
+  assert.strictEqual(esc(0), '0', 'zero must survive');
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -60,4 +73,5 @@ eval([
 
   console.log('derivation: ' + ms + 'ms/login, ' + PIN_ITERATIONS + ' iterations');
   console.log('identity-check OK - 9 distinct addresses, normalization stable, no name or PIN recoverable from an address');
+  console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

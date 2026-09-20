@@ -1136,6 +1136,15 @@
     r[field] = value;
   }
 
+  // Student names and custom exercise names are free text typed by students and
+  // land in the teacher's dashboard, inside her authenticated session. Everything
+  // student-controlled goes through here before it reaches innerHTML.
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
   function normalizeName(name) {
     return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   }
@@ -1276,7 +1285,11 @@
       // The name is claimed but this PIN does not lead to that record. Creating
       // an account here is exactly how a student silently ends up with a second,
       // empty one and loses their history, so refuse and send them to the teacher.
-      alert(`That PIN doesn't match the record for "${nameInput}".\n\nCheck the PIN and try again, or ask your teacher to reset it.`);
+      alert(`That PIN doesn't match the record for "${nameInput}".\n\n`
+        + `Check the PIN and try again, or ask your teacher to reset it.\n\n`
+        + `If you are a DIFFERENT student who happens to have the same name, `
+        + `add your middle initial or class period so your name is unique `
+        + `— for example "${nameInput} B".`);
       return;
     } else {
       if(!confirm(`No record found for "${nameInput}".\n\nCreate a new account with PIN ${pinInput}?`)) return;
@@ -1470,7 +1483,7 @@
       if(r.done) tr.classList.add('completed-row');
       tr.innerHTML = `
         <td><input type="checkbox" ${r.done ? 'checked' : ''} onchange="updateRoutineField(${r.id}, 'done', this.checked); toggleCompleteRow(this); saveUserData();"></td>
-        <td><strong>${r.name}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${r.component}</span></td>
+        <td><strong>${esc(r.name)}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${esc(r.component)}</span></td>
         <td>${lastCell}</td>
         <td><input type="number" class="sheet-input" value="${r.sets}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
         <td><input type="number" class="sheet-input" value="${r.reps}" onchange="updateRoutineField(${r.id}, 'reps', this.value); saveUserData();"></td>
@@ -1521,8 +1534,8 @@
       let lastText = last ? `${last.sets} x ${last.reps} @ ${last.lbs} lbs (${formatDateShort(last.date)})` : "First time";
       return `
         <tr>
-          <td>${r.name}</td>
-          <td>${lastText}</td>
+          <td>${esc(r.name)}</td>
+          <td>${esc(lastText)}</td>
           <td class="print-blank"></td>
           <td class="print-blank"></td>
           <td class="print-blank"></td>
@@ -1531,7 +1544,7 @@
 
     return `
       <div class="print-page">
-        <h2>${title} — ${currentUser || "________________"}</h2>
+        <h2>${esc(title)} — ${esc(currentUser || "________________")}</h2>
         <p>${subtitle}</p>
         <table class="print-table">
           <thead>
@@ -1595,7 +1608,7 @@
       let tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="date" class="sheet-input" value="${row.date}" onchange="spreadsheetRows[${idx}].date = this.value"></td>
-        <td><input type="text" class="sheet-input" value="${row.exercise}" placeholder="Exercise Name" onchange="spreadsheetRows[${idx}].exercise = this.value"></td>
+        <td><input type="text" class="sheet-input" value="${esc(row.exercise)}" placeholder="Exercise Name" onchange="spreadsheetRows[${idx}].exercise = this.value"></td>
         <td>
           <select class="sheet-select" onchange="spreadsheetRows[${idx}].component = this.value">
             <option value="Muscular Strength" ${row.component==='Muscular Strength'?'selected':''}>Muscular Strength</option>
@@ -1746,8 +1759,8 @@
       tr.innerHTML = `
         <td>${h.date}</td>
         <td>${h.day || "—"}</td>
-        <td><strong>${h.exercise}</strong></td>
-        <td>${h.component}</td>
+        <td><strong>${esc(h.exercise)}</strong></td>
+        <td>${esc(h.component)}</td>
         <td>${h.sets}</td>
         <td>${h.reps}</td>
         <td>${h.lbs} lbs</td>
@@ -1849,11 +1862,11 @@
       hLogs.forEach(h => {
         let tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><strong>${name}</strong></td>
-          <td>${h.date}</td>
-          <td>${h.day || "—"}</td>
-          <td>${h.exercise}</td>
-          <td>${h.component}</td>
+          <td><strong>${esc(name)}</strong></td>
+          <td>${esc(h.date)}</td>
+          <td>${esc(h.day || "—")}</td>
+          <td>${esc(h.exercise)}</td>
+          <td>${esc(h.component)}</td>
           <td>${h.sets}</td>
           <td>${h.reps}</td>
           <td>${h.lbs} lbs</td>
@@ -1863,8 +1876,8 @@
 
       let str = document.createElement('tr');
       str.innerHTML = `
-        <td><strong>${name}</strong></td>
-        <td><button class="btn btn-danger" onclick="resetStudentPin('${docSnap.id}')">Reset PIN</button></td>
+        <td><strong>${esc(name)}</strong></td>
+        <td><button class="btn btn-danger" onclick="resetStudentPin('${esc(docSnap.id)}')">Reset PIN</button></td>
       `;
       studentsBody.appendChild(str);
     });
@@ -1894,7 +1907,15 @@
         return;
       }
       await fbSetDoc(fbDoc(db, "students", newId), data);
-      await fbDeleteDoc(ref);
+      try {
+        await fbDeleteDoc(ref);
+      } catch(err) {
+        await renderTeacherLogs();
+        alert(`${name}'s new PIN ${newPin} works, but the old record could not be `
+          + `removed — so the OLD PIN STILL WORKS TOO.\n\nRun the reset again, or `
+          + `delete the leftover record in the Firebase console.`);
+        return;
+      }
       await renderTeacherLogs();
       alert(`${name}'s PIN has been reset to ${newPin}. Let them know.`);
     } catch(err) {
