@@ -1609,7 +1609,7 @@
     let comp = document.getElementById('fitnessComponent').value;
 
     let item = {
-      id: Date.now(),
+      id: nextFreeId(Date.now(), savedRoutines),
       name: exName,
       targetArea: activeTargetArea,
       muscleGroup: activeMuscleGroup,
@@ -1684,6 +1684,18 @@
   // outgrow the 1MB single-document ceiling.
   function historyCol(addr) {
     return fbCollection(db, "students", addr, "history");
+  }
+
+  // Routine ids were Date.now(), so two exercises added inside the same
+  // millisecond collided. Everything addressing a routine looks it up by id
+  // (`find` returns the first match), so the second one's sets, reps, weight
+  // and Done tick landed on the wrong exercise, and deleting removed the wrong
+  // row. Kept numeric so the ids interpolate into the handlers unquoted.
+  function nextFreeId(start, existing) {
+    let taken = new Set(existing.map(r => r.id));
+    let id = start;
+    while(taken.has(id)) id++;
+    return id;
   }
 
   function newLogId() {

@@ -27,6 +27,7 @@ eval([
   grab('function cleanNumber(value, max) {'),
   grab('function todayLocal() {'),
   grab('function shouldShowTarget(now, seen, currentText) {'),
+  grab('function nextFreeId(start, existing) {'),
   grab('function normalizeName(name) {'),
   grab('async function sha256Hex(str) {'),
   grab('async function studentDocId(name, pin) {'),
@@ -110,6 +111,18 @@ eval([
     assert.strictEqual(shouldShowTarget(now, {}, T), true, 'empty record -> show');
   }
 
+  // Routine ids must be unique: everything that edits or deletes a routine
+  // finds it by id, and `find` silently returns the first match.
+  assert.strictEqual(nextFreeId(100, []), 100, 'free id is used as-is');
+  assert.strictEqual(nextFreeId(100, [{id:100}]), 101, 'collision steps forward');
+  assert.strictEqual(nextFreeId(100, [{id:100},{id:101},{id:102}]), 103, 'walks past a run');
+  {
+    // six added in the same millisecond, the case that broke it
+    const list = [];
+    for (let i = 0; i < 6; i++) list.push({ id: nextFreeId(1000, list) });
+    assert.strictEqual(new Set(list.map(r => r.id)).size, 6, 'six same-ms adds must all be distinct');
+  }
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -119,6 +132,7 @@ eval([
   console.log('derivation: ' + ms + 'ms/login, ' + PIN_ITERATIONS + ' iterations');
   console.log('identity-check OK - 9 distinct addresses, normalization stable, no name or PIN recoverable from an address');
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
+  console.log('routineid-check OK - no collision when several exercises are added in the same millisecond');
   console.log('target-check   OK - once per hour per device, and always on a changed target');
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });
