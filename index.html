@@ -779,7 +779,8 @@
           <label for="newLearningTarget">New Learning Target:</label>
           <input type="text" id="newLearningTarget" placeholder="e.g., Focus on explosive power and full range of motion.">
         </div>
-        <button class="btn btn-primary" onclick="updateLearningTarget()">Update Target for Class</button>
+        <button class="btn btn-primary" id="updateTargetBtn" onclick="updateLearningTarget()">Update Target for Class</button>
+        <p id="targetUpdatedAt" style="color: var(--subtle); font-size: 0.9rem; margin-top: 10px;"></p>
       </div>
     </div>
   </div>
@@ -1159,7 +1160,22 @@
   let currentDocId = null;
   let savesInFlight = 0;
   let sizeWarned = false;
-  let currentLearningTarget = "Focus on explosive power and full range of motion.";
+  const DEFAULT_LEARNING_TARGET = "Focus on explosive power and full range of motion.";
+  let currentLearningTarget = DEFAULT_LEARNING_TARGET;
+
+  // Students see the target pop up once an hour per device: often enough to be a
+  // reminder before their class, rare enough not to nag a student who reloads.
+  const TARGET_MODAL_INTERVAL_MS = 60 * 60 * 1000;
+  const TARGET_SEEN_KEY = "peTargetSeen";
+
+  // Pure so it can be tested directly. A changed target always shows, regardless
+  // of the hour: if the teacher rewrites it at 10:05 the next class needs it now,
+  // not whenever the previous hour happens to lapse.
+  function shouldShowTarget(now, seen, currentText) {
+    if(!seen || typeof seen.at !== "number") return true;
+    if(seen.text !== currentText) return true;
+    return (now - seen.at) >= TARGET_MODAL_INTERVAL_MS;
+  }
 
   // toISOString() is UTC: after 7pm local it hands back tomorrow's date, which
   // would file an evening workout under the wrong day.
@@ -1241,10 +1257,7 @@
   window.onload = function() {
     let today = todayLocal();
     document.getElementById('workoutDate').value = today;
-    document.getElementById('activeTargetBannerText').innerText = currentLearningTarget;
-    
-    // Trigger Learning Target Pop-Up each time the site loads
-    showTargetModal();
+    loadLearningTarget().then(maybeShowTargetModal);
 
     updateKPIs();
   };
@@ -1252,6 +1265,57 @@
   function showTargetModal() {
     document.getElementById('targetModalBody').innerText = currentLearningTarget;
     document.getElementById('targetModal').classList.remove('hidden');
+  }
+
+  // Browser storage is unavailable in some private-window configurations and the
+  // accessor itself can throw, so every read and write is guarded and the modal
+  // simply shows when we cannot remember.
+  function readTargetSeen() {
+    try { return JSON.parse(localStorage.getItem(TARGET_SEEN_KEY) || "null"); }
+    catch(e) { return null; }
+  }
+
+  function markTargetSeen() {
+    try {
+      localStorage.setItem(TARGET_SEEN_KEY,
+        JSON.stringify({ at: Date.now(), text: currentLearningTarget }));
+    } catch(e) { /* nothing to do; the modal just shows again next load */ }
+  }
+
+  function maybeShowTargetModal() {
+    if(shouldShowTarget(Date.now(), readTargetSeen(), currentLearningTarget)) {
+      showTargetModal();
+      markTargetSeen();
+    }
+  }
+
+  // The target lives in one document every student reads. It does not expire —
+  // whatever the teacher last set stays current until they change it.
+  async function loadLearningTarget() {
+    let text = DEFAULT_LEARNING_TARGET, updatedAt = null;
+    try {
+      let snap = await fbGetDoc(fbDoc(db, "settings", "learningTarget"));
+      if(snap.exists()) {
+        let d = snap.data();
+        if(d && typeof d.text === "string" && d.text.trim()) text = d.text.trim();
+        updatedAt = d && d.updatedAt ? d.updatedAt : null;
+      }
+    } catch(err) {
+      // Offline, or the settings rules are not published yet. Fall back to the
+      // default rather than leaving the banner reading "Loading target...".
+      console.error("Learning target unavailable:", err);
+    }
+    currentLearningTarget = text;
+    document.getElementById('activeTargetBannerText').innerText = text;
+    let stamp = document.getElementById('targetUpdatedAt');
+    if(stamp) {
+      stamp.innerText = updatedAt
+        ? "Currently showing to students, set " + new Date(updatedAt).toLocaleString()
+        : "No target has been set yet — students are seeing the default.";
+    }
+    let input = document.getElementById('newLearningTarget');
+    if(input && !input.value) input.value = text;
+    return text;
   }
 
   async function switchRole(role, evt) {
@@ -2007,12 +2071,25 @@
     }
   }
 
-  function updateLearningTarget() {
+  async function updateLearningTarget() {
     let val = document.getElementById('newLearningTarget').value.trim();
-    if(!val) return;
-    currentLearningTarget = val;
-    document.getElementById('activeTargetBannerText').innerText = currentLearningTarget;
-    alert("Learning target updated for class.");
+    if(!val) { alert("Type a learning target first."); return; }
+    if(val.length > 480) { alert("That target is too long — keep it under 480 characters."); return; }
+
+    let btn = document.getElementById('updateTargetBtn');
+    if(btn) { btn.disabled = true; btn.innerText = "Saving\u2026"; }
+    try {
+      await fbSetDoc(fbDoc(db, "settings", "learningTarget"),
+        { text: val, updatedAt: new Date().toISOString() });
+    } catch(err) {
+      alert("Couldn't save the learning target: " + (err && err.code ? err.code : err.message)
+        + "\n\nIt has NOT been sent to students.");
+      return;
+    } finally {
+      if(btn) { btn.disabled = false; btn.innerText = "Update Target for Class"; }
+    }
+    await loadLearningTarget();
+    alert("Learning target updated. Every student will see it the next time they open the tracker.");
   }
 
   // The dashboard used to render every student's entire history in one table.

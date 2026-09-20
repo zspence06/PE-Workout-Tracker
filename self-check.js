@@ -16,13 +16,17 @@ function grab(sig) {
   if (j < 0) throw new Error('could not find end of ' + sig);
   return src.slice(i, j + 4);
 }
-const constLine = src.split('\n').find(l => l.includes('const PIN_ITERATIONS'));
-if (!constLine) throw new Error('PIN_ITERATIONS not found');
+const constLines = ['const PIN_ITERATIONS', 'const TARGET_MODAL_INTERVAL_MS'].map(k => {
+  const line = src.split('\n').find(l => l.includes(k));
+  if (!line) throw new Error(k + ' not found');
+  return line.trim().replace('const ', 'globalThis.');
+});
 eval([
-  constLine.replace('const ', 'globalThis.'),
+  ...constLines,
   grab('function esc(v) {'),
   grab('function cleanNumber(value, max) {'),
   grab('function todayLocal() {'),
+  grab('function shouldShowTarget(now, seen, currentText) {'),
   grab('function normalizeName(name) {'),
   grab('async function sha256Hex(str) {'),
   grab('async function studentDocId(name, pin) {'),
@@ -89,6 +93,23 @@ eval([
     assert.strictEqual(todayLocal(), expected, 'todayLocal must match the local calendar day');
   }
 
+  // Learning-target modal: once per device per hour, but a changed target always
+  // shows, or a class starting at 10:05 would miss a target rewritten at 10:00.
+  {
+    const HOUR = 60 * 60 * 1000, now = 1_000_000_000_000, T = 'squat depth';
+    assert.strictEqual(shouldShowTarget(now, null, T), true, 'never seen -> show');
+    assert.strictEqual(shouldShowTarget(now, { at: now - 60_000, text: T }, T), false,
+      'seen a minute ago, unchanged -> stay quiet');
+    assert.strictEqual(shouldShowTarget(now, { at: now - HOUR, text: T }, T), true,
+      'an hour later -> show again');
+    assert.strictEqual(shouldShowTarget(now, { at: now - 60_000, text: 'old target' }, T), true,
+      'target changed -> show immediately, hour or not');
+    assert.strictEqual(shouldShowTarget(now, { text: T }, T), true, 'missing timestamp -> show');
+    assert.strictEqual(shouldShowTarget(now, { at: 'nonsense', text: T }, T), true,
+      'corrupt timestamp -> show');
+    assert.strictEqual(shouldShowTarget(now, {}, T), true, 'empty record -> show');
+  }
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -98,5 +119,6 @@ eval([
   console.log('derivation: ' + ms + 'ms/login, ' + PIN_ITERATIONS + ' iterations');
   console.log('identity-check OK - 9 distinct addresses, normalization stable, no name or PIN recoverable from an address');
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
+  console.log('target-check   OK - once per hour per device, and always on a changed target');
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });
