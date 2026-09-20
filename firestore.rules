@@ -1,0 +1,54 @@
+rules_version = '2';
+
+// Memorial PE Workout Tracker — Firestore security rules
+//
+// Model: a student record's DOCUMENT ID is the secret.
+//   id = PBKDF2(pin, salt = normalized name, 100k iterations, SHA-256)
+// No PIN — and no hash of a PIN — is stored in any document. Reaching a record
+// requires already knowing both the student's name and their PIN.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Shape of a student record. Note the absence of any credential field.
+    function isStudentShape(d) {
+      return d.keys().hasAll(['name', 'routines', 'history'])
+             && d.name is string
+             && d.name.size() > 0
+             && d.name.size() < 120
+             && d.routines is list
+             && d.history is list;
+    }
+
+    match /students/{studentId} {
+      allow get:    if true;                     // safe: the address is unguessable
+      allow list:   if request.auth != null;     // only the teacher may enumerate
+      allow create: if request.auth != null
+                    || isStudentShape(request.resource.data);
+      // A student may write their own record (they proved knowledge of the PIN by
+      // reaching this address at all) but may never rename it onto someone else.
+      allow update: if request.auth != null
+                    || (isStudentShape(request.resource.data)
+                        && request.resource.data.name == resource.data.name);
+      allow delete: if request.auth != null;     // a PIN reset relocates a record
+    }
+
+    // "Is this name already claimed?" Keyed by sha256("name:" + name), so the
+    // roster cannot be listed out — only checked for a name already known.
+    // Holds no PIN information whatsoever. This is what stops a mistyped PIN
+    // from silently creating a second, empty account for an existing student.
+    match /names/{nameKey} {
+      allow get:    if true;
+      allow list:   if request.auth != null;
+      allow create: if request.resource.data.keys().hasOnly(['name'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() < 120;
+      allow update, delete: if request.auth != null;
+    }
+
+    // Firestore already denies anything unmatched; stated here for clarity.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

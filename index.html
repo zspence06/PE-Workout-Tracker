@@ -801,7 +801,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -822,6 +822,7 @@
   window.fbUpdateDoc = updateDoc;
   window.fbCollection = collection;
   window.fbGetDocs = getDocs;
+  window.fbDeleteDoc = deleteDoc;
   window.fbSignIn = signInWithEmailAndPassword;
   window.fbUpdatePassword = updatePassword;
 </script>
@@ -836,18 +837,18 @@
           "Squat Rack Overhead Press": { cues: "Unrack bar at chest, brace core, press straight up with head clearance.", video: "https://www.youtube.com/shorts/2yjwXTZQDDI" },
           "Dumbbell Lateral Raise": { cues: "Slight bend in elbows, lead with elbows, control downward motion.", video: "https://www.youtube.com/shorts/3VcKaXpzqRo" },
           "TRX Y-Flyes": { cues: "Lean back on TRX, keep arms straight, pull body up into a 'Y' shape squeezing shoulders.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
-          "Medicine Ball Overhead Slam": { cues: "Raise med ball overhead with extended arms, slam powerfully down near toes.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Medicine Ball Overhead Slam": { cues: "Raise med ball overhead with extended arms, slam powerfully down near toes.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Overhead+Slam+proper+form" },
           "Bodyweight Pike Push-Ups": { cues: "Elevate hips high in downward dog position, lower forehead toward floor.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
-          "TRX Rear Delt Flyes": { cues: "Facing anchor point, pull handles apart laterally while keeping elbows soft.", video: "https://.youtube.com/shorts/0Xp3uJ2T08s" },
+          "TRX Rear Delt Flyes": { cues: "Facing anchor point, pull handles apart laterally while keeping elbows soft.", video: "https://www.youtube.com/results?search_query=TRX+Rear+Delt+Flyes+proper+form" },
           "Seated Dumbbell Shoulder Press": { cues: "Keep back flat on bench, press dumbbells upward until extended overhead.", video: "https://www.youtube.com/shorts/qEwKCR5JCog" },
           "Arnold Dumbbell Press": { cues: "Start palms facing you, rotate wrists out as you overhead press.", video: "https://www.youtube.com/shorts/6Z15_WdXmVw" },
           "Pulldown Machine Face Pulls": { cues: "Attach rope to pulley, pull rope towards forehead flaring elbows high.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
-          "Dumbbell Front Raise": { cues: "Raise dumbbells to eye level in front of body with soft elbows.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "Dumbbell Front Raise": { cues: "Raise dumbbells to eye level in front of body with soft elbows.", video: "https://www.youtube.com/results?search_query=Dumbbell+Front+Raise+proper+form" },
           "Bodyweight Feet-Elevated Pike Push-Up": { cues: "Place feet on plyo box, hips over shoulders, lower top of head to ground.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
-          "Dumbbell Bent-Over Rear Delt Fly": { cues: "Hinge at waist, raise weights laterally keeping shoulder blades relaxed.", video: "https://www.youtube.com/shorts/0Xp3uJ2T08s" },
-          "Squat Rack Push Press": { cues: "Dip knees slightly in rack position and drive upwards overhead with legs.", video: "https://www.youtube.com/shorts/iaBf1A377-w" },
-          "Medicine Ball Single-Arm Overhead Press": { cues: "Hold heavy med ball at shoulder, press upward bracing core anti-laterally.", video: "https://www.youtube.com/shorts/4L_P0jL61I4" },
-          "TRX Overhead Shoulder Press": { cues: "Face away from anchor, lean forward on TRX straps and press arms overhead.", video: "https://www.youtube.com/shorts/8JkP_5Kj4tA" }
+          "Dumbbell Bent-Over Rear Delt Fly": { cues: "Hinge at waist, raise weights laterally keeping shoulder blades relaxed.", video: "https://www.youtube.com/results?search_query=Dumbbell+Bent-Over+Rear+Delt+Fly+proper+form" },
+          "Squat Rack Push Press": { cues: "Dip knees slightly in rack position and drive upwards overhead with legs.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Push+Press+proper+form" },
+          "Medicine Ball Single-Arm Overhead Press": { cues: "Hold heavy med ball at shoulder, press upward bracing core anti-laterally.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Single-Arm+Overhead+Press+proper+form" },
+          "TRX Overhead Shoulder Press": { cues: "Face away from anchor, lean forward on TRX straps and press arms overhead.", video: "https://www.youtube.com/results?search_query=TRX+Overhead+Shoulder+Press+proper+form" }
         }
       },
       pectorals: {
@@ -858,7 +859,7 @@
           "TRX Suspension Chest Press": { cues: "Face away from anchor, maintain rigid plank, press away from handles.", video: "https://www.youtube.com/shorts/Iwe6AmxVf7o" },
           "Bodyweight Push-Ups": { cues: "Rigid plank position, lower chest near floor with elbows at 45 degrees.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
           "Plyo Box Feet-Elevated Push-Ups": { cues: "Feet on plyo box, hands on floor, lower chest into deep push-up.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
-          "Medicine Ball Chest Pass Slam": { cues: "Explosively push med ball away from chest against solid wall.", video: "https://www.youtube.com/shorts/0U35dI4J4S4" },
+          "Medicine Ball Chest Pass Slam": { cues: "Explosively push med ball away from chest against solid wall.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Chest+Pass+Slam+proper+form" },
           "Dumbbell Flat Chest Flyes": { cues: "Lie flat, open arms wide with soft elbows, sweep weights together above chest.", video: "https://www.youtube.com/shorts/eozdVDA78K0" },
           "TRX Chest Flyes": { cues: "Lean forward on TRX, spread arms wide in arc motion, squeeze chest to return.", video: "https://www.youtube.com/shorts/Iwe6AmxVf7o" },
           "Bodyweight Dip Station Chest Dips": { cues: "Lean torso forward 30 degrees, lower body until elbows reach 90 degrees.", video: "https://www.youtube.com/shorts/2z8JmcrW-As" },
@@ -877,77 +878,77 @@
           "Dumbbell Hammer Curls": { cues: "Palms facing each other, curl dumbbells to target brachialis and biceps.", video: "https://www.youtube.com/shorts/CFBZ4jN1CMI" },
           "TRX Bicep Curls": { cues: "Face TRX anchor, lean back, keep elbows high and curl handles to forehead.", video: "https://www.youtube.com/shorts/Jvj2wV0vOYU" },
           "TRX Overhead Tricep Extensions": { cues: "Face away from anchor, arms overhead, bend elbows lowering hands behind head.", video: "https://www.youtube.com/shorts/_gsUck-7M74" },
-          "Pulldown Machine Tricep Rope Pushdowns": { cues: "Attach rope to top cable pulley, tuck elbows, spread rope at bottom.", video: "https://www.youtube.com/shorts/6SS6K3lA_6w" },
+          "Pulldown Machine Tricep Rope Pushdowns": { cues: "Attach rope to top cable pulley, tuck elbows, spread rope at bottom.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Tricep+Rope+Pushdowns+proper+form" },
           "Bodyweight Diamond Push-Ups": { cues: "Form diamond shape with thumbs and index fingers under chest, lower down.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
           "Dumbbell Incline Bicep Curls": { cues: "Sit back on incline bench, let arms hang, curl upwards without moving elbows.", video: "https://www.youtube.com/shorts/soxrZlIl35U" },
-          "Dumbbell Lying Skullcrushers": { cues: "Lie flat on bench, lower dumbbells toward ears by bending elbows, press up.", video: "https://www.youtube.com/shorts/d_KZxkY_0aw" },
+          "Dumbbell Lying Skullcrushers": { cues: "Lie flat on bench, lower dumbbells toward ears by bending elbows, press up.", video: "https://www.youtube.com/results?search_query=Dumbbell+Lying+Skullcrushers+proper+form" },
           "Plyo Box Tricep Dips": { cues: "Hands on edge of plyo box behind you, lower body by flexing elbows to 90 degrees.", video: "https://www.youtube.com/shorts/c3ZGl4pAwZ4" },
           "Medicine Ball Bicep Curls": { cues: "Hold heavy med ball with both hands under ball, curl up squeeze biceps.", video: "https://www.youtube.com/shorts/Jvj2wV0vOYU" },
           "Overhead Dumbbell Tricep Extension": { cues: "Hold single dumbbell overhead with both hands, lower behind head.", video: "https://www.youtube.com/shorts/_gsUck-7M74" },
-          "Pulldown Machine High-Bicep Cable Curl": { cues: "Hold handles from high pulleys, curl towards ears squeezing biceps.", video: "https://www.youtube.com/shorts/N89kS656qA0" },
+          "Pulldown Machine High-Bicep Cable Curl": { cues: "Hold handles from high pulleys, curl towards ears squeezing biceps.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+High-Bicep+Cable+Curl+proper+form" },
           "TRX Tricep Press": { cues: "Lean forward on TRX, bend at elbows bringing thumbs to temple, press out.", video: "https://www.youtube.com/shorts/_gsUck-7M74" },
-          "Bodyweight Chin-Ups (Underhand Biceps Focus)": { cues: "Underhand shoulder-width grip on pull-up bar, pull chin over bar.", video: "https://www.youtube.com/shorts/3-28901_331" },
+          "Bodyweight Chin-Ups (Underhand Biceps Focus)": { cues: "Underhand shoulder-width grip on pull-up bar, pull chin over bar.", video: "https://www.youtube.com/results?search_query=Bodyweight+Chin-Ups+%28Underhand+Biceps+Focus%29+proper+form" },
           "Dumbbell Concentration Curls": { cues: "Sit, brace elbow against inner thigh, curl dumbbell toward chest.", video: "https://www.youtube.com/shorts/Jvj2wV0vOYU" }
         }
       },
       trapezius: {
         name: "Trapezius (Traps)",
         exercises: {
-          "Barbell Shrugs (Squat Rack)": { cues: "Lift bar from rack pins, shrug shoulders straight up to ears and hold.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
-          "Dumbbell Standing Shrugs": { cues: "Hold heavy dumbbells at sides, pull shoulders up vertically without rolling.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
-          "TRX High Trapezius Rows": { cues: "Lean back on TRX, pull elbows out wide at 90 degrees squeezing upper traps.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
-          "Medicine Ball Overhead Shrug": { cues: "Hold med ball fully locked out overhead, elevate shoulders upward into ball.", video: "https://www.youtube.com/shorts/87zQ3-0A2p9" },
-          "Bodyweight Prone Scapular Y Raises": { cues: "Lie face down, extend arms into 'Y' with thumbs up, raise arms squeezing traps.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
-          "Overhead Barbell Shrug (Squat Rack)": { cues: "Press bar overhead in rack, shrug shoulders vertically into locked bar.", video: "https://www.youtube.com/shorts/87zQ3-0A2p9" },
-          "Dumbbell Incline Prone Shrugs": { cues: "Lie chest down on incline bench, let weights hang, pull shoulder blades up.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
+          "Barbell Shrugs (Squat Rack)": { cues: "Lift bar from rack pins, shrug shoulders straight up to ears and hold.", video: "https://www.youtube.com/results?search_query=Barbell+Shrugs+%28Squat+Rack%29+proper+form" },
+          "Dumbbell Standing Shrugs": { cues: "Hold heavy dumbbells at sides, pull shoulders up vertically without rolling.", video: "https://www.youtube.com/results?search_query=Dumbbell+Standing+Shrugs+proper+form" },
+          "TRX High Trapezius Rows": { cues: "Lean back on TRX, pull elbows out wide at 90 degrees squeezing upper traps.", video: "https://www.youtube.com/results?search_query=TRX+High+Trapezius+Rows+proper+form" },
+          "Medicine Ball Overhead Shrug": { cues: "Hold med ball fully locked out overhead, elevate shoulders upward into ball.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Overhead+Shrug+proper+form" },
+          "Bodyweight Prone Scapular Y Raises": { cues: "Lie face down, extend arms into 'Y' with thumbs up, raise arms squeezing traps.", video: "https://www.youtube.com/results?search_query=Bodyweight+Prone+Scapular+Y+Raises+proper+form" },
+          "Overhead Barbell Shrug (Squat Rack)": { cues: "Press bar overhead in rack, shrug shoulders vertically into locked bar.", video: "https://www.youtube.com/results?search_query=Overhead+Barbell+Shrug+%28Squat+Rack%29+proper+form" },
+          "Dumbbell Incline Prone Shrugs": { cues: "Lie chest down on incline bench, let weights hang, pull shoulder blades up.", video: "https://www.youtube.com/results?search_query=Dumbbell+Incline+Prone+Shrugs+proper+form" },
           "Pulldown Machine High Cable Face Pulls": { cues: "Set pulldown rope high, pull toward eyes while lifting elbows up and back.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
-          "TRX Scapular Retractions": { cues: "Keep arms extended on TRX, pull body up solely by depressing and squeezing traps.", video: "https://www.youtube.com/shorts/2-P_90A1_44" },
-          "Squat Rack Behind-The-Back Barbell Shrug": { cues: "Hold bar behind glutes, shrug shoulders up toward ears.", video: "https://www.youtube.com/shorts/7A-92L8M110" },
-          "Plyo Box Prone Trap Raises": { cues: "Lie chest down on plyo box, lift dumbbells in 'T' or 'Y' shape.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
-          "Single-Arm Dumbbell Farmers Shrug Walk": { cues: "Walk holding heavy dumbbell in one hand while maintaining elevated shrug.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
+          "TRX Scapular Retractions": { cues: "Keep arms extended on TRX, pull body up solely by depressing and squeezing traps.", video: "https://www.youtube.com/results?search_query=TRX+Scapular+Retractions+proper+form" },
+          "Squat Rack Behind-The-Back Barbell Shrug": { cues: "Hold bar behind glutes, shrug shoulders up toward ears.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Behind-The-Back+Barbell+Shrug+proper+form" },
+          "Plyo Box Prone Trap Raises": { cues: "Lie chest down on plyo box, lift dumbbells in 'T' or 'Y' shape.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Prone+Trap+Raises+proper+form" },
+          "Single-Arm Dumbbell Farmers Shrug Walk": { cues: "Walk holding heavy dumbbell in one hand while maintaining elevated shrug.", video: "https://www.youtube.com/results?search_query=Single-Arm+Dumbbell+Farmers+Shrug+Walk+proper+form" },
           "TRX Overhead Y-Squeeze": { cues: "Facing TRX anchor, extend arms overhead in 'Y', pull body forward using traps.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
-          "Medicine Ball Hugging Shrugs": { cues: "Hug heavy medicine ball against upper chest, shrug shoulders up.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
-          "Bodyweight Bear Crawl Shoulder Taps": { cues: "Tabletop hover position, tap opposite shoulder while keeping traps engaged.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" }
+          "Medicine Ball Hugging Shrugs": { cues: "Hug heavy medicine ball against upper chest, shrug shoulders up.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Hugging+Shrugs+proper+form" },
+          "Bodyweight Bear Crawl Shoulder Taps": { cues: "Tabletop hover position, tap opposite shoulder while keeping traps engaged.", video: "https://www.youtube.com/results?search_query=Bodyweight+Bear+Crawl+Shoulder+Taps+proper+form" }
         }
       },
       rhomboids: {
         name: "Rhomboids",
         exercises: {
-          "TRX Low Suspension Rows": { cues: "Lean back on TRX, drive elbows past torso squeezing shoulder blades together.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
-          "Pulldown Machine Seated Rows": { cues: "Pull handle to lower abdomen, pull shoulder blades back forcefully.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
+          "TRX Low Suspension Rows": { cues: "Lean back on TRX, drive elbows past torso squeezing shoulder blades together.", video: "https://www.youtube.com/results?search_query=TRX+Low+Suspension+Rows+proper+form" },
+          "Pulldown Machine Seated Rows": { cues: "Pull handle to lower abdomen, pull shoulder blades back forcefully.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Seated+Rows+proper+form" },
           "Squat Rack Bent-Over Barbell Rows": { cues: "Hinge 45 degrees, pull bar to navel driving elbows back.", video: "https://www.youtube.com/shorts/9efgcAjQe7E" },
-          "Dumbbell Single-Arm Rows": { cues: "Brace on bench, pull dumbbell to hip pinching upper back muscles.", video: "https://www.youtube.com/shorts/D7Ka347mZ4g" },
-          "Medicine Ball Bent-Over Hug Rows": { cues: "Hinge at hips holding med ball, pull ball into chest squeezing rhomboids.", video: "https://www.youtube.com/shorts/j3IG8K5-21M" },
+          "Dumbbell Single-Arm Rows": { cues: "Brace on bench, pull dumbbell to hip pinching upper back muscles.", video: "https://www.youtube.com/results?search_query=Dumbbell+Single-Arm+Rows+proper+form" },
+          "Medicine Ball Bent-Over Hug Rows": { cues: "Hinge at hips holding med ball, pull ball into chest squeezing rhomboids.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Bent-Over+Hug+Rows+proper+form" },
           "Bodyweight Scapular Push-Ups": { cues: "In high plank, squeeze shoulder blades together without bending elbows.", video: "https://www.youtube.com/shorts/IODxDxX7oi4" },
-          "TRX Single-Arm Rows": { cues: "Perform row using one TRX handle, avoid rotation, pull thumb to ribs.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
-          "Dumbbell Incline Prone Rows": { cues: "Lie chest down on bench, pull dumbbells up flaring elbows slightly.", video: "https://www.youtube.com/shorts/7P39G-80X99" },
-          "Plyo Box Supported Dumbbell Rows": { cues: "Rest hand on box, hinge torso, perform heavy dumbbell rows.", video: "https://www.youtube.com/shorts/D7Ka347mZ4g" },
+          "TRX Single-Arm Rows": { cues: "Perform row using one TRX handle, avoid rotation, pull thumb to ribs.", video: "https://www.youtube.com/results?search_query=TRX+Single-Arm+Rows+proper+form" },
+          "Dumbbell Incline Prone Rows": { cues: "Lie chest down on bench, pull dumbbells up flaring elbows slightly.", video: "https://www.youtube.com/results?search_query=Dumbbell+Incline+Prone+Rows+proper+form" },
+          "Plyo Box Supported Dumbbell Rows": { cues: "Rest hand on box, hinge torso, perform heavy dumbbell rows.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Supported+Dumbbell+Rows+proper+form" },
           "Squat Rack Pendlay Rows": { cues: "Bar rests on floor each rep, explosively row bar to lower sternum.", video: "https://www.youtube.com/shorts/9efgcAjQe7E" },
-          "TRX Reverse Flyes": { cues: "Pull TRX handles apart horizontally until body rises, squeezing rhomboids.", video: "https://www.youtube.com/shorts/0Xp3uJ2T08s" },
+          "TRX Reverse Flyes": { cues: "Pull TRX handles apart horizontally until body rises, squeezing rhomboids.", video: "https://www.youtube.com/results?search_query=TRX+Reverse+Flyes+proper+form" },
           "Pulldown Machine Wide-Grip Face Pulls": { cues: "Pull high cable attachment to nose level with wide elbows.", video: "https://www.youtube.com/shorts/V8dZ3pyiCBo" },
-          "Bodyweight Inverted Rows (Squat Rack Bar)": { cues: "Hang under barbell set in rack, pull chest up to bar.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
-          "Medicine Ball Overhead Band Pull-Aparts": { cues: "Squeeze ball between palms or pull band over head to engage back.", video: "https://www.youtube.com/shorts/j3IG8K5-21M" },
-          "Dumbbell Renegade Rows": { cues: "In push-up position on dumbbells, row one dumbbell at a time to hip.", video: "https://www.youtube.com/shorts/D7Ka347mZ4g" }
+          "Bodyweight Inverted Rows (Squat Rack Bar)": { cues: "Hang under barbell set in rack, pull chest up to bar.", video: "https://www.youtube.com/results?search_query=Bodyweight+Inverted+Rows+%28Squat+Rack+Bar%29+proper+form" },
+          "Medicine Ball Overhead Band Pull-Aparts": { cues: "Squeeze ball between palms or pull band over head to engage back.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Overhead+Band+Pull-Aparts+proper+form" },
+          "Dumbbell Renegade Rows": { cues: "In push-up position on dumbbells, row one dumbbell at a time to hip.", video: "https://www.youtube.com/results?search_query=Dumbbell+Renegade+Rows+proper+form" }
         }
       },
       levatorScapulae: {
         name: "Levator Scapulae",
         exercises: {
-          "Dumbbell Shrugs with 3-Sec Pause": { cues: "Elevate shoulders straight up toward ears, squeeze firmly for 3 seconds.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
-          "TRX Neck Retraction Pulls": { cues: "Lean back slightly on TRX, pull body up using gentle scapular elevation.", video: "https://www.youtube.com/shorts/9-291_0A99A" },
-          "Bodyweight Chin Tucks with Scapular Retraction": { cues: "Pull chin back creating double chin while pulling shoulders down and back.", video: "https://www.youtube.com/shorts/9-291_0A99A" },
-          "Pulldown Machine High Single-Arm Shrug": { cues: "Hold high cable pulley, pull handle downward/elevate shoulder safely.", video: "https://www.youtube.com/shorts/3-A8811-A01" },
-          "Medicine Ball Hugging Neck Retractions": { cues: "Hold med ball against chest, retract chin and pull levator muscles tight.", video: "https://www.youtube.com/shorts/9-291_0A99A" },
-          "Barbell Overhead Lockout Hold (Squat Rack)": { cues: "Hold barbell overhead in rack lockout, active shoulder elevation.", video: "https://www.youtube.com/shorts/87zQ3-0A2p9" },
-          "TRX Wall-Slide Imitations": { cues: "Lean back on straps, slide elbows up into 'V' shape overhead against tension.", video: "https://www.youtube.com/shorts/11u0S-3A881" },
-          "Dumbbell Single-Arm Overhead Shrug": { cues: "Hold dumbbell straight overhead, shrug shoulder up isolating levator scapulae.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
-          "Bodyweight Wall Angels": { cues: "Back flat against wall, slide arms overhead maintaining contact with wall.", video: "https://www.youtube.com/shorts/11u0S-3A881" },
-          "Plyo Box Prone Neck & Scapular Extension": { cues: "Head off edge of box, gently retract chin and lift upper back.", video: "https://www.youtube.com/shorts/9-291_0A99A" },
-          "Squat Rack Barbell Shrug Holds": { cues: "Unrack heavy bar, shrug high and hold static squeeze for 10 seconds.", video: "https://www.youtube.com/shorts/NA1P3_Xo6x4" },
-          "TRX Y-To-I Arm Glides": { cues: "Glide arms smoothly between overhead 'I' and wide 'Y' under TRX tension.", video: "https://www.youtube.com/shorts/11u0S-3A881" },
-          "Dumbbell Seated Overhead Shrugs": { cues: "Sit on upright bench, press dumbbells overhead, shrug upward.", video: "https://www.youtube.com/shorts/p4zQ39J2p30" },
-          "Medicine Ball Overhead Static Carry": { cues: "Walk carrying med ball directly overhead, keep shoulders elevated.", video: "https://www.youtube.com/shorts/87zQ3-0A2p9" },
-          "Bodyweight Prone Cobra Retractions": { cues: "Lie prone, lift chest, rotate thumbs to ceiling squeezing neck/upper back.", video: "https://www.youtube.com/shorts/9-291_0A99A" }
+          "Dumbbell Shrugs with 3-Sec Pause": { cues: "Elevate shoulders straight up toward ears, squeeze firmly for 3 seconds.", video: "https://www.youtube.com/results?search_query=Dumbbell+Shrugs+with+3-Sec+Pause+proper+form" },
+          "TRX Neck Retraction Pulls": { cues: "Lean back slightly on TRX, pull body up using gentle scapular elevation.", video: "https://www.youtube.com/results?search_query=TRX+Neck+Retraction+Pulls+proper+form" },
+          "Bodyweight Chin Tucks with Scapular Retraction": { cues: "Pull chin back creating double chin while pulling shoulders down and back.", video: "https://www.youtube.com/results?search_query=Bodyweight+Chin+Tucks+with+Scapular+Retraction+proper+form" },
+          "Pulldown Machine High Single-Arm Shrug": { cues: "Hold high cable pulley, pull handle downward/elevate shoulder safely.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+High+Single-Arm+Shrug+proper+form" },
+          "Medicine Ball Hugging Neck Retractions": { cues: "Hold med ball against chest, retract chin and pull levator muscles tight.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Hugging+Neck+Retractions+proper+form" },
+          "Barbell Overhead Lockout Hold (Squat Rack)": { cues: "Hold barbell overhead in rack lockout, active shoulder elevation.", video: "https://www.youtube.com/results?search_query=Barbell+Overhead+Lockout+Hold+%28Squat+Rack%29+proper+form" },
+          "TRX Wall-Slide Imitations": { cues: "Lean back on straps, slide elbows up into 'V' shape overhead against tension.", video: "https://www.youtube.com/results?search_query=TRX+Wall-Slide+Imitations+proper+form" },
+          "Dumbbell Single-Arm Overhead Shrug": { cues: "Hold dumbbell straight overhead, shrug shoulder up isolating levator scapulae.", video: "https://www.youtube.com/results?search_query=Dumbbell+Single-Arm+Overhead+Shrug+proper+form" },
+          "Bodyweight Wall Angels": { cues: "Back flat against wall, slide arms overhead maintaining contact with wall.", video: "https://www.youtube.com/results?search_query=Bodyweight+Wall+Angels+proper+form" },
+          "Plyo Box Prone Neck & Scapular Extension": { cues: "Head off edge of box, gently retract chin and lift upper back.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Prone+Neck+%26+Scapular+Extension+proper+form" },
+          "Squat Rack Barbell Shrug Holds": { cues: "Unrack heavy bar, shrug high and hold static squeeze for 10 seconds.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Barbell+Shrug+Holds+proper+form" },
+          "TRX Y-To-I Arm Glides": { cues: "Glide arms smoothly between overhead 'I' and wide 'Y' under TRX tension.", video: "https://www.youtube.com/results?search_query=TRX+Y-To-I+Arm+Glides+proper+form" },
+          "Dumbbell Seated Overhead Shrugs": { cues: "Sit on upright bench, press dumbbells overhead, shrug upward.", video: "https://www.youtube.com/results?search_query=Dumbbell+Seated+Overhead+Shrugs+proper+form" },
+          "Medicine Ball Overhead Static Carry": { cues: "Walk carrying med ball directly overhead, keep shoulders elevated.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Overhead+Static+Carry+proper+form" },
+          "Bodyweight Prone Cobra Retractions": { cues: "Lie prone, lift chest, rotate thumbs to ceiling squeezing neck/upper back.", video: "https://www.youtube.com/results?search_query=Bodyweight+Prone+Cobra+Retractions+proper+form" }
         }
       },
       latissimusDorsi: {
@@ -955,18 +956,18 @@
         exercises: {
           "Pulldown Machine Wide-Grip Lat Pulldown": { cues: "Grip bar wide, pull down to upper chest while leaning back slightly.", video: "https://www.youtube.com/shorts/CAwf7n6Luuc" },
           "Bodyweight Pull-Ups": { cues: "Overhand grip on bar, pull chest to bar driving elbows straight down.", video: "https://www.youtube.com/shorts/eGo4IYlbE5g" },
-          "TRX Suspended Lat Pullovers": { cues: "Lean back on TRX, keep arms overhead and drive hands down to hips.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
-          "Squat Rack Barbell Inverted Rows": { cues: "Hang underneath rack bar, pull chest to bar keeping core rigid.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
-          "Dumbbell Single-Arm Lat Row": { cues: "Place hand on plyo box, row dumbbell towards hip sweeping elbow back.", video: "https://www.youtube.com/shorts/D7Ka347mZ4g" },
-          "Pulldown Machine Straight-Arm Cable Pushdowns": { cues: "Keep arms extended, push bar down from eye level to thighs using lats.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
-          "Bodyweight Chin-Ups": { cues: "Underhand grip, pull body up until chin clears bar, focus on lat pull.", video: "https://www.youtube.com/shorts/3-28901_331" },
-          "TRX Single-Arm Lat Pull": { cues: "Facing TRX, pull single handle to rib cage while keeping body aligned.", video: "https://www.youtube.com/shorts/GZbfZ033p20" },
-          "Medicine Ball Slam Dunk": { cues: "Reach ball overhead stretching lats, drive ball into ground violently.", video: "https://www.youtube.com/shorts/gzPz2_N-03E" },
+          "TRX Suspended Lat Pullovers": { cues: "Lean back on TRX, keep arms overhead and drive hands down to hips.", video: "https://www.youtube.com/results?search_query=TRX+Suspended+Lat+Pullovers+proper+form" },
+          "Squat Rack Barbell Inverted Rows": { cues: "Hang underneath rack bar, pull chest to bar keeping core rigid.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Barbell+Inverted+Rows+proper+form" },
+          "Dumbbell Single-Arm Lat Row": { cues: "Place hand on plyo box, row dumbbell towards hip sweeping elbow back.", video: "https://www.youtube.com/results?search_query=Dumbbell+Single-Arm+Lat+Row+proper+form" },
+          "Pulldown Machine Straight-Arm Cable Pushdowns": { cues: "Keep arms extended, push bar down from eye level to thighs using lats.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Straight-Arm+Cable+Pushdowns+proper+form" },
+          "Bodyweight Chin-Ups": { cues: "Underhand grip, pull body up until chin clears bar, focus on lat pull.", video: "https://www.youtube.com/results?search_query=Bodyweight+Chin-Ups+proper+form" },
+          "TRX Single-Arm Lat Pull": { cues: "Facing TRX, pull single handle to rib cage while keeping body aligned.", video: "https://www.youtube.com/results?search_query=TRX+Single-Arm+Lat+Pull+proper+form" },
+          "Medicine Ball Slam Dunk": { cues: "Reach ball overhead stretching lats, drive ball into ground violently.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Slam+Dunk+proper+form" },
           "Plyo Box Assisted Pull-Ups": { cues: "Place foot on box below pull-up bar, assist body upwards to bar.", video: "https://www.youtube.com/shorts/eGo4IYlbE5g" },
-          "Dumbbell Pullover": { cues: "Lie across bench, lower single dumbbell overhead in arc, pull back using lats.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
+          "Dumbbell Pullover": { cues: "Lie across bench, lower single dumbbell overhead in arc, pull back using lats.", video: "https://www.youtube.com/results?search_query=Dumbbell+Pullover+proper+form" },
           "Pulldown Machine Close-Grip V-Bar Pulldown": { cues: "Attach V-bar, pull handles to chest squeezing lat sides.", video: "https://www.youtube.com/shorts/CAwf7n6Luuc" },
-          "Squat Rack Rack Pulls (Below Knee)": { cues: "Set pins in rack below knee, pull barbell extending hips and lats.", video: "https://www.youtube.com/shorts/AweC3UaM14A" },
-          "TRX Swimming Lat Swings": { cues: "Alternating straight arm press downs against TRX handles to engage lats.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
+          "Squat Rack Rack Pulls (Below Knee)": { cues: "Set pins in rack below knee, pull barbell extending hips and lats.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Rack+Pulls+%28Below+Knee%29+proper+form" },
+          "TRX Swimming Lat Swings": { cues: "Alternating straight arm press downs against TRX handles to engage lats.", video: "https://www.youtube.com/results?search_query=TRX+Swimming+Lat+Swings+proper+form" },
           "Bodyweight Neutral Grip Pull-Ups": { cues: "Palms facing each other, pull chest up between handles.", video: "https://www.youtube.com/shorts/eGo4IYlbE5g" }
         }
       }
@@ -976,19 +977,19 @@
         name: "Quadriceps (Front Thighs)",
         exercises: {
           "Squat Rack Barbell Back Squat": { cues: "Bar across upper back, sit down into hips, knees tracking over toes.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
-          "Plyo Box Jumps": { cues: "Hinge at hips, jump explosively onto plyo box landing softly in squat.", video: "https://www.youtube.com/shorts/d3LdMbd3Y7Y" },
+          "Plyo Box Jumps": { cues: "Hinge at hips, jump explosively onto plyo box landing softly in squat.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Jumps+proper+form" },
           "Dumbbell Bulgarian Split Squat": { cues: "Rear foot on plyo box, lower back knee toward ground, drive up.", video: "https://www.youtube.com/shorts/2C-uNgKwPLE" },
-          "TRX Suspended Single-Leg Lunge": { cues: "Back foot in TRX loop, lower body into single leg squat drive back up.", video: "https://www.youtube.com/shorts/7A-54Wq6Dk8" },
-          "Medicine Ball Goblet Squat": { cues: "Hold med ball against chest, squat deep keeping spine neutral.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
+          "TRX Suspended Single-Leg Lunge": { cues: "Back foot in TRX loop, lower body into single leg squat drive back up.", video: "https://www.youtube.com/results?search_query=TRX+Suspended+Single-Leg+Lunge+proper+form" },
+          "Medicine Ball Goblet Squat": { cues: "Hold med ball against chest, squat deep keeping spine neutral.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Goblet+Squat+proper+form" },
           "Bodyweight Air Squats": { cues: "Feet shoulder-width, lower hips parallel to floor, drive through heels.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
           "Squat Rack Barbell Front Squat": { cues: "Bar resting on front shoulders, elbows up high, squat deep.", video: "https://www.youtube.com/shorts/uYumuL_G_V0" },
-          "Dumbbell Walking Lunges": { cues: "Hold dumbbells at sides, step forward dropping back knee to floor.", video: "https://www.youtube.com/shorts/D7Ka347mZ4g" },
-          "Plyo Box Step-Ups": { cues: "Step whole foot on box, drive through heel to extend quad fully.", video: "https://www.youtube.com/shorts/d3LdMbd3Y7Y" },
+          "Dumbbell Walking Lunges": { cues: "Hold dumbbells at sides, step forward dropping back knee to floor.", video: "https://www.youtube.com/results?search_query=Dumbbell+Walking+Lunges+proper+form" },
+          "Plyo Box Step-Ups": { cues: "Step whole foot on box, drive through heel to extend quad fully.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Step-Ups+proper+form" },
           "TRX Assisted Deep Squat": { cues: "Hold TRX straps, squat low into heels using straps for balance.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" },
           "Bodyweight Wall Sit": { cues: "Press back into wall, thighs parallel to floor, hold statically.", video: "https://www.youtube.com/shorts/y-wV4Venusw" },
-          "Medicine Ball Overhead Squat": { cues: "Lock med ball overhead, execute deep squat maintaining erect torso.", video: "https://www.youtube.com/shorts/MeIiIdhvKL4" },
-          "Dumbbell Step-Up Jump": { cues: "Step onto plyo box holding dumbbells, drive explosively off top foot.", video: "https://www.youtube.com/shorts/d3LdMbd3Y7Y" },
-          "Squat Rack Box Squats": { cues: "Squat down onto box behind you in rack, pause, drive up.", video: "https://www.youtube.com/shorts/TjR0-A3eN40" },
+          "Medicine Ball Overhead Squat": { cues: "Lock med ball overhead, execute deep squat maintaining erect torso.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Overhead+Squat+proper+form" },
+          "Dumbbell Step-Up Jump": { cues: "Step onto plyo box holding dumbbells, drive explosively off top foot.", video: "https://www.youtube.com/results?search_query=Dumbbell+Step-Up+Jump+proper+form" },
+          "Squat Rack Box Squats": { cues: "Squat down onto box behind you in rack, pause, drive up.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Box+Squats+proper+form" },
           "Bodyweight Jump Squats": { cues: "Lower into squat, explode upward into vertical jump.", video: "https://www.youtube.com/shorts/ultWZbUMPL8" }
         }
       },
@@ -996,58 +997,58 @@
         name: "Hamstrings",
         exercises: {
           "Squat Rack Barbell Romanian Deadlift (RDL)": { cues: "Hinge at hips, push glutes back, lower bar along shins keeping back flat.", video: "https://www.youtube.com/shorts/JCXUYuzwNrM" },
-          "TRX Hamstring Runner Curls": { cues: "Heels in TRX loops lying on back, lift hips and alternate curling heels to glutes.", video: "https://www.youtube.com/shorts/1Tq3QdIUuHs" },
-          "Dumbbell Single-Leg RDL": { cues: "Balance on one foot, hinge forward extending opposite leg back with dumbbell.", video: "https://www.youtube.com/shorts/7X1134L4L2o" },
-          "Medicine Ball Hamstring Bridge Curls": { cues: "Place feet on med ball on floor, bridge hips up, roll ball in with heels.", video: "https://www.youtube.com/shorts/1Tq3QdIUuHs" },
-          "Bodyweight Nordic Hamstring Curls": { cues: "Anchor ankles, lower body forward slowly resisting gravity with hamstrings.", video: "https://www.youtube.com/shorts/7S-0149021A" },
-          "Plyo Box Single-Leg Hamstring Bridge": { cues: "Place one heel on plyo box lying on back, drive hips upward.", video: "https://www.youtube.com/shorts/1Tq3QdIUuHs" },
-          "Squat Rack Good Mornings": { cues: "Bar on shoulders, soft knees, hinge forward at waist until torso parallel.", video: "https://www.youtube.com/shorts/114A_9W7J3A" },
-          "Dumbbell Kettlebell-Style Swings": { cues: "Hinge at hips holding dumbbell between legs, snap hips to drive up.", video: "https://www.youtube.com/shorts/s3Y3RkS2zCg" },
-          "TRX Double-Leg Hamstring Curl": { cues: "Heels in TRX, lift hips off ground, curl both heels into glutes simultaneously.", video: "https://www.youtube.com/shorts/1Tq3QdIUuHs" },
-          "Medicine Ball Underhand Hip Hinge Throws": { cues: "Hinge deeply, explode up through hamstrings launching ball upward.", video: "https://www.youtube.com/shorts/s3Y3RkS2zCg" },
-          "Bodyweight Single-Leg Glute-Ham Hinge": { cues: "Stand on one leg, touch floor while extending back leg parallel.", video: "https://www.youtube.com/shorts/7X1134L4L2o" },
-          "Plyo Box Hamstring Heel Drives": { cues: "Lie on back, put both heels on box edge, raise hips into full alignment.", video: "https://www.youtube.com/shorts/1Tq3QdIUuHs" },
+          "TRX Hamstring Runner Curls": { cues: "Heels in TRX loops lying on back, lift hips and alternate curling heels to glutes.", video: "https://www.youtube.com/results?search_query=TRX+Hamstring+Runner+Curls+proper+form" },
+          "Dumbbell Single-Leg RDL": { cues: "Balance on one foot, hinge forward extending opposite leg back with dumbbell.", video: "https://www.youtube.com/results?search_query=Dumbbell+Single-Leg+RDL+proper+form" },
+          "Medicine Ball Hamstring Bridge Curls": { cues: "Place feet on med ball on floor, bridge hips up, roll ball in with heels.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Hamstring+Bridge+Curls+proper+form" },
+          "Bodyweight Nordic Hamstring Curls": { cues: "Anchor ankles, lower body forward slowly resisting gravity with hamstrings.", video: "https://www.youtube.com/results?search_query=Bodyweight+Nordic+Hamstring+Curls+proper+form" },
+          "Plyo Box Single-Leg Hamstring Bridge": { cues: "Place one heel on plyo box lying on back, drive hips upward.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Single-Leg+Hamstring+Bridge+proper+form" },
+          "Squat Rack Good Mornings": { cues: "Bar on shoulders, soft knees, hinge forward at waist until torso parallel.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Good+Mornings+proper+form" },
+          "Dumbbell Kettlebell-Style Swings": { cues: "Hinge at hips holding dumbbell between legs, snap hips to drive up.", video: "https://www.youtube.com/results?search_query=Dumbbell+Kettlebell-Style+Swings+proper+form" },
+          "TRX Double-Leg Hamstring Curl": { cues: "Heels in TRX, lift hips off ground, curl both heels into glutes simultaneously.", video: "https://www.youtube.com/results?search_query=TRX+Double-Leg+Hamstring+Curl+proper+form" },
+          "Medicine Ball Underhand Hip Hinge Throws": { cues: "Hinge deeply, explode up through hamstrings launching ball upward.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Underhand+Hip+Hinge+Throws+proper+form" },
+          "Bodyweight Single-Leg Glute-Ham Hinge": { cues: "Stand on one leg, touch floor while extending back leg parallel.", video: "https://www.youtube.com/results?search_query=Bodyweight+Single-Leg+Glute-Ham+Hinge+proper+form" },
+          "Plyo Box Hamstring Heel Drives": { cues: "Lie on back, put both heels on box edge, raise hips into full alignment.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Hamstring+Heel+Drives+proper+form" },
           "Squat Rack Sumo Romanian Deadlift": { cues: "Wide stance with barbell, hinge forward stretching inner hamstrings.", video: "https://www.youtube.com/shorts/JCXUYuzwNrM" },
           "Dumbbell Stiff-Legged Deadlift": { cues: "Keep legs straight with soft knees, lower dumbbells to feet, squeeze glutes/hams.", video: "https://www.youtube.com/shorts/JCXUYuzwNrM" },
-          "TRX Hinged Deadlift": { cues: "Hold TRX straps, hinge forward extending back leg into horizontal line.", video: "https://www.youtube.com/shorts/7X1134L4L2o" }
+          "TRX Hinged Deadlift": { cues: "Hold TRX straps, hinge forward extending back leg into horizontal line.", video: "https://www.youtube.com/results?search_query=TRX+Hinged+Deadlift+proper+form" }
         }
       },
       glutes: {
         name: "Glutes",
         exercises: {
-          "Squat Rack Barbell Hip Thrust": { cues: "Upper back against bench, barbell across hips, drive through heels to lock out.", video: "https://www.youtube.com/shorts/LM8X3r_A4a8" },
-          "Plyo Box High Step-Ups": { cues: "Step onto high box, drive through front heel relying entirely on glute power.", video: "https://www.youtube.com/shorts/d3LdMbd3Y7Y" },
-          "Dumbbell Dumbbell Sumo Deadlift": { cues: "Wide stance, hold dumbbell vertically, drop hips down and extend.", video: "https://www.youtube.com/shorts/43p-203859A" },
-          "TRX Single-Leg Glute Bridge": { cues: "One heel in TRX loop, drive hips toward ceiling squeezing glute.", video: "https://www.youtube.com/shorts/3-A05-9_Kk8" },
-          "Medicine Ball Wall Balls": { cues: "Full squat with med ball, drive up throwing ball to target on wall.", video: "https://www.youtube.com/shorts/LM8X3r_A4a8" },
-          "Bodyweight Glute Bridge": { cues: "Lie on back, knees bent, feet flat, drive hips up until torso aligns.", video: "https://www.youtube.com/shorts/3-A05-9_Kk8" },
-          "Squat Rack Conventional Barbell Deadlift": { cues: "Bar over midfoot, drop hips, drive floor away squeezing glutes at top.", video: "https://www.youtube.com/shorts/AweC3UaM14A" },
-          "Dumbbell Walking Curtsy Lunges": { cues: "Step leg behind and across opposite leg, dropping hip down.", video: "https://www.youtube.com/shorts/D7Ka347mZ4g" },
-          "Plyo Box Glute Elevated Hip Thrust": { cues: "Upper back on plyo box, dip hips down and press up to parallel.", video: "https://www.youtube.com/shorts/LM8X3r_A4a8" },
-          "TRX Squat to Crossover Lunge": { cues: "Perform TRX squat, transition immediately into crossing back lunge.", video: "https://www.youtube.com/shorts/7A-54Wq6Dk8" },
-          "Bodyweight Donkey Kicks": { cues: "On all fours, kick heel up toward ceiling squeezing glute at top.", video: "https://www.youtube.com/shorts/4B4K178Y5K8" },
-          "Medicine Ball Single-Leg Hip Thrust": { cues: "Hold med ball on hips, drive single heel into ground to lift hips.", video: "https://www.youtube.com/shorts/3-A05-9_Kk8" },
-          "Dumbbell Frog Pumps": { cues: "Soles of feet together, knees flaring out, lift hips off ground.", video: "https://www.youtube.com/shorts/3-A05-9_Kk8" },
-          "TRX Crossing Skater Jumps": { cues: "Hop side to side using TRX straps to control landing into glute loaded hinge.", video: "https://www.youtube.com/shorts/43p-203859A" },
-          "Squat Rack Barbell Reverse Lunge": { cues: "Barbell on back, step backward stepping into deep knee bend.", video: "https://www.youtube.com/shorts/7A-54Wq6Dk8" }
+          "Squat Rack Barbell Hip Thrust": { cues: "Upper back against bench, barbell across hips, drive through heels to lock out.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Barbell+Hip+Thrust+proper+form" },
+          "Plyo Box High Step-Ups": { cues: "Step onto high box, drive through front heel relying entirely on glute power.", video: "https://www.youtube.com/results?search_query=Plyo+Box+High+Step-Ups+proper+form" },
+          "Dumbbell Dumbbell Sumo Deadlift": { cues: "Wide stance, hold dumbbell vertically, drop hips down and extend.", video: "https://www.youtube.com/results?search_query=Dumbbell+Dumbbell+Sumo+Deadlift+proper+form" },
+          "TRX Single-Leg Glute Bridge": { cues: "One heel in TRX loop, drive hips toward ceiling squeezing glute.", video: "https://www.youtube.com/results?search_query=TRX+Single-Leg+Glute+Bridge+proper+form" },
+          "Medicine Ball Wall Balls": { cues: "Full squat with med ball, drive up throwing ball to target on wall.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Wall+Balls+proper+form" },
+          "Bodyweight Glute Bridge": { cues: "Lie on back, knees bent, feet flat, drive hips up until torso aligns.", video: "https://www.youtube.com/results?search_query=Bodyweight+Glute+Bridge+proper+form" },
+          "Squat Rack Conventional Barbell Deadlift": { cues: "Bar over midfoot, drop hips, drive floor away squeezing glutes at top.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Conventional+Barbell+Deadlift+proper+form" },
+          "Dumbbell Walking Curtsy Lunges": { cues: "Step leg behind and across opposite leg, dropping hip down.", video: "https://www.youtube.com/results?search_query=Dumbbell+Walking+Curtsy+Lunges+proper+form" },
+          "Plyo Box Glute Elevated Hip Thrust": { cues: "Upper back on plyo box, dip hips down and press up to parallel.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Glute+Elevated+Hip+Thrust+proper+form" },
+          "TRX Squat to Crossover Lunge": { cues: "Perform TRX squat, transition immediately into crossing back lunge.", video: "https://www.youtube.com/results?search_query=TRX+Squat+to+Crossover+Lunge+proper+form" },
+          "Bodyweight Donkey Kicks": { cues: "On all fours, kick heel up toward ceiling squeezing glute at top.", video: "https://www.youtube.com/results?search_query=Bodyweight+Donkey+Kicks+proper+form" },
+          "Medicine Ball Single-Leg Hip Thrust": { cues: "Hold med ball on hips, drive single heel into ground to lift hips.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Single-Leg+Hip+Thrust+proper+form" },
+          "Dumbbell Frog Pumps": { cues: "Soles of feet together, knees flaring out, lift hips off ground.", video: "https://www.youtube.com/results?search_query=Dumbbell+Frog+Pumps+proper+form" },
+          "TRX Crossing Skater Jumps": { cues: "Hop side to side using TRX straps to control landing into glute loaded hinge.", video: "https://www.youtube.com/results?search_query=TRX+Crossing+Skater+Jumps+proper+form" },
+          "Squat Rack Barbell Reverse Lunge": { cues: "Barbell on back, step backward stepping into deep knee bend.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Barbell+Reverse+Lunge+proper+form" }
         }
       },
       gastrocnemius: {
         name: "Gastrocnemius (Calves)",
         exercises: {
           "Plyo Box Edge Calf Raise": { cues: "Balls of feet on edge of plyo box, lower heels down deep, press high.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
-          "Dumbbell Single-Leg Calf Raise": { cues: "Hold dumbbell in one hand, press up on toes of balancing foot.", video: "https://www.youtube.com/shorts/K6D_sB22x0w" },
+          "Dumbbell Single-Leg Calf Raise": { cues: "Hold dumbbell in one hand, press up on toes of balancing foot.", video: "https://www.youtube.com/results?search_query=Dumbbell+Single-Leg+Calf+Raise+proper+form" },
           "Squat Rack Barbell Standing Calf Raise": { cues: "Bar on shoulders in rack, elevate onto toes with straight knees.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
-          "Bodyweight Single-Leg Calf Raise": { cues: "Balance on single foot, lift body up onto big toe slowly.", video: "https://www.youtube.com/shorts/K6D_sB22x0w" },
+          "Bodyweight Single-Leg Calf Raise": { cues: "Balance on single foot, lift body up onto big toe slowly.", video: "https://www.youtube.com/results?search_query=Bodyweight+Single-Leg+Calf+Raise+proper+form" },
           "Medicine Ball Overhead Calf Press": { cues: "Hold med ball overhead while raising up high on toes.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
           "TRX Suspended Calf Raises": { cues: "Lean slightly forward in TRX straps, extend ankles completely upward.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
-          "Plyo Box Depth Jump to Calf Explode": { cues: "Step off plyo box, land and immediately spring straight up off calves.", video: "https://www.youtube.com/shorts/d3LdMbd3Y7Y" },
-          "Dumbbell Seated Calf Raise": { cues: "Sit on bench with dumbbells rested on knees, lift heels off floor.", video: "https://www.youtube.com/shorts/Jbyj-UORkeA" },
-          "Bodyweight Donkey Calf Raises": { cues: "Hinge forward hands on bench, extend ankles upward with straight legs.", video: "https://www.youtube.com/shorts/N344C1_c0P4" },
+          "Plyo Box Depth Jump to Calf Explode": { cues: "Step off plyo box, land and immediately spring straight up off calves.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Depth+Jump+to+Calf+Explode+proper+form" },
+          "Dumbbell Seated Calf Raise": { cues: "Sit on bench with dumbbells rested on knees, lift heels off floor.", video: "https://www.youtube.com/results?search_query=Dumbbell+Seated+Calf+Raise+proper+form" },
+          "Bodyweight Donkey Calf Raises": { cues: "Hinge forward hands on bench, extend ankles upward with straight legs.", video: "https://www.youtube.com/results?search_query=Bodyweight+Donkey+Calf+Raises+proper+form" },
           "Squat Rack Farmer's Toe Walk": { cues: "Hold barbell or heavy weights, walk forward entirely elevated on toes.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
           "Medicine Ball Calf Hops": { cues: "Hold med ball, hop continuously off ankle bounce without bending knees.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
-          "TRX Single-Leg Calf Extension": { cues: "Single leg balance using TRX handles, drive up to tip-toe.", video: "https://www.youtube.com/shorts/K6D_sB22x0w" },
-          "Plyo Box Agility Toe Taps": { cues: "Tap toes rapidly on edge of plyo box alternating feet.", video: "https://www.youtube.com/shorts/d3LdMbd3Y7Y" },
+          "TRX Single-Leg Calf Extension": { cues: "Single leg balance using TRX handles, drive up to tip-toe.", video: "https://www.youtube.com/results?search_query=TRX+Single-Leg+Calf+Extension+proper+form" },
+          "Plyo Box Agility Toe Taps": { cues: "Tap toes rapidly on edge of plyo box alternating feet.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Agility+Toe+Taps+proper+form" },
           "Dumbbell Jump Rope Simulation": { cues: "Hold light dumbbells, hop rapidly on balls of feet.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" },
           "Bodyweight Wall-Supported Calf Stretch & Drive": { cues: "Hands on wall, press back heel flat then drive high onto toes.", video: "https://www.youtube.com/shorts/YMmgqO8Jo-k" }
         }
@@ -1058,18 +1059,18 @@
         name: "Abdominals",
         exercises: {
           "TRX Suspended Atomic Crunches": { cues: "Feet in TRX loops in plank, pull both knees into chest squeezing abs.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
-          "Medicine Ball Russian Twist & Slam": { cues: "Sit on floor, rotate med ball side to side, tap floor violently.", video: "https://www.youtube.com/shorts/3p2W5S354_k" },
+          "Medicine Ball Russian Twist & Slam": { cues: "Sit on floor, rotate med ball side to side, tap floor violently.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Russian+Twist+%26+Slam+proper+form" },
           "Bodyweight Hanging Leg Raise": { cues: "Hang from rack bar, raise legs to 90 degrees without swinging.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
-          "Plyo Box Decline Sit-Ups": { cues: "Hook legs over plyo box, lower torso back, sit up fully to vertical.", video: "https://www.youtube.com/shorts/4-2S550211k" },
-          "Dumbbell Dumbbell Ab Rollout / Drag": { cues: "In plank, drag dumbbell back and forth under torso.", video: "https://www.youtube.com/shorts/3X_5B334X-A" },
-          "Pulldown Machine Kneeling Cable Crunch": { cues: "Kneel below cable attachment, crunch down bringing elbows to knees.", video: "https://www.youtube.com/shorts/2_72183_994" },
+          "Plyo Box Decline Sit-Ups": { cues: "Hook legs over plyo box, lower torso back, sit up fully to vertical.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Decline+Sit-Ups+proper+form" },
+          "Dumbbell Dumbbell Ab Rollout / Drag": { cues: "In plank, drag dumbbell back and forth under torso.", video: "https://www.youtube.com/results?search_query=Dumbbell+Dumbbell+Ab+Rollout+%2F+Drag+proper+form" },
+          "Pulldown Machine Kneeling Cable Crunch": { cues: "Kneel below cable attachment, crunch down bringing elbows to knees.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Kneeling+Cable+Crunch+proper+form" },
           "Bodyweight Forearm Plank": { cues: "Elbows under shoulders, form straight line head to heels, brace core.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
           "TRX Body Saw": { cues: "In forearm plank with feet in TRX, slide body backward and forward.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
-          "Medicine Ball V-Ups": { cues: "Lie flat holding med ball overhead, raise ball and feet together in 'V'.", video: "https://www.youtube.com/shorts/iP2003A-K30" },
-          "Bodyweight Bicycle Crunches": { cues: "Alternate elbow to opposite knee while extending opposite leg straight.", video: "https://www.youtube.com/shorts/8-1718-4a9I" },
+          "Medicine Ball V-Ups": { cues: "Lie flat holding med ball overhead, raise ball and feet together in 'V'.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+V-Ups+proper+form" },
+          "Bodyweight Bicycle Crunches": { cues: "Alternate elbow to opposite knee while extending opposite leg straight.", video: "https://www.youtube.com/results?search_query=Bodyweight+Bicycle+Crunches+proper+form" },
           "Plyo Box Incline Plank Hold": { cues: "Place forearms on plyo box, hold stiff plank engaging upper abs.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
           "Squat Rack Hanging Knee Tucks": { cues: "Hang from rack bar, tuck knees to chest in controlled tempo.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
-          "Dumbbell Straight-Leg Toe Touches": { cues: "Lie back legs straight up, reach dumbbell toward toes lifting shoulder blades.", video: "https://www.youtube.com/shorts/iP2003A-K30" },
+          "Dumbbell Straight-Leg Toe Touches": { cues: "Lie back legs straight up, reach dumbbell toward toes lifting shoulder blades.", video: "https://www.youtube.com/results?search_query=Dumbbell+Straight-Leg+Toe+Touches+proper+form" },
           "TRX Mountain Climbers": { cues: "Feet in TRX, drive knees rapidly forward to chest in plank.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
           "Medicine Ball Overhead Plank Hold": { cues: "Hold plank with hands balanced on top of medicine ball.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" }
         }
@@ -1077,41 +1078,41 @@
       obliques: {
         name: "Obliques",
         exercises: {
-          "TRX Side Plank Hip Drops": { cues: "Feet in TRX sideways, lower bottom hip toward floor and lift high.", video: "https://www.youtube.com/shorts/K2VljzD1A38" },
-          "Medicine Ball Rotational Wall Throws": { cues: "Stand sideways to wall, twist torso and throw ball against wall.", video: "https://www.youtube.com/shorts/9-2A8G80554" },
-          "Dumbbell Standing Side Bends": { cues: "Hold dumbbell in one hand, tilt torso to side, pull up using obliques.", video: "https://www.youtube.com/shorts/1199341-2A1" },
-          "Pulldown Machine Cable Woodchoppers": { cues: "Pull cable diagonally across body while rotating torso and hips.", video: "https://www.youtube.com/shorts/9-2A8G80554" },
-          "Bodyweight Side Plank": { cues: "Elbow on ground under shoulder, lift hips high, stack feet.", video: "https://www.youtube.com/shorts/K2VljzD1A38" },
-          "Plyo Box Elevated Side Plank": { cues: "Feet elevated sideways on plyo box, hold rigid lateral alignment.", video: "https://www.youtube.com/shorts/K2VljzD1A38" },
+          "TRX Side Plank Hip Drops": { cues: "Feet in TRX sideways, lower bottom hip toward floor and lift high.", video: "https://www.youtube.com/results?search_query=TRX+Side+Plank+Hip+Drops+proper+form" },
+          "Medicine Ball Rotational Wall Throws": { cues: "Stand sideways to wall, twist torso and throw ball against wall.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Rotational+Wall+Throws+proper+form" },
+          "Dumbbell Standing Side Bends": { cues: "Hold dumbbell in one hand, tilt torso to side, pull up using obliques.", video: "https://www.youtube.com/results?search_query=Dumbbell+Standing+Side+Bends+proper+form" },
+          "Pulldown Machine Cable Woodchoppers": { cues: "Pull cable diagonally across body while rotating torso and hips.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Cable+Woodchoppers+proper+form" },
+          "Bodyweight Side Plank": { cues: "Elbow on ground under shoulder, lift hips high, stack feet.", video: "https://www.youtube.com/results?search_query=Bodyweight+Side+Plank+proper+form" },
+          "Plyo Box Elevated Side Plank": { cues: "Feet elevated sideways on plyo box, hold rigid lateral alignment.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Elevated+Side+Plank+proper+form" },
           "TRX Oblique Crunches": { cues: "Feet in TRX, pull both knees toward outside of left/right elbow.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
           "Squat Rack Hanging Windshield Wipers": { cues: "Hang from bar, raise legs and rotate them side to side in arc.", video: "https://www.youtube.com/shorts/hdng3Nm1x_E" },
-          "Medicine Ball Figure 8s": { cues: "Hold med ball, trace '8' pattern in air in front of body using core.", video: "https://www.youtube.com/shorts/3p2W5S354_k" },
+          "Medicine Ball Figure 8s": { cues: "Hold med ball, trace '8' pattern in air in front of body using core.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Figure+8s+proper+form" },
           "Bodyweight Cross-Body Mountain Climbers": { cues: "In plank, pull right knee across toward left elbow repeatedly.", video: "https://www.youtube.com/shorts/pSHjTRCQxIw" },
-          "Dumbbell Russian Twists": { cues: "Balance on glutes, twist dumbbell left and right across hips.", video: "https://www.youtube.com/shorts/3p2W5S354_k" },
-          "Plyo Box Lateral Step Crunches": { cues: "Stand beside box, lift leg sideways while crunching elbow to hip.", video: "https://www.youtube.com/shorts/K2VljzD1A38" },
-          "TRX Standing Oblique Rollouts": { cues: "Reach TRX straps out diagonally forward leaning into rotation.", video: "https://www.youtube.com/shorts/9X_902A_334" },
-          "Pulldown Machine Pallof Press": { cues: "Hold cable at chest standing sideways, press straight out without twisting.", video: "https://www.youtube.com/shorts/9X_902A_334" },
-          "Bodyweight Side Lying Crunches": { cues: "Lie sideways on floor, lift shoulder blades squeezing side waist.", video: "https://www.youtube.com/shorts/K2VljzD1A38" }
+          "Dumbbell Russian Twists": { cues: "Balance on glutes, twist dumbbell left and right across hips.", video: "https://www.youtube.com/results?search_query=Dumbbell+Russian+Twists+proper+form" },
+          "Plyo Box Lateral Step Crunches": { cues: "Stand beside box, lift leg sideways while crunching elbow to hip.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Lateral+Step+Crunches+proper+form" },
+          "TRX Standing Oblique Rollouts": { cues: "Reach TRX straps out diagonally forward leaning into rotation.", video: "https://www.youtube.com/results?search_query=TRX+Standing+Oblique+Rollouts+proper+form" },
+          "Pulldown Machine Pallof Press": { cues: "Hold cable at chest standing sideways, press straight out without twisting.", video: "https://www.youtube.com/results?search_query=Pulldown+Machine+Pallof+Press+proper+form" },
+          "Bodyweight Side Lying Crunches": { cues: "Lie sideways on floor, lift shoulder blades squeezing side waist.", video: "https://www.youtube.com/results?search_query=Bodyweight+Side+Lying+Crunches+proper+form" }
         }
       },
       lowerBack: {
         name: "Lower Back (Erector Spinae)",
         exercises: {
-          "Plyo Box Back Extensions": { cues: "Lie hips on edge of plyo box, lower upper body down, raise back to level.", video: "https://www.youtube.com/shorts/440-2A_0199" },
-          "Bodyweight Supermans": { cues: "Lie face down, lift arms, chest, and legs simultaneously off floor.", video: "https://www.youtube.com/shorts/z6Pz32-0941" },
-          "Medicine Ball Prone Back Extension": { cues: "Lie face down holding med ball at chest, elevate chest up.", video: "https://www.youtube.com/shorts/z6Pz32-0941" },
-          "Squat Rack Barbell Good Mornings": { cues: "Barbell resting on traps, hinge at hips 90 degrees, return erect.", video: "https://www.youtube.com/shorts/114A_9W7J3A" },
-          "TRX Inverted Lower Back Extensions": { cues: "Facing TRX, hinge back dropping hips, drive hips forward to extend back.", video: "https://www.youtube.com/shorts/440-2A_0199" },
-          "Bodyweight Bird Dog": { cues: "On all fours, extend opposite arm and leg straight out while bracing core.", video: "https://www.youtube.com/shorts/39328470_21" },
-          "Dumbbell Dumbbell Deadlifts": { cues: "Hold dumbbells, hinge at hips keeping flat spine, stand up tall.", video: "https://www.youtube.com/shorts/AweC3UaM14A" },
-          "Plyo Box Supported Bird Dog": { cues: "Kneel on plyo box, extend opposite hand and foot parallel to floor.", video: "https://www.youtube.com/shorts/39328470_21" },
-          "Bodyweight Prone Cobra Holds": { cues: "Lie face down, lift chest and hands thumbs up, hold squeeze.", video: "https://www.youtube.com/shorts/z6Pz32-0941" },
-          "TRX Suspended Reverse Hypers": { cues: "Forearms on bench, feet in TRX, lift legs up behind hips.", video: "https://www.youtube.com/shorts/7A-89Gk2A0A" },
-          "Medicine Ball Good Morning Hinges": { cues: "Hold med ball behind head/neck, hinge forward stretching erectors.", video: "https://www.youtube.com/shorts/114A_9W7J3A" },
-          "Squat Rack Jefferson Curls": { cues: "Stand on box in rack with light bar, slowly segment spine downward.", video: "https://www.youtube.com/shorts/440-2A_0199" },
-          "Bodyweight Swimming Floor Lifts": { cues: "Lie prone, alternate fluttering opposite arm and leg up off floor.", video: "https://www.youtube.com/shorts/z6Pz32-0941" },
+          "Plyo Box Back Extensions": { cues: "Lie hips on edge of plyo box, lower upper body down, raise back to level.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Back+Extensions+proper+form" },
+          "Bodyweight Supermans": { cues: "Lie face down, lift arms, chest, and legs simultaneously off floor.", video: "https://www.youtube.com/results?search_query=Bodyweight+Supermans+proper+form" },
+          "Medicine Ball Prone Back Extension": { cues: "Lie face down holding med ball at chest, elevate chest up.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Prone+Back+Extension+proper+form" },
+          "Squat Rack Barbell Good Mornings": { cues: "Barbell resting on traps, hinge at hips 90 degrees, return erect.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Barbell+Good+Mornings+proper+form" },
+          "TRX Inverted Lower Back Extensions": { cues: "Facing TRX, hinge back dropping hips, drive hips forward to extend back.", video: "https://www.youtube.com/results?search_query=TRX+Inverted+Lower+Back+Extensions+proper+form" },
+          "Bodyweight Bird Dog": { cues: "On all fours, extend opposite arm and leg straight out while bracing core.", video: "https://www.youtube.com/results?search_query=Bodyweight+Bird+Dog+proper+form" },
+          "Dumbbell Dumbbell Deadlifts": { cues: "Hold dumbbells, hinge at hips keeping flat spine, stand up tall.", video: "https://www.youtube.com/results?search_query=Dumbbell+Dumbbell+Deadlifts+proper+form" },
+          "Plyo Box Supported Bird Dog": { cues: "Kneel on plyo box, extend opposite hand and foot parallel to floor.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Supported+Bird+Dog+proper+form" },
+          "Bodyweight Prone Cobra Holds": { cues: "Lie face down, lift chest and hands thumbs up, hold squeeze.", video: "https://www.youtube.com/results?search_query=Bodyweight+Prone+Cobra+Holds+proper+form" },
+          "TRX Suspended Reverse Hypers": { cues: "Forearms on bench, feet in TRX, lift legs up behind hips.", video: "https://www.youtube.com/results?search_query=TRX+Suspended+Reverse+Hypers+proper+form" },
+          "Medicine Ball Good Morning Hinges": { cues: "Hold med ball behind head/neck, hinge forward stretching erectors.", video: "https://www.youtube.com/results?search_query=Medicine+Ball+Good+Morning+Hinges+proper+form" },
+          "Squat Rack Jefferson Curls": { cues: "Stand on box in rack with light bar, slowly segment spine downward.", video: "https://www.youtube.com/results?search_query=Squat+Rack+Jefferson+Curls+proper+form" },
+          "Bodyweight Swimming Floor Lifts": { cues: "Lie prone, alternate fluttering opposite arm and leg up off floor.", video: "https://www.youtube.com/results?search_query=Bodyweight+Swimming+Floor+Lifts+proper+form" },
           "Dumbbell Romanian Deadlift to Shrug": { cues: "Hinge into RDL, extend hips and shrug dumbbells at peak.", video: "https://www.youtube.com/shorts/JCXUYuzwNrM" },
-          "Plyo Box Glute-Ham Arch Hold": { cues: "Hips supported on box edge, extend body straight and hold static alignment.", video: "https://www.youtube.com/shorts/440-2A_0199" }
+          "Plyo Box Glute-Ham Arch Hold": { cues: "Hips supported on box edge, extend body straight and hold static alignment.", video: "https://www.youtube.com/results?search_query=Plyo+Box+Glute-Ham+Arch+Hold+proper+form" }
         }
       }
     }
@@ -1126,6 +1127,7 @@
   let spreadsheetRows = [];
   let historyLogs = [];
   let todaysSubmission = null;
+  let currentDocId = null;
   let currentLearningTarget = "Focus on explosive power and full range of motion.";
 
   function updateRoutineField(id, field, value) {
@@ -1134,14 +1136,49 @@
     r[field] = value;
   }
 
-  function studentDocId(name) {
+  function normalizeName(name) {
     return name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   }
 
-  async function hashPin(pin, salt) {
-    let data = new TextEncoder().encode(salt + ":" + pin);
-    let hashBuffer = await crypto.subtle.digest("SHA-256", data);
-    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, "0")).join("");
+  async function sha256Hex(str) {
+    // SubtleCrypto only exists on https:// or localhost. Over plain http on a LAN
+    // IP it is undefined, which would otherwise surface as a confusing crash.
+    if(!window.crypto || !crypto.subtle) {
+      throw new Error("Logins need this page to be opened over https:// (or on localhost).");
+    }
+    let buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+    return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // A record's address is derived from BOTH the name and the PIN, so finding it
+  // means already knowing both. The PIN itself is never stored — there is no
+  // hash sitting in a readable document for anyone to crack offline.
+  //
+  // PBKDF2 rather than a plain hash on purpose: a 4-digit PIN is only 10,000
+  // possibilities, so a single SHA would let someone precompute every address
+  // for a known classmate in about a second. At 100k iterations that same sweep
+  // costs hours, while one real login costs a few hundred milliseconds.
+  const PIN_ITERATIONS = 100000;   // ponytail: raise if PINs ever get longer
+
+  async function studentDocId(name, pin) {
+    if(!window.crypto || !crypto.subtle) {
+      throw new Error("Logins need this page to be opened over https:// (or on localhost).");
+    }
+    let slug = normalizeName(name);
+    let key = await crypto.subtle.importKey(
+      "raw", new TextEncoder().encode(pin), "PBKDF2", false, ["deriveBits"]);
+    let bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: new TextEncoder().encode("pe-tracker:" + slug),
+        iterations: PIN_ITERATIONS, hash: "SHA-256" },
+      key, 256);
+    return Array.from(new Uint8Array(bits)).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  // "Is this name already claimed?" Hashed, so the roster cannot be dumped by
+  // reading it, but a name someone already knows can still be checked. Carries
+  // no PIN information of any kind.
+  function nameKey(name) {
+    return sha256Hex("name:" + normalizeName(name));
   }
 
   window.onload = function() {
@@ -1203,16 +1240,25 @@
       return;
     }
 
-    let docId = studentDocId(nameInput);
-    if(!docId) {
+    if(!normalizeName(nameInput)) {
       alert("Please enter a valid name.");
       return;
     }
+
+    let docId, nKey;
+    try {
+      docId = await studentDocId(nameInput, pinInput);
+      nKey = await nameKey(nameInput);
+    } catch(err) {
+      alert(err.message);
+      return;
+    }
+
     let ref = fbDoc(db, "students", docId);
-    let hash = await hashPin(pinInput, docId);
-    let snap;
+    let snap, nameSnap;
     try {
       snap = await fbGetDoc(ref);
+      nameSnap = await fbGetDoc(fbDoc(db, "names", nKey));
     } catch(err) {
       alert("Couldn't reach the server — check your internet connection and try again.");
       return;
@@ -1220,25 +1266,32 @@
 
     if(snap.exists()) {
       let data = snap.data();
-      if(data.pinHash !== hash) {
-        alert("Incorrect PIN for " + data.name + ". Ask your teacher to reset it if you forgot.");
-        return;
-      }
       currentUser = data.name;
+      currentDocId = docId;
       savedRoutines = data.routines || [];
       historyLogs = data.history || [];
       todaysSubmission = data.submission || null;
       alert("Welcome back, " + currentUser + "!");
+    } else if(nameSnap.exists()) {
+      // The name is claimed but this PIN does not lead to that record. Creating
+      // an account here is exactly how a student silently ends up with a second,
+      // empty one and loses their history, so refuse and send them to the teacher.
+      alert(`That PIN doesn't match the record for "${nameInput}".\n\nCheck the PIN and try again, or ask your teacher to reset it.`);
+      return;
     } else {
+      if(!confirm(`No record found for "${nameInput}".\n\nCreate a new account with PIN ${pinInput}?`)) return;
       currentUser = nameInput;
+      currentDocId = docId;
       savedRoutines = [];
       historyLogs = [];
       todaysSubmission = null;
       try {
-        await fbSetDoc(ref, { name: currentUser, pinHash: hash, routines: [], history: [], submission: null });
+        await fbSetDoc(ref, { name: currentUser, routines: [], history: [], submission: null });
+        await fbSetDoc(fbDoc(db, "names", nKey), { name: currentUser });
       } catch(err) {
         alert("Couldn't create your account — check your internet connection and try again.");
         currentUser = null;
+        currentDocId = null;
         return;
       }
       alert(`Welcome, ${currentUser}! Your PIN is ${pinInput} — remember it, you'll need it to log back in on any device.`);
@@ -1334,7 +1387,7 @@
     document.getElementById('modalTitle').innerText = activeExercise + " - Form Preview";
     document.getElementById('modalBody').innerHTML = `
       <p><strong>Form Cues:</strong> ${exData.cues}</p>
-      <p><strong>Proper Form Short:</strong> <a href="${exData.video}" target="_blank" style="color: var(--primary); font-weight: bold;">Watch YouTube Short Here ↗</a></p>
+      <p><strong>Proper Form:</strong> <a href="${exData.video}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); font-weight: bold;">${exData.video.includes('/results?') ? 'Search form videos ↗' : 'Watch YouTube Short Here ↗'}</a></p>
     `;
     document.getElementById('cueModal').classList.remove('hidden');
   }
@@ -1735,8 +1788,8 @@
   }
 
   function saveUserData() {
-    if(!currentUser) return;
-    let ref = fbDoc(db, "students", studentDocId(currentUser));
+    if(!currentUser || !currentDocId) return;
+    let ref = fbDoc(db, "students", currentDocId);
     fbUpdateDoc(ref, {
       routines: savedRoutines,
       history: historyLogs,
@@ -1825,14 +1878,24 @@
     try {
       let snap = await fbGetDoc(ref);
       if(!snap.exists()) { alert("Student not found."); return; }
-      let name = snap.data().name || studentId;
+      let data = snap.data();
+      let name = data.name;
+      if(!name) { alert("That record has no name stored, so it can't be re-keyed."); return; }
 
       let newPin = prompt(`New 4-digit PIN for ${name}:`);
       if(!newPin) return;
       if(!/^\d{4}$/.test(newPin)) { alert("PIN must be exactly 4 digits."); return; }
 
-      let hash = await hashPin(newPin, studentId);
-      await fbUpdateDoc(ref, { pinHash: hash });
+      // The PIN is half the address, so changing it relocates the whole record.
+      let newId = await studentDocId(name, newPin);
+      if(newId === studentId) { alert(`${name} already has that PIN.`); return; }
+      if((await fbGetDoc(fbDoc(db, "students", newId))).exists()) {
+        alert("That PIN is already in use by another record. Pick a different one.");
+        return;
+      }
+      await fbSetDoc(fbDoc(db, "students", newId), data);
+      await fbDeleteDoc(ref);
+      await renderTeacherLogs();
       alert(`${name}'s PIN has been reset to ${newPin}. Let them know.`);
     } catch(err) {
       alert("Couldn't reset PIN: " + err.message);
