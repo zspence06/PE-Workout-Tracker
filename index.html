@@ -415,6 +415,17 @@
     @media print {
       .container, .modal-overlay { display: none !important; }
       .print-only { display: block !important; }
+      .rep-class { page-break-before: always; }
+      .rep-class:first-child { page-break-before: avoid; }
+      .rep-student { page-break-inside: avoid; }
+      .rep-h1 { font-size: 16pt; margin: 0 0 2pt; }
+      .rep-sub { font-size: 9pt; color: #444; margin: 0 0 12pt; }
+      .rep-name { font-size: 11pt; margin: 10pt 0 3pt; border-bottom: 1px solid #000; }
+      .rep-meta { font-size: 8.5pt; color: #444; }
+      .rep-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+      .rep-table th { text-align: left; border-bottom: 1px solid #000; padding: 2pt 4pt; }
+      .rep-table td { padding: 1.5pt 4pt; border-bottom: 1px solid #ddd; }
+      .rep-none { font-size: 9pt; color: #666; font-style: italic; }
     }
     .print-page { page-break-after: always; font-family: Arial, sans-serif; color: #000; }
     .print-page:last-of-type { page-break-after: auto; }
@@ -731,10 +742,21 @@
       <div class="card">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h3 style="margin:0;">Students by Class</h3>
-          <div class="form-group" style="margin:0; min-width:220px;">
-            <select id="classFilter" onchange="renderTeacherLogs()">
-              <option value="">All classes</option>
-            </select>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <div class="form-group" style="margin:0; min-width:200px;">
+              <select id="classFilter" onchange="renderTeacherLogs()">
+                <option value="">All classes</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0; min-width:150px;">
+              <select id="printRange">
+                <option value="7">Last 7 days</option>
+                <option value="30" selected>Last 30 days</option>
+                <option value="90">Last 90 days</option>
+                <option value="0">Everything</option>
+              </select>
+            </div>
+            <button class="btn btn-secondary" id="printReportBtn" onclick="printClassReport()">Print report</button>
           </div>
         </div>
         <p style="color: var(--subtle); font-size: 0.9rem;">
@@ -2634,6 +2656,88 @@
         + '<button class="btn btn-secondary" onclick="renameClass(\'' + esc(c.id) + '\')">Rename</button>'
         + freezeBtn + '</div></div>' + linkRow + '</div>';
     }).join("");
+  }
+
+  // ---------------------------------------------------------------- printing
+  // Full detail was the explicit choice: every workout for every student. That
+  // is also the one place the phase 1 data move does not save us, since it has
+  // to read every student's history -- hence the date range, so printing "last
+  // 7 days" for a class is small even in May.
+  function rangeCutoff(days) {
+    if(!days) return "";
+    let d = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  }
+
+  async function printClassReport() {
+    let btn = document.getElementById('printReportBtn');
+    let filter = document.getElementById('classFilter').value;
+    let days = parseInt(document.getElementById('printRange').value, 10) || 0;
+    let cutoff = rangeCutoff(days);
+
+    let groups = classCache.map(c => ({ id: c.id, name: c.name,
+      students: teacherCache.filter(s => s.classId === c.id) }));
+    groups.push({ id: "__none", name: "Unassigned",
+      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)) });
+    if(filter !== "") groups = groups.filter(g => g.id === filter);
+    groups = groups.filter(g => g.students.length > 0);
+
+    if(groups.length === 0) { alert("Nothing to print for that selection."); return; }
+
+    let everyone = groups.flatMap(g => g.students);
+    let rough = everyone.reduce((n, s) => n + s.count, 0);
+    if(rough > 600 && !confirm("This will print up to about " + rough + " workout rows for "
+      + everyone.length + " students.\n\nNarrow the date range if that is more than you wanted. Carry on?")) return;
+
+    if(btn) { btn.disabled = true; btn.innerText = "Gathering..."; }
+    try {
+      // Reuse anything already loaded by expanding a student.
+      let missing = everyone.filter(s => !historyByStudent[s.id]);
+      let fetched = await Promise.all(missing.map(s =>
+        fetchHistory(s.id).catch(err => { console.error("History load failed for", s.name, err); return null; })));
+      let failed = [];
+      missing.forEach((s, i) => {
+        if(fetched[i] === null) failed.push(s.name); else historyByStudent[s.id] = fetched[i];
+      });
+      if(failed.length && !confirm("Couldn't load workouts for: " + failed.join(", ")
+        + "\n\nPrint anyway, without them?")) return;
+
+      let printed = 0;
+      let html = groups.map(g => {
+        let students = g.students.slice().sort((a, b) => a.name.localeCompare(b.name));
+        let bodies = students.map(stu => {
+          let rows = (historyByStudent[stu.id] || [])
+            .filter(h => !cutoff || String(h.date || "") >= cutoff)
+            .sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+          printed += rows.length;
+          let table = rows.length === 0
+            ? '<p class="rep-none">No workouts logged in this period.</p>'
+            : '<table class="rep-table"><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th>'
+              + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th></tr></thead><tbody>'
+              + rows.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
+                  + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
+                  + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + '</td></tr>').join("")
+              + '</tbody></table>';
+          return '<div class="rep-student"><h3 class="rep-name">' + esc(stu.name) + '</h3>'
+            + '<p class="rep-meta">' + rows.length + ' workout row'
+            + (rows.length === 1 ? "" : "s") + " in this period"
+            + (stu.lastLogDate ? " &middot; last logged " + esc(stu.lastLogDate) : "") + '</p>'
+            + table + '</div>';
+        }).join("");
+        return '<div class="rep-class"><h1 class="rep-h1">' + esc(g.name) + '</h1>'
+          + '<p class="rep-sub">' + students.length + ' student' + (students.length === 1 ? "" : "s")
+          + " &middot; " + (days ? "last " + days + " days" : "all workouts to date")
+          + " &middot; printed " + todayLocal() + '</p>' + bodies + '</div>';
+      }).join("");
+
+      document.getElementById('printSheet').innerHTML = html;
+      if(printed === 0) alert("No workouts fall in that date range \u2014 the report will be empty.");
+      window.print();
+    } catch(err) {
+      alert("Couldn't build the report: " + (err && err.code ? err.code : err.message));
+    } finally {
+      if(btn) { btn.disabled = false; btn.innerText = "Print report"; }
+    }
   }
 
   // ------------------------------------------------------- student cleanup
