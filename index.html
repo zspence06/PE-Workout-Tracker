@@ -831,7 +831,7 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
   import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -853,6 +853,7 @@
   window.fbCollection = collection;
   window.fbGetDocs = getDocs;
   window.fbDeleteDoc = deleteDoc;
+  window.fbWriteBatch = writeBatch;
   window.fbSignIn = signInWithEmailAndPassword;
   window.fbUpdatePassword = updatePassword;
 </script>
@@ -1158,6 +1159,7 @@
   let historyLogs = [];
   let todaysSubmission = null;
   let currentDocId = null;
+  let currentClassId = null;
   let savesInFlight = 0;
   let sizeWarned = false;
   const DEFAULT_LEARNING_TARGET = "Focus on explosive power and full range of motion.";
@@ -1444,9 +1446,17 @@
       let data = snap.data();
       currentUser = data.name;
       currentDocId = docId;
+      currentClassId = data.classId || null;
       savedRoutines = data.routines || [];
-      historyLogs = data.history || [];
       todaysSubmission = data.submission || null;
+      try {
+        historyLogs = await fetchHistory(docId);
+      } catch(err) {
+        console.error("History load failed:", err);
+        alert("Couldn't load your workout history — check your connection and log in again.");
+        currentUser = null; currentDocId = null; currentClassId = null;
+        return;
+      }
       alert("Welcome back, " + currentUser + "!");
     } else if(nameSnap.exists()) {
       // The name is claimed but this PIN does not lead to that record. Creating
@@ -1462,16 +1472,18 @@
       if(!confirm(`No record found for "${nameInput}".\n\nCreate a new account with PIN ${pinInput}?`)) return;
       currentUser = nameInput;
       currentDocId = docId;
+      currentClassId = null;
       savedRoutines = [];
       historyLogs = [];
       todaysSubmission = null;
       try {
-        await fbSetDoc(ref, { name: currentUser, routines: [], history: [], submission: null });
+        await fbSetDoc(ref, { name: currentUser, classId: null, routines: [], submission: null });
         await fbSetDoc(fbDoc(db, "names", nKey), { name: currentUser });
       } catch(err) {
         alert("Couldn't create your account — check your internet connection and try again.");
         currentUser = null;
         currentDocId = null;
+        currentClassId = null;
         return;
       }
       alert(`Welcome, ${currentUser}! Your PIN is ${pinInput} — remember it, you'll need it to log back in on any device.`);
@@ -1667,6 +1679,25 @@
     });
   }
 
+  // Workout logs are one document each under students/<addr>/history, so a
+  // roster can be listed without pulling anyone's semester, and no student can
+  // outgrow the 1MB single-document ceiling.
+  function historyCol(addr) {
+    return fbCollection(db, "students", addr, "history");
+  }
+
+  function newLogId() {
+    return "L" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  }
+
+  async function fetchHistory(addr) {
+    let snap = await fbGetDocs(historyCol(addr));
+    let rows = [];
+    snap.forEach(d => rows.push({ ...d.data(), logId: d.id }));
+    rows.sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    return rows;
+  }
+
   function getLastPerformance(exerciseName) {
     if(!exerciseName) return null;
     let name = exerciseName.trim().toLowerCase();
@@ -1799,7 +1830,7 @@
     renderSpreadsheet();
   }
 
-  function commitRowsToHistory(rows) {
+  async function commitRowsToHistory(rows) {
     let seen = new Set();
     for(let row of rows) {
       let key = row.date + "||" + (row.exercise || "").trim().toLowerCase();
@@ -1816,14 +1847,33 @@
       }
     }
 
-    historyLogs.push(...rows);
+    // One batch, so six exercises are one round trip and either all land or
+    // none do. The in-memory copy is only updated once the write succeeded.
+    let stamped = rows.map(r => ({ ...r, logId: r.logId || newLogId() }));
+    let batch = fbWriteBatch(db);
+    stamped.forEach(r => {
+      let { logId, ...fields } = r;
+      batch.set(fbDoc(db, "students", currentDocId, "history", logId), fields);
+    });
+    setSaveStatus("saving");
+    try {
+      await batch.commit();
+    } catch(err) {
+      console.error("History write failed:", err);
+      setSaveStatus("error", err && err.code ? err.code : "");
+      alert("Your workout could NOT be saved — check your connection and try again.");
+      return false;
+    }
+    setSaveStatus("saved");
+
+    historyLogs.push(...stamped);
     saveUserData();
     renderHistoryTable();
     updateKPIs();
     return true;
   }
 
-  function saveSpreadsheetLog() {
+  async function saveSpreadsheetLog() {
     if(!currentUser) {
       alert("Please log in with student name.");
       return;
@@ -1833,14 +1883,14 @@
       return;
     }
 
-    if(!commitRowsToHistory(spreadsheetRows)) return;
+    if(!await commitRowsToHistory(spreadsheetRows)) return;
 
     spreadsheetRows = [];
     renderSpreadsheet();
     alert("Workout logs committed successfully to History!");
   }
 
-  function submitWorkout(day) {
+  async function submitWorkout(day) {
     if(!currentUser) {
       alert("Please log in with student name first.");
       return;
@@ -1876,7 +1926,7 @@
       sets: r.sets, reps: r.reps, lbs: r.lbs, day: day, subId: subId
     }));
 
-    if(!commitRowsToHistory(rows)) return;
+    if(!await commitRowsToHistory(rows)) return;
 
     todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: items.map(r => r.name) };
     saveUserData();
@@ -1884,7 +1934,7 @@
     alert(`Workout ${day} submitted! Your teacher can now see it.`);
   }
 
-  function undoSubmitWorkout() {
+  async function undoSubmitWorkout() {
     if(!todaysSubmission) {
       alert("Nothing to undo — you haven't submitted a workout yet today.");
       return;
@@ -1899,17 +1949,34 @@
     }
 
     let before = historyLogs.length;
+    let doomed;
     if(todaysSubmission.subId) {
+      doomed = historyLogs.filter(h => h.subId === todaysSubmission.subId);
       historyLogs = historyLogs.filter(h => h.subId !== todaysSubmission.subId);
     } else {
       // Submission predates subId tagging: fall back to the old match, but keep
       // it to the same workout day so hand-logged rows are less likely to go.
       let names = new Set(todaysSubmission.exercises.map(n => n.trim().toLowerCase()));
-      historyLogs = historyLogs.filter(h => !(h.date === todaysSubmission.date
-        && h.day === todaysSubmission.day
-        && names.has((h.exercise || "").trim().toLowerCase())));
+      let hit = h => h.date === todaysSubmission.date && h.day === todaysSubmission.day
+        && names.has((h.exercise || "").trim().toLowerCase());
+      doomed = historyLogs.filter(hit);
+      historyLogs = historyLogs.filter(h => !hit(h));
     }
     let removed = before - historyLogs.length;
+
+    // Remove the stored rows too, or they reappear on the next login.
+    if(doomed.length) {
+      let batch = fbWriteBatch(db);
+      doomed.forEach(h => {
+        if(h.logId) batch.delete(fbDoc(db, "students", currentDocId, "history", h.logId));
+      });
+      try { await batch.commit(); }
+      catch(err) {
+        console.error("Undo delete failed:", err);
+        alert("Couldn't undo the submission on the server — reload and try again.");
+        return;
+      }
+    }
 
     todaysSubmission = null;
     saveUserData();
@@ -2010,7 +2077,6 @@
     if(!currentUser || !currentDocId) return;
     let payload = {
       routines: savedRoutines,
-      history: historyLogs,
       submission: todaysSubmission
     };
 
@@ -2038,7 +2104,7 @@
   // session, and one of them ends up writing into the other's record.
   function logoutStudent() {
     if(savesInFlight > 0 && !confirm("A save is still in progress. Log out anyway?")) return;
-    currentUser = null; currentDocId = null;
+    currentUser = null; currentDocId = null; currentClassId = null;
     savedRoutines = []; historyLogs = []; todaysSubmission = null;
     sizeWarned = false;
     document.getElementById('studentName').value = "";
@@ -2116,12 +2182,21 @@
 
     teacherCache = [];
     let allLogs = [];
+    let roster = [];
     snap.forEach(docSnap => {
       let data = docSnap.data();
-      let name = data.name || docSnap.id;
-      let hLogs = data.history || [];
-      teacherCache.push({ id: docSnap.id, name: name, count: hLogs.length });
-      hLogs.forEach(h => allLogs.push({ student: name, h: h }));
+      roster.push({ id: docSnap.id, name: data.name || docSnap.id, classId: data.classId || null });
+    });
+
+    // TEMPORARY (phase 1): one history fetch per student. Phase 4 replaces this
+    // with lazy loading on expand, which is the whole point of the subcollection.
+    let histories = await Promise.all(roster.map(stu =>
+      fetchHistory(stu.id).catch(err => { console.error("History load failed for", stu.name, err); return []; })));
+
+    roster.forEach((stu, i) => {
+      let hLogs = histories[i];
+      teacherCache.push({ id: stu.id, name: stu.name, classId: stu.classId, count: hLogs.length });
+      hLogs.forEach(h => allLogs.push({ student: stu.name, h: h }));
     });
 
     teacherCache.sort((a, b) => a.name.localeCompare(b.name));

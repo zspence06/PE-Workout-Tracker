@@ -11,13 +11,14 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // Shape of a student record. Note the absence of any credential field.
+    // Workout history is no longer stored here -- it lives in the history
+    // subcollection below, so a roster can be listed without downloading it.
     function isStudentShape(d) {
-      return d.keys().hasAll(['name', 'routines', 'history'])
+      return d.keys().hasAll(['name', 'routines'])
              && d.name is string
              && d.name.size() > 0
              && d.name.size() < 120
-             && d.routines is list
-             && d.history is list;
+             && d.routines is list;
     }
 
     match /students/{studentId} {
@@ -55,6 +56,27 @@ service cloud.firestore {
       allow write:  if request.auth != null
                     && request.resource.data.text is string
                     && request.resource.data.text.size() < 500;
+    }
+
+    // A student's workout log rows, one document each. Reachable only through
+    // the parent student document id, which is the PBKDF2 address -- the same
+    // secret that protects the student record itself. Listing these requires
+    // already knowing that address, so it is protected identically.
+    match /students/{studentId}/history/{logId} {
+      allow read, write: if true;
+    }
+
+    // Class periods. Students have to read the list to pick their class, so it
+    // is world-readable -- a class name is not a secret, and joining one grants
+    // nothing but a label the teacher can override. Only the teacher writes.
+    // There is no delete: classes are frozen, never removed.
+    match /classes/{classId} {
+      allow get, list: if true;
+      allow create, update: if request.auth != null
+                            && request.resource.data.name is string
+                            && request.resource.data.name.size() > 0
+                            && request.resource.data.name.size() < 100;
+      allow delete: if false;
     }
 
     // Firestore already denies anything unmatched; stated here for clarity.
