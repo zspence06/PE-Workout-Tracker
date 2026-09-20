@@ -19,6 +19,8 @@
       --danger-bg: #FEE2E2;       /* Soft Red Highlight */
       --success: #16A34A;         /* Success Green */
       --success-bg: #DCFCE7;      /* Soft Green Highlight */
+      --warn: #B45309;            /* Amber - a heads-up, not a refusal */
+      --warn-bg: #FEF3C7;         /* Soft Amber Highlight */
     }
 
     * {
@@ -353,6 +355,48 @@
       transition: width 0.3s ease-in-out;
     }
 
+    .blockers { margin-top: 12px; font-size: 0.88rem; }
+    .blockers ul { list-style: none; margin: 0; padding: 0; }
+    .blockers li { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; }
+    .blockers .mark { flex: 0 0 auto; font-weight: 700; line-height: 1.5; }
+    .blockers .bad .mark { color: var(--danger); }
+    .blockers .good .mark { color: var(--success); }
+    .blockers-head { font-weight: 700; margin: 0 0 4px; }
+
+    .blockers-warn {
+      margin: 10px 0 0;
+      padding: 8px 10px;
+      background: var(--warn-bg);
+      color: var(--warn);
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .blocker-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+
+    .btn-mini {
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      border-radius: 5px;
+      border: 1px solid var(--primary);
+      background: #FFFFFF;
+      color: var(--primary);
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .btn-mini:hover { background: var(--accent-light); }
+
+    /* Pressing Submit while blocked pulses the list, so the answer and the
+       button that refused are visibly the same thing. */
+    @keyframes blockerFlash {
+      0%, 100% { background-color: transparent; }
+      25%, 65% { background-color: var(--warn-bg); }
+    }
+    .blockers.flash { animation: blockerFlash 1.3s ease-in-out; border-radius: 6px; }
+
+    .row-flag { background-color: var(--warn-bg) !important; font-weight: 700; }
+
     .day-toggle {
       display: flex;
       border: 2px solid var(--primary);
@@ -591,6 +635,7 @@
         <span id="todayCore">Core 0 / 2</span>
       </div>
       <p id="todayHint" style="margin:10px 0 0; font-size:0.85rem; color:var(--subtle);"></p>
+      <p id="todaySubmitNote" style="margin:8px 0 0; font-size:0.85rem; font-weight:600;"></p>
     </div>
 
     <!-- ROUTINE SETUP: is the routine BUILT correctly, not today's progress -->
@@ -745,6 +790,7 @@
                 <tbody id="workoutATable"></tbody>
               </table>
             </div>
+            <div class="blockers" id="blockersA"></div>
             <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="submitWorkout('A')">✅ Submit Workout</button>
               <button class="btn btn-danger" onclick="undoSubmitWorkout('A')">↩️ Undo Submit</button>
@@ -771,6 +817,7 @@
                 <tbody id="workoutBTable"></tbody>
               </table>
             </div>
+            <div class="blockers" id="blockersB"></div>
             <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
               <button class="btn btn-primary" onclick="submitWorkout('B')">✅ Submit Workout</button>
               <button class="btn btn-danger" onclick="undoSubmitWorkout('B')">↩️ Undo Submit</button>
@@ -803,6 +850,7 @@
             <tbody id="editableSheetBody"></tbody>
           </table>
         </div>
+        <div class="blockers" id="blockersSheet"></div>
         <button class="btn btn-primary" onclick="saveSpreadsheetLog()" style="margin-top: 15px;">💾 Commit Log to History</button>
       </div>
     </div>
@@ -1380,6 +1428,16 @@
     return String(v == null ? "" : v).trim();
   }
 
+  // An exercise already sitting in today's history was still DONE today -- it
+  // just cannot be written twice. Treating it as work done is what stops "Skip
+  // it and submit the rest" from bouncing a student into a requirement blocker
+  // whose only remedy is ticking the very exercise that is blocked.
+  function loggedToday(r, date, history) {
+    let name = cleanName(r.name).toLowerCase();
+    return history.some(h => String(h.date) === String(date)
+      && cleanName(h.exercise).toLowerCase() === name);
+  }
+
   // Everything that would stop a set of rows reaching history, computed the same
   // way for the A/B submit and the spreadsheet commit so a clash is explained
   // identically wherever a student meets it. Pure -- rows and history in,
@@ -1418,9 +1476,13 @@
     }
     let blockers = [], warnings = [];
     let ticked = items.filter(r => doneToday(r, date));
+    // Credited = done today, whether that shows as a tick or as a row already in
+    // history. Only ticked rows get WRITTEN, but both count as work done.
+    let credited = items.filter(r => doneToday(r, date) || loggedToday(r, date, history));
+    let score = composedScore(credited.map(r => ({ ...r, done: true, doneDate: date })), day, date);
     let prime = day === "A" ? "lower" : "upper";
     let primeLabel = day === "A" ? "lower body" : "upper body";
-    if(composedScore(routines, day, date) < DAILY_TARGET && ticked.length < items.length) {
+    if(score < DAILY_TARGET && credited.length < items.length) {
       // A routine that cannot reach 6 however hard they try must not be told to
       // check off more of it -- that is an instruction it is impossible to obey.
       let ceiling = composedScore(items.map(r => ({ ...r, done: true, doneDate: date })), day, date);
@@ -1429,8 +1491,8 @@
           + "requirement (4 " + primeLabel + " + 2 core), so it cannot reach 6 of 6. Check off "
           + "everything in the list to submit it as it is, or add more exercises." });
       } else {
-        let primeDone = ticked.filter(r => r.targetArea === prime).length;
-        let coreDone = ticked.filter(r => r.targetArea === "core").length;
+        let primeDone = credited.filter(r => r.targetArea === prime).length;
+        let coreDone = credited.filter(r => r.targetArea === "core").length;
         if(primeDone < 4) {
           blockers.push({ code: "need-prime", text: (4 - primeDone) + " more " + primeLabel
             + " exercise" + ((4 - primeDone) === 1 ? "" : "s") + " checked off \u2014 you have "
@@ -1448,8 +1510,9 @@
     // A warning is not a blocker, and only worth raising on a submit that would
     // otherwise go through -- nagging about unticked rows on an already-blocked
     // submit just buries the thing they actually have to fix.
-    if(blockers.length === 0 && ticked.length < items.length) {
-      let skipped = items.filter(r => !doneToday(r, date)).map(r => cleanName(r.name));
+    if(blockers.length === 0 && credited.length < items.length) {
+      let skipped = items.filter(r => !doneToday(r, date) && !loggedToday(r, date, history))
+        .map(r => cleanName(r.name));
       warnings.push({ code: "not-ticked", exercises: skipped,
         text: skipped.length + (skipped.length === 1 ? " exercise won't" : " exercises won't")
           + " be logged because " + (skipped.length === 1 ? "it isn't" : "they aren't")
@@ -1927,6 +1990,7 @@
     renderSavedTags();
     renderMasterWorkoutPlan();
     updateProgressUI();
+    renderTodayCard();
     alert("Added " + exName + " to Workout " + day + "!");
   }
 
@@ -2074,6 +2138,7 @@
     renderSavedTags();
     renderMasterWorkoutPlan();
     updateProgressUI();
+    renderTodayCard();
   }
 
   function sendToSpreadsheet(item) {
@@ -2111,8 +2176,8 @@
     spreadsheetRows.forEach((row, idx) => {
       let tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><input type="date" class="sheet-input" value="${row.date}" onchange="spreadsheetRows[${idx}].date = this.value"></td>
-        <td><input type="text" class="sheet-input" value="${esc(row.exercise)}" placeholder="Exercise Name" onchange="spreadsheetRows[${idx}].exercise = this.value"></td>
+        <td><input type="date" class="sheet-input" value="${row.date}" onchange="spreadsheetRows[${idx}].date = this.value; renderAllBlockers();"></td>
+        <td><input type="text" class="sheet-input" value="${esc(row.exercise)}" placeholder="Exercise Name" onchange="spreadsheetRows[${idx}].exercise = this.value; renderAllBlockers();"></td>
         <td>
           <select class="sheet-select" onchange="spreadsheetRows[${idx}].component = this.value">
             <option value="Muscular Strength" ${row.component==='Muscular Strength'?'selected':''}>Muscular Strength</option>
@@ -2128,6 +2193,7 @@
       `;
       tbody.appendChild(tr);
     });
+    renderAllBlockers();
   }
 
   function deleteSpreadsheetRow(idx) {
@@ -2183,8 +2249,10 @@
       alert("Please log in with student name.");
       return;
     }
-    if(spreadsheetRows.length === 0) {
-      alert("No rows to commit.");
+    let res = spreadsheetBlockers(spreadsheetRows, historyLogs);
+    if(res.blockers.length) {
+      flashBlockers("Sheet");
+      alert(blockerAlert("these rows", res));
       return;
     }
 
@@ -2201,39 +2269,21 @@
       return;
     }
 
-    let items = savedRoutines.filter(r => r.day === day);
-    if(items.length === 0) {
-      alert(`Add exercises to Workout ${day} before submitting.`);
-      return;
-    }
     let dateVal = document.getElementById('workoutDate').value;
-    let score = composedScore(savedRoutines, day, dateVal);
-    let allTicked = items.every(r => doneToday(r, dateVal));
-    // Either the requirement is met, or they have ticked the lot. The second
-    // half is load-bearing: a student whose Workout A holds only 3 lower + 2
-    // core can never reach 6, and this is what keeps them able to submit at all.
-    if(score < DAILY_TARGET && !allTicked) {
-      alert(`Workout ${day} isn't finished yet.\n\n`
-        + `You're at ${score} of ${DAILY_TARGET} \u2014 Workout ${day} needs `
-        + `${day === "A" ? "4 lower body" : "4 upper body"} + 2 core.\n\n`
-        + `Check off what you did today, or tick every exercise in Workout ${day} `
-        + `to submit the whole list.`);
+    // Every guard that used to live inline here now lives in workoutBlockers,
+    // which the live checklist also reads -- so the button and the panel can
+    // never disagree, and a student sees ALL of it rather than the first one.
+    let res = workoutBlockers(savedRoutines, day, dateVal, historyLogs);
+    if(res.blockers.length) {
+      flashBlockers(day);
+      alert(blockerAlert("Workout " + day, res));
       return;
     }
 
     // Only what was actually ticked gets logged; a skipped exercise is no longer
     // written as a 0x0 @ 0lbs row.
+    let items = savedRoutines.filter(r => r.day === day);
     let logged = items.filter(r => doneToday(r, dateVal));
-
-    let seenNames = new Set();
-    for(let r of logged) {
-      let key = r.name.trim().toLowerCase();
-      if(seenNames.has(key)) {
-        alert(`"${r.name}" is added twice in Workout ${day}. Delete one copy (the red X button in that row) before submitting.`);
-        return;
-      }
-      seenNames.add(key);
-    }
 
     // Tag every row with the submission that created it, so an undo removes
     // exactly these rows and not an identically-named row logged by hand on the
@@ -2336,11 +2386,20 @@
     }
   }
 
+  let highlightExercise = "";
+
   function renderHistoryTable() {
     let tbody = document.getElementById('historyTable');
     tbody.innerHTML = "";
+    let today = selectedDate();
     historyLogs.forEach(h => {
       let tr = document.createElement('tr');
+      // Flag the row a blocked submit is colliding with, so "Show me" lands on
+      // something the student can actually point at.
+      if(highlightExercise && h.date === today
+         && cleanName(h.exercise).toLowerCase() === highlightExercise) {
+        tr.className = "row-flag";
+      }
       tr.innerHTML = `
         <td>${h.date}</td>
         <td>${h.day || "—"}</td>
@@ -2370,7 +2429,99 @@
     saveUserData();
   }
 
+  // One renderer for all three panels. Every string it shows comes out of the
+  // blocker functions, so the checklist cannot promise something the button
+  // then refuses -- the same guarantee composedScore gives the two progress bars.
+  function blockerHtml(res, label) {
+    let html = "";
+    if(res.blockers.length === 0) {
+      html += '<p class="blockers-head" style="color:var(--success);">'
+        + '\u2713 Ready to submit ' + esc(label) + '</p>';
+    } else {
+      html += '<p class="blockers-head">Before you can submit ' + esc(label) + ':</p><ul>';
+      res.blockers.forEach(b => {
+        html += '<li class="bad"><span class="mark">\u2717</span><span>' + esc(b.text)
+          + (b.code === "already-logged" && b.id != null ? blockerActionsHtml(b) : "")
+          + '</span></li>';
+      });
+      html += '</ul>';
+    }
+    res.warnings.forEach(w => {
+      html += '<p class="blockers-warn">\u26a0 ' + esc(w.text) + '</p>';
+    });
+    return html;
+  }
+
+  // Actions go out keyed by routine id, never by name: an exercise name is free
+  // text a student typed, and interpolating it into an onclick is how you get a
+  // quote break or worse.
+  function blockerActionsHtml(b) {
+    return '<div class="blocker-actions">'
+      + '<button type="button" class="btn-mini" onclick="showHistoryFor(' + Number(b.id) + ')">Show me</button>'
+      + '<button type="button" class="btn-mini" onclick="skipBlockedExercise(' + Number(b.id) + ')">'
+      + 'Skip it and submit the rest</button>'
+      + '</div>';
+  }
+
+  function renderAllBlockers() {
+    let date = selectedDate();
+    ["A", "B"].forEach(day => {
+      let host = document.getElementById("blockers" + day);
+      if(!host) return;
+      host.innerHTML = currentUser
+        ? blockerHtml(workoutBlockers(savedRoutines, day, date, historyLogs), "Workout " + day)
+        : "";
+    });
+    let sheet = document.getElementById("blockersSheet");
+    if(sheet) {
+      sheet.innerHTML = currentUser
+        ? blockerHtml(spreadsheetBlockers(spreadsheetRows, historyLogs), "these rows")
+        : "";
+    }
+    let note = document.getElementById("todaySubmitNote");
+    if(note) {
+      let n = currentUser
+        ? workoutBlockers(savedRoutines, todayDay, date, historyLogs).blockers.length : 0;
+      note.style.color = "var(--warn)";
+      note.innerText = n === 0 ? "" : "\u26a0 " + n + (n === 1 ? " thing" : " things")
+        + " to fix before you can submit \u2014 see the Master A/B Workout Plan tab.";
+    }
+  }
+
+  // Pressing a blocked Submit pulses the list and brings it into view, so the
+  // refusal and its explanation are visibly the same thing.
+  function flashBlockers(key) {
+    let host = document.getElementById("blockers" + key);
+    if(!host) return;
+    host.scrollIntoView({ behavior: "smooth", block: "center" });
+    host.classList.remove("flash");
+    void host.offsetWidth;
+    host.classList.add("flash");
+  }
+
+  function blockerAlert(label, res) {
+    return "Can't submit " + label + " yet \u2014 "
+      + res.blockers.length + (res.blockers.length === 1 ? " thing" : " things") + " to fix:\n\n"
+      + res.blockers.map((b, i) => (i + 1) + ". " + b.text).join("\n\n");
+  }
+
+  // History has no delete in the student UI, so an exercise already logged today
+  // cannot be cleared -- skipping it is the only way out, and it is one tick.
+  function skipBlockedExercise(id) {
+    setRoutineDone(id, false);
+  }
+
+  function showHistoryFor(id) {
+    let r = savedRoutines.find(x => x.id === id);
+    highlightExercise = r ? cleanName(r.name).toLowerCase() : "";
+    switchStudentTab('tab4');
+    renderHistoryTable();
+    let row = document.querySelector('#historyTable .row-flag');
+    if(row) row.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
   function renderTodayCard() {
+    renderAllBlockers();
     let card = document.getElementById('todayCard');
     let setup = document.getElementById('routineSetupCard');
     if(!card) return;
@@ -2542,10 +2693,13 @@
     document.querySelectorAll('.student-tab').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
 
-    if(evt) {
-      document.querySelectorAll('#studentView .sub-tab-btn').forEach(b => b.classList.remove('active'));
-      evt.target.classList.add('active');
-    }
+    // Match the button to the panel even when nothing was clicked -- "Show me"
+    // switches tabs in code, and the highlight used to stay where it was.
+    let btns = document.querySelectorAll('#studentView .sub-tab-btn');
+    btns.forEach(b => b.classList.remove('active'));
+    let target = evt ? evt.target
+      : [...btns].find(b => (b.getAttribute('onclick') || "").indexOf("'" + tabId + "'") !== -1);
+    if(target) target.classList.add('active');
   }
 
   function switchTeacherTab(tabId, evt) {

@@ -29,6 +29,7 @@ eval([
   grab('function doneToday(r, date) {'),
   grab('function composedScore(routines, day, date) {'),
   grab('function cleanName(v) {'),
+  grab('function loggedToday(r, date, history) {'),
   grab('function rowConflicts(rows, history) {'),
   grab('function workoutBlockers(routines, day, date, history) {'),
   grab('function spreadsheetBlockers(rows, history) {'),
@@ -271,6 +272,33 @@ eval([
     assert.deepStrictEqual(
       spreadsheetBlockers([{ date:D, exercise:"Squat" }, { date:"2026-09-19", exercise:"Squat" }], [])
         .blockers, [], 'the same exercise on two different dates is fine');
+
+    // THE LOOP, found by driving the real UI: Back Squat is already in history,
+    // so it blocks. Skipping it unticks it -- and if an already-logged exercise
+    // did not count toward the requirement, the student would then be told to
+    // check off one more lower body, whose only candidate is the very exercise
+    // that is blocked. Two blockers, each cleared only by causing the other.
+    {
+      const hist = [{ date: D, exercise: "Squat" }];
+      const blocked = workoutBlockers(full, "A", D, hist);
+      assert.deepStrictEqual(codes(blocked), ["already-logged"], 'ticked + in history blocks');
+
+      const skipped = full.map(r => r.name === "Squat" ? { ...r, done:false, doneDate:"" } : r);
+      assert.deepStrictEqual(codes(workoutBlockers(skipped, "A", D, hist)), [],
+        'skipping it clears the way instead of bouncing into a requirement blocker');
+
+      // ...and it is credited, not silently dropped: without history it IS short.
+      assert.deepStrictEqual(codes(workoutBlockers(skipped, "A", D, [])),
+        ["need-prime"], 'the same untick with no history row is genuinely short');
+
+      assert.ok(loggedToday({ name:"  squat " }, D, hist), 'match ignores case and padding');
+      assert.ok(!loggedToday({ name:"Squat" }, "2026-09-19", hist), 'and is scoped to the date');
+
+      // An already-logged exercise that was never ticked is not a conflict at
+      // all -- nothing is about to be written twice.
+      assert.deepStrictEqual(workoutBlockers(skipped, "A", D, hist).warnings, [],
+        'a credited exercise is not warned about as unlogged');
+    }
 
     assert.strictEqual(cleanName("  Back Squat "), "Back Squat", 'names are trimmed');
     assert.strictEqual(cleanName(null), "", 'and null-safe');
