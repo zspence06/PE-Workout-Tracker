@@ -1,5 +1,6 @@
-// Runnable check for the record-addressing scheme. Pulls the real functions out
-// of index.html so it can't drift from what ships.   node identity-check.js
+// Runnable checks for the logic index.html depends on being exactly right:
+// record addressing, HTML escaping, and number clamping. Pulls the real functions
+// out of index.html so they cannot drift from what ships.   node self-check.js
 const fs = require('fs'), assert = require('assert');
 const src = fs.readFileSync(__dirname + '/index.html', 'utf8');
 
@@ -20,6 +21,8 @@ if (!constLine) throw new Error('PIN_ITERATIONS not found');
 eval([
   constLine.replace('const ', 'globalThis.'),
   grab('function esc(v) {'),
+  grab('function cleanNumber(value, max) {'),
+  grab('function todayLocal() {'),
   grab('function normalizeName(name) {'),
   grab('async function sha256Hex(str) {'),
   grab('async function studentDocId(name, pin) {'),
@@ -65,6 +68,27 @@ eval([
   assert.strictEqual(esc(undefined), '', 'undefined renders empty');
   assert.strictEqual(esc(0), '0', 'zero must survive');
 
+  // Number clamping: sets/reps/weight are free-entry boxes. Clamp, never reject,
+  // so a typo cannot block a student mid-workout.
+  assert.strictEqual(cleanNumber('-5', 99), 0, 'negatives floor to 0');
+  assert.strictEqual(cleanNumber('abc', 99), 0, 'garbage floors to 0');
+  assert.strictEqual(cleanNumber('', 99), 0, 'empty floors to 0');
+  assert.strictEqual(cleanNumber('7.9', 99), 7, 'decimals truncate');
+  assert.strictEqual(cleanNumber('1e9', 2000), 2000, 'absurd values clamp to max');
+  assert.strictEqual(cleanNumber('Infinity', 99), 0, 'Infinity is not a value: reads as 0, never leaks through');
+  assert.strictEqual(cleanNumber('0', 99), 0, 'a skipped exercise stays 0');
+  assert.strictEqual(cleanNumber('45', 2000), 45, 'ordinary values pass through');
+
+  // Local date, not UTC: after 7pm CDT toISOString() already reads tomorrow.
+  assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(todayLocal()), 'todayLocal shape');
+  {
+    const d = new Date();
+    const expected = [d.getFullYear(),
+      String(d.getMonth() + 1).padStart(2, '0'),
+      String(d.getDate()).padStart(2, '0')].join('-');
+    assert.strictEqual(todayLocal(), expected, 'todayLocal must match the local calendar day');
+  }
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -74,4 +98,5 @@ eval([
   console.log('derivation: ' + ms + 'ms/login, ' + PIN_ITERATIONS + ' iterations');
   console.log('identity-check OK - 9 distinct addresses, normalization stable, no name or PIN recoverable from an address');
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
+  console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

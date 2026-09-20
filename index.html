@@ -450,6 +450,7 @@
             <input type="text" id="studentName" placeholder="e.g., Alex Smith">
             <input type="text" id="studentPin" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" style="max-width: 110px;">
             <button class="btn btn-primary" onclick="loginStudent()">Log In / Register</button>
+            <button class="btn btn-secondary hidden" id="logoutBtn" onclick="logoutStudent()">Log Out</button>
           </div>
           <p style="font-size: 0.8rem; color: var(--subtle); margin: 4px 0 0;">First time? Type a new 4-digit PIN and it becomes yours. Forgot it? Ask your teacher to reset it.</p>
         </div>
@@ -743,6 +744,13 @@
 
       <div class="card">
         <h3>All Student Activity Logs</h3>
+        <div class="form-group" style="max-width: 320px;">
+          <label for="teacherStudentFilter">Show:</label>
+          <select id="teacherStudentFilter" onchange="renderTeacherLogs()">
+            <option value="">All students</option>
+          </select>
+        </div>
+        <p id="teacherLogsCount" style="color: var(--subtle); font-size: 0.9rem;"></p>
         <div style="overflow-x: auto;">
           <table>
             <thead>
@@ -1128,12 +1136,31 @@
   let historyLogs = [];
   let todaysSubmission = null;
   let currentDocId = null;
+  let savesInFlight = 0;
+  let sizeWarned = false;
   let currentLearningTarget = "Focus on explosive power and full range of motion.";
+
+  // toISOString() is UTC: after 7pm local it hands back tomorrow's date, which
+  // would file an evening workout under the wrong day.
+  function todayLocal() {
+    let d = new Date();
+    return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split("T")[0];
+  }
+
+  // Sets, reps and weight are free-entry number boxes. Clamp rather than reject
+  // so a student is never blocked mid-workout by a typo.
+  function cleanNumber(value, max) {
+    let n = Math.floor(Number(value));
+    if(!isFinite(n) || n < 0) return 0;
+    return n > max ? max : n;
+  }
+
+  const FIELD_MAX = { sets: 99, reps: 999, lbs: 2000 };
 
   function updateRoutineField(id, field, value) {
     let r = savedRoutines.find(x => x.id === id);
     if(!r) return;
-    r[field] = value;
+    r[field] = (field in FIELD_MAX) ? cleanNumber(value, FIELD_MAX[field]) : value;
   }
 
   // Student names and custom exercise names are free text typed by students and
@@ -1191,7 +1218,7 @@
   }
 
   window.onload = function() {
-    let today = new Date().toISOString().split('T')[0];
+    let today = todayLocal();
     document.getElementById('workoutDate').value = today;
     document.getElementById('activeTargetBannerText').innerText = currentLearningTarget;
     
@@ -1310,6 +1337,7 @@
       alert(`Welcome, ${currentUser}! Your PIN is ${pinInput} — remember it, you'll need it to log back in on any device.`);
     }
 
+    document.getElementById('logoutBtn').classList.remove('hidden');
     renderSavedTags();
     renderHistoryTable();
     renderMasterWorkoutPlan();
@@ -1617,9 +1645,9 @@
             <option value="Flexibility" ${row.component==='Flexibility'?'selected':''}>Flexibility</option>
           </select>
         </td>
-        <td><input type="number" class="sheet-input" value="${row.sets}" onchange="spreadsheetRows[${idx}].sets = this.value"></td>
-        <td><input type="number" class="sheet-input" value="${row.reps}" onchange="spreadsheetRows[${idx}].reps = this.value"></td>
-        <td><input type="number" class="sheet-input" value="${row.lbs}" onchange="spreadsheetRows[${idx}].lbs = this.value"></td>
+        <td><input type="number" class="sheet-input" value="${row.sets}" onchange="spreadsheetRows[${idx}].sets = cleanNumber(this.value, 99); renderSpreadsheet();"></td>
+        <td><input type="number" class="sheet-input" value="${row.reps}" onchange="spreadsheetRows[${idx}].reps = cleanNumber(this.value, 999); renderSpreadsheet();"></td>
+        <td><input type="number" class="sheet-input" value="${row.lbs}" onchange="spreadsheetRows[${idx}].lbs = cleanNumber(this.value, 2000); renderSpreadsheet();"></td>
         <td><button class="btn btn-danger" onclick="deleteSpreadsheetRow(${idx})">X</button></td>
       `;
       tbody.appendChild(tr);
@@ -1699,14 +1727,18 @@
     }
 
     let dateVal = document.getElementById('workoutDate').value;
+    // Tag every row with the submission that created it, so an undo removes
+    // exactly these rows and not an identically-named row logged by hand on the
+    // spreadsheet tab the same day.
+    let subId = "s" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
     let rows = items.map(r => ({
       date: dateVal, exercise: r.name, component: r.component,
-      sets: r.sets, reps: r.reps, lbs: r.lbs, day: day
+      sets: r.sets, reps: r.reps, lbs: r.lbs, day: day, subId: subId
     }));
 
     if(!commitRowsToHistory(rows)) return;
 
-    todaysSubmission = { date: dateVal, day: day, exercises: items.map(r => r.name) };
+    todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: items.map(r => r.name) };
     saveUserData();
     renderSubmitStatus();
     alert(`Workout ${day} submitted! Your teacher can now see it.`);
@@ -1726,15 +1758,25 @@
       return;
     }
 
-    let names = new Set(todaysSubmission.exercises.map(n => n.trim().toLowerCase()));
-    historyLogs = historyLogs.filter(h => !(h.date === todaysSubmission.date && names.has((h.exercise || "").trim().toLowerCase())));
+    let before = historyLogs.length;
+    if(todaysSubmission.subId) {
+      historyLogs = historyLogs.filter(h => h.subId !== todaysSubmission.subId);
+    } else {
+      // Submission predates subId tagging: fall back to the old match, but keep
+      // it to the same workout day so hand-logged rows are less likely to go.
+      let names = new Set(todaysSubmission.exercises.map(n => n.trim().toLowerCase()));
+      historyLogs = historyLogs.filter(h => !(h.date === todaysSubmission.date
+        && h.day === todaysSubmission.day
+        && names.has((h.exercise || "").trim().toLowerCase())));
+    }
+    let removed = before - historyLogs.length;
 
     todaysSubmission = null;
     saveUserData();
     renderHistoryTable();
     updateKPIs();
     renderSubmitStatus();
-    alert("Submission undone. Fix your workout and resubmit when ready.");
+    alert(`Submission undone (${removed} log ${removed === 1 ? "row" : "rows"} removed). Fix your workout and resubmit when ready.`);
   }
 
   function renderSubmitStatus() {
@@ -1800,14 +1842,73 @@
     }
   }
 
+  function setSaveStatus(state, detail) {
+    let el = document.getElementById('saveStatus');
+    if(!el) return;
+    if(state === "saving") {
+      el.style.display = "block"; el.style.background = "var(--accent-light)";
+      el.style.color = "var(--primary)"; el.innerText = "Saving\u2026";
+    } else if(state === "saved") {
+      el.style.display = "block"; el.style.background = "var(--success-bg)";
+      el.style.color = "var(--success)"; el.innerText = "\u2705 Saved";
+      setTimeout(() => { if(el.innerText === "\u2705 Saved") el.style.display = "none"; }, 1800);
+    } else {
+      // Stays on screen: a save that silently failed is how a student loses a
+      // whole workout without ever being told.
+      el.style.display = "block"; el.style.background = "var(--danger-bg)";
+      el.style.color = "var(--danger)";
+      el.innerText = "\u26A0\uFE0F NOT SAVED \u2014 " + (detail || "check your connection") + ". Keep this tab open and try again.";
+    }
+  }
+
+  // Firestore caps a document at 1MB. Everything a student does lives in one
+  // document, so crossing that line means every later save fails. Warn while
+  // there is still room rather than after the wall.
+  const DOC_WARN_BYTES = 800000;
+
   function saveUserData() {
     if(!currentUser || !currentDocId) return;
-    let ref = fbDoc(db, "students", currentDocId);
-    fbUpdateDoc(ref, {
+    let payload = {
       routines: savedRoutines,
       history: historyLogs,
       submission: todaysSubmission
-    }).catch(err => console.error("Save failed:", err));
+    };
+
+    let approx = 0;
+    try { approx = new Blob([JSON.stringify(payload)]).size; } catch(e) { approx = 0; }
+    if(approx > DOC_WARN_BYTES && !sizeWarned) {
+      sizeWarned = true;
+      alert("Your workout history is getting very large and is close to the limit "
+        + "where saving stops working.\n\nLet your teacher know so older logs can be "
+        + "cleared out.");
+    }
+
+    savesInFlight++;
+    setSaveStatus("saving");
+    fbUpdateDoc(fbDoc(db, "students", currentDocId), payload)
+      .then(() => { savesInFlight--; if(savesInFlight === 0) setSaveStatus("saved"); })
+      .catch(err => {
+        savesInFlight--;
+        console.error("Save failed:", err);
+        setSaveStatus("error", err && err.code ? err.code : "");
+      });
+  }
+
+  // Shared devices: without this the next student inherits the previous one's
+  // session, and one of them ends up writing into the other's record.
+  function logoutStudent() {
+    if(savesInFlight > 0 && !confirm("A save is still in progress. Log out anyway?")) return;
+    currentUser = null; currentDocId = null;
+    savedRoutines = []; historyLogs = []; todaysSubmission = null;
+    sizeWarned = false;
+    document.getElementById('studentName').value = "";
+    document.getElementById('studentPin').value = "";
+    document.getElementById('logoutBtn').classList.add('hidden');
+    document.getElementById('saveStatus').style.display = "none";
+    renderSavedTags(); renderHistoryTable(); renderMasterWorkoutPlan();
+    renderSpreadsheet(); renderSubmitStatus(); updateProgressUI();
+    switchStudentTab('tab1');
+    alert("Logged out. The next student can log in now.");
   }
 
   function switchStudentTab(tabId, evt) {
@@ -1838,13 +1939,20 @@
     alert("Learning target updated for class.");
   }
 
+  // The dashboard used to render every student's entire history in one table.
+  // Fine for a class of twelve; a browser-killer for a few hundred students with
+  // a semester of logs each. Newest first, capped, with a per-student filter.
+  const TEACHER_LOG_CAP = 400;
+  let teacherCache = [];
+
   async function renderTeacherLogs() {
     let tbody = document.getElementById('teacherLogsTable');
     let studentsBody = document.getElementById('manageStudentsTable');
+    let filterEl = document.getElementById('teacherStudentFilter');
+    let countEl = document.getElementById('teacherLogsCount');
     tbody.innerHTML = "";
     studentsBody.innerHTML = "";
 
-    let totalLogsCount = 0;
     let snap;
     try {
       snap = await fbGetDocs(fbCollection(db, "students"));
@@ -1853,37 +1961,66 @@
       return;
     }
 
+    teacherCache = [];
+    let allLogs = [];
     snap.forEach(docSnap => {
       let data = docSnap.data();
       let name = data.name || docSnap.id;
       let hLogs = data.history || [];
-      totalLogsCount += hLogs.length;
+      teacherCache.push({ id: docSnap.id, name: name, count: hLogs.length });
+      hLogs.forEach(h => allLogs.push({ student: name, h: h }));
+    });
 
-      hLogs.forEach(h => {
-        let tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><strong>${esc(name)}</strong></td>
-          <td>${esc(h.date)}</td>
-          <td>${esc(h.day || "—")}</td>
-          <td>${esc(h.exercise)}</td>
-          <td>${esc(h.component)}</td>
-          <td>${h.sets}</td>
-          <td>${h.reps}</td>
-          <td>${h.lbs} lbs</td>
-        `;
-        tbody.appendChild(tr);
-      });
+    teacherCache.sort((a, b) => a.name.localeCompare(b.name));
 
+    // Preserve the chosen filter across re-renders (a PIN reset re-renders).
+    let chosen = filterEl ? filterEl.value : "";
+    if(filterEl) {
+      filterEl.innerHTML = '<option value="">All students</option>'
+        + teacherCache.map(s => `<option value="${esc(s.name)}">${esc(s.name)} (${s.count})</option>`).join("");
+      filterEl.value = teacherCache.some(s => s.name === chosen) ? chosen : "";
+      chosen = filterEl.value;
+    }
+
+    let shown = chosen ? allLogs.filter(r => r.student === chosen) : allLogs;
+    shown = shown.slice().sort((a, b) => String(b.h.date || "").localeCompare(String(a.h.date || "")));
+    let capped = shown.slice(0, TEACHER_LOG_CAP);
+
+    capped.forEach(r => {
+      let h = r.h;
+      let tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${esc(r.student)}</strong></td>
+        <td>${esc(h.date)}</td>
+        <td>${esc(h.day || "\u2014")}</td>
+        <td>${esc(h.exercise)}</td>
+        <td>${esc(h.component)}</td>
+        <td>${esc(h.sets)}</td>
+        <td>${esc(h.reps)}</td>
+        <td>${esc(h.lbs)} lbs</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    if(countEl) {
+      countEl.innerText = shown.length === 0
+        ? "No logs yet."
+        : `Showing ${capped.length} of ${shown.length} log rows`
+          + (chosen ? ` for ${chosen}` : " across all students")
+          + (capped.length < shown.length ? " \u2014 newest first. Filter by student to see more." : "");
+    }
+
+    teacherCache.forEach(stu => {
       let str = document.createElement('tr');
       str.innerHTML = `
-        <td><strong>${esc(name)}</strong></td>
-        <td><button class="btn btn-danger" onclick="resetStudentPin('${esc(docSnap.id)}')">Reset PIN</button></td>
+        <td><strong>${esc(stu.name)}</strong></td>
+        <td><button class="btn btn-danger" onclick="resetStudentPin('${esc(stu.id)}')">Reset PIN</button></td>
       `;
       studentsBody.appendChild(str);
     });
 
     document.getElementById('kpiStudents').innerText = snap.size;
-    document.getElementById('kpiLogs').innerText = totalLogsCount;
+    document.getElementById('kpiLogs').innerText = allLogs.length;
   }
 
   async function resetStudentPin(studentId) {
@@ -1940,6 +2077,8 @@
     }
   }
 </script>
+
+<div id="saveStatus" aria-live="polite" style="position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:900; padding:10px 18px; border-radius:6px; font-weight:600; font-size:0.9rem; box-shadow:0 4px 10px rgba(0,0,0,.18); display:none;"></div>
 
 <div id="printSheet" class="print-only"></div>
 
