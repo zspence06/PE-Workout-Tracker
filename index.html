@@ -729,52 +729,19 @@
       </div>
 
       <div class="card">
-        <h3>Manage Students</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+          <h3 style="margin:0;">Students by Class</h3>
+          <div class="form-group" style="margin:0; min-width:220px;">
+            <select id="classFilter" onchange="renderTeacherLogs()">
+              <option value="">All classes</option>
+            </select>
+          </div>
+        </div>
         <p style="color: var(--subtle); font-size: 0.9rem;">
-          Reset a PIN if a student forgets it, or delete a student to remove them and all
-          their logs. Everything here is permanent and does not need the Firebase console.
+          Click a student to see their workouts. Everything here &mdash; moving a student to a
+          different class, resetting a PIN, deleting a student &mdash; is done from this page.
         </p>
-        <div style="overflow-x: auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Class</th>
-                <th>Logs</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="manageStudentsTable"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <div class="card">
-        <h3>All Student Activity Logs</h3>
-        <div class="form-group" style="max-width: 320px;">
-          <label for="teacherStudentFilter">Show:</label>
-          <select id="teacherStudentFilter" onchange="renderTeacherLogs()">
-            <option value="">All students</option>
-          </select>
-        </div>
-        <p id="teacherLogsCount" style="color: var(--subtle); font-size: 0.9rem;"></p>
-        <div style="overflow-x: auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Date</th>
-                <th>Workout</th>
-                <th>Exercise</th>
-                <th>Component</th>
-                <th>Sets</th>
-                <th>Reps</th>
-                <th>Weight</th>
-              </tr>
-            </thead>
-            <tbody id="teacherLogsTable"></tbody>
-          </table>
-        </div>
+        <div id="dashboardBody"></div>
       </div>
     </div>
 
@@ -1502,6 +1469,8 @@
       todaysSubmission = data.submission || null;
       try {
         historyLogs = await fetchHistory(docId);
+        // Self-heal: if the stored summary disagrees with the real rows, fix it.
+        if((data.logCount || 0) !== historyLogs.length) saveUserData();
       } catch(err) {
         console.error("History load failed:", err);
         alert("Couldn't load your workout history — check your connection and log in again.");
@@ -1528,7 +1497,8 @@
       historyLogs = [];
       todaysSubmission = null;
       try {
-        await fbSetDoc(ref, { name: currentUser, classId: null, routines: [], submission: null });
+        await fbSetDoc(ref, { name: currentUser, classId: null, routines: [],
+                              submission: null, logCount: 0, lastLogDate: "" });
         await fbSetDoc(fbDoc(db, "names", nKey), { name: currentUser });
       } catch(err) {
         alert("Couldn't create your account — check your internet connection and try again.");
@@ -2139,9 +2109,18 @@
 
   function saveUserData() {
     if(!currentUser || !currentDocId) return;
+    // logCount and lastLogDate are a summary of the history subcollection, kept
+    // on the record so the teacher dashboard can list a whole class without
+    // downloading anyone's workouts. They are derived, never authoritative:
+    // every login recomputes them from the real rows, so drift self-heals.
     let payload = {
       routines: savedRoutines,
-      submission: todaysSubmission
+      submission: todaysSubmission,
+      logCount: historyLogs.length,
+      lastLogDate: historyLogs.reduce((m, h) => {
+        let d = String(h.date || "");
+        return d > m ? d : m;
+      }, "")
     };
 
     let approx = 0;
@@ -2225,19 +2204,143 @@
     alert("Learning target updated. Every student will see it the next time they open the tracker.");
   }
 
-  // The dashboard used to render every student's entire history in one table.
-  // Fine for a class of twelve; a browser-killer for a few hundred students with
-  // a semester of logs each. Newest first, capped, with a per-student filter.
-  const TEACHER_LOG_CAP = 400;
+  // The dashboard lists students only. A student's workouts are fetched when
+  // their row is opened -- which is the whole reason history moved out of the
+  // student record in phase 1. Opening a class of thirty costs thirty small
+  // reads, not thirty semesters of logs.
   let teacherCache = [];
+  let expandedStudents = new Set();
+  let historyByStudent = {};
+
+  const RECENTLY_MOVED_MS = 7 * 24 * 60 * 60 * 1000;
+
+  function movedRecently(stu) {
+    if(!stu.classChangedAt) return false;
+    let t = Date.parse(stu.classChangedAt);
+    return isFinite(t) && (Date.now() - t) < RECENTLY_MOVED_MS;
+  }
+
+  async function toggleStudentLogs(studentId) {
+    if(expandedStudents.has(studentId)) {
+      expandedStudents.delete(studentId);
+    } else {
+      expandedStudents.add(studentId);
+      if(!historyByStudent[studentId]) {
+        let host = document.getElementById("logs-" + studentId);
+        if(host) host.innerHTML = '<p style="color:var(--subtle); padding:8px;">Loading workouts...</p>';
+        try {
+          historyByStudent[studentId] = await fetchHistory(studentId);
+        } catch(err) {
+          if(host) host.innerHTML = '<p style="color:var(--danger); padding:8px;">Could not load workouts: '
+            + esc(err.code || err.message) + '</p>';
+          return;
+        }
+      }
+    }
+    renderDashboardBody();
+  }
+
+  async function reassignStudent(studentId, classId) {
+    let stu = teacherCache.find(x => x.id === studentId);
+    if(!stu) return;
+    try {
+      await fbUpdateDoc(fbDoc(db, "students", studentId),
+        { classId: classId || null, classChangedAt: new Date().toISOString() });
+    } catch(err) {
+      alert("Couldn't move that student: " + (err && err.code ? err.code : err.message));
+      return;
+    }
+    await renderTeacherLogs();
+  }
+
+  function studentRowHtml(stu) {
+    let open = expandedStudents.has(stu.id);
+    let rows = historyByStudent[stu.id];
+    let flag = movedRecently(stu)
+      ? ' <span style="font-size:.72rem; color:var(--danger); font-weight:700;">MOVED RECENTLY</span>' : "";
+    let options = '<option value="">Unassigned</option>' + classCache.map(c =>
+      '<option value="' + esc(c.id) + '"' + (c.id === stu.classId ? " selected" : "") + '>'
+      + esc(c.name) + (c.frozen ? " (archived)" : "") + '</option>').join("");
+
+    let detail = "";
+    if(open) {
+      if(!rows) {
+        detail = '<p style="color:var(--subtle); padding:8px;">Loading workouts...</p>';
+      } else if(rows.length === 0) {
+        detail = '<p style="color:var(--subtle); padding:8px;">No workouts logged yet.</p>';
+      } else {
+        let sorted = rows.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+        detail = '<div style="overflow-x:auto;"><table><thead><tr>'
+          + '<th>Date</th><th>Workout</th><th>Exercise</th><th>Component</th>'
+          + '<th>Sets</th><th>Reps</th><th>Weight</th></tr></thead><tbody>'
+          + sorted.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
+              + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
+              + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td></tr>').join("")
+          + '</tbody></table></div>';
+      }
+    }
+
+    return '<div style="border:1px solid var(--border); border-radius:6px; margin-bottom:8px;">'
+      + '<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px;">'
+      + '<div style="cursor:pointer; flex:1; min-width:200px;" onclick="toggleStudentLogs(\'' + esc(stu.id) + '\')">'
+      + '<span style="font-weight:700; color:var(--primary);">' + (open ? "&#9662;" : "&#9656;") + '</span> '
+      + '<strong>' + esc(stu.name) + '</strong>' + flag
+      + '<br><span style="font-size:.8rem; color:var(--subtle); margin-left:18px;">'
+      + stu.count + ' workout' + (stu.count === 1 ? "" : "s")
+      + (stu.lastLogDate ? ' &middot; last ' + esc(stu.lastLogDate) : " &middot; none yet")
+      + '</span></div>'
+      + '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">'
+      + '<select class="sheet-select" style="max-width:190px;" onchange="reassignStudent(\'' + esc(stu.id) + '\', this.value)">'
+      + options + '</select>'
+      + '<button class="btn btn-secondary" onclick="resetStudentPin(\'' + esc(stu.id) + '\')">Reset PIN</button>'
+      + '<button class="btn btn-danger" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
+      + '</div></div>'
+      + (open ? '<div id="logs-' + esc(stu.id) + '" style="border-top:1px solid var(--border); padding:6px;">' + detail + '</div>' : "")
+      + '</div>';
+  }
+
+  function renderDashboardBody() {
+    let host = document.getElementById('dashboardBody');
+    if(!host) return;
+    let filter = document.getElementById('classFilter').value;
+
+    // Group by class in the teacher's own ordering, with anyone unassigned last
+    // but impossible to miss.
+    let groups = classCache.map(c => ({ id: c.id, name: c.name, frozen: c.frozen,
+      students: teacherCache.filter(s => s.classId === c.id) }));
+    groups.push({ id: "", name: "Unassigned", frozen: false,
+      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)) });
+
+    if(filter !== "") groups = groups.filter(g => g.id === filter);
+    groups = groups.filter(g => g.students.length > 0 || g.id === filter);
+
+    if(groups.length === 0 || groups.every(g => g.students.length === 0)) {
+      host.innerHTML = '<p style="color:var(--subtle);">No students yet'
+        + (filter ? " in this class." : ". They appear here as soon as they log in.") + '</p>';
+      return;
+    }
+
+    host.innerHTML = groups.map(g => {
+      let isUnassigned = g.id === "";
+      let heading = esc(g.name)
+        + (g.frozen ? ' <span style="font-size:.72rem; color:var(--danger);">ARCHIVED</span>' : "")
+        + ' <span style="font-weight:400; color:var(--subtle); font-size:.9rem;">('
+        + g.students.length + ')</span>';
+      let body = g.students.length
+        ? g.students.map(studentRowHtml).join("")
+        : '<p style="color:var(--subtle);">Nobody in this class yet.</p>';
+      return '<div style="margin-bottom:18px;">'
+        + '<h4 style="margin:0 0 8px; color:' + (isUnassigned && g.students.length ? "var(--danger)" : "var(--primary)") + ';">'
+        + heading + '</h4>' + body + '</div>';
+    }).join("");
+  }
 
   async function renderTeacherLogs() {
-    let tbody = document.getElementById('teacherLogsTable');
-    let studentsBody = document.getElementById('manageStudentsTable');
-    let filterEl = document.getElementById('teacherStudentFilter');
-    let countEl = document.getElementById('teacherLogsCount');
-    tbody.innerHTML = "";
-    studentsBody.innerHTML = "";
+    let host = document.getElementById('dashboardBody');
+    if(host && !host.innerHTML) host.innerHTML = '<p style="color:var(--subtle);">Loading...</p>';
+
+    try { classCache = await fetchClasses(); }
+    catch(err) { console.error("Class load failed:", err); classCache = []; }
 
     let snap;
     try {
@@ -2247,89 +2350,34 @@
       return;
     }
 
-    // The roster shows each student's class name, so the class list has to be
-    // in hand before it renders.
-    try { classCache = await fetchClasses(); }
-    catch(err) { console.error("Class load failed:", err); classCache = []; }
-
     teacherCache = [];
-    let allLogs = [];
-    let roster = [];
     snap.forEach(docSnap => {
-      let data = docSnap.data();
-      roster.push({ id: docSnap.id, name: data.name || docSnap.id, classId: data.classId || null });
+      let d = docSnap.data();
+      teacherCache.push({
+        id: docSnap.id,
+        name: d.name || docSnap.id,
+        classId: d.classId || null,
+        classChangedAt: d.classChangedAt || null,
+        count: d.logCount || 0,
+        lastLogDate: d.lastLogDate || ""
+      });
     });
-
-    // TEMPORARY (phase 1): one history fetch per student. Phase 4 replaces this
-    // with lazy loading on expand, which is the whole point of the subcollection.
-    let histories = await Promise.all(roster.map(stu =>
-      fetchHistory(stu.id).catch(err => { console.error("History load failed for", stu.name, err); return []; })));
-
-    roster.forEach((stu, i) => {
-      let hLogs = histories[i];
-      teacherCache.push({ id: stu.id, name: stu.name, classId: stu.classId, count: hLogs.length });
-      hLogs.forEach(h => allLogs.push({ student: stu.name, h: h }));
-    });
-
     teacherCache.sort((a, b) => a.name.localeCompare(b.name));
 
-    // Preserve the chosen filter across re-renders (a PIN reset re-renders).
-    let chosen = filterEl ? filterEl.value : "";
+    // Keep the chosen filter across the re-render a reassign or delete causes.
+    let filterEl = document.getElementById('classFilter');
     if(filterEl) {
-      filterEl.innerHTML = '<option value="">All students</option>'
-        + teacherCache.map(s => `<option value="${esc(s.name)}">${esc(s.name)} (${s.count})</option>`).join("");
-      filterEl.value = teacherCache.some(s => s.name === chosen) ? chosen : "";
-      chosen = filterEl.value;
+      let chosen = filterEl.value;
+      filterEl.innerHTML = '<option value="">All classes</option>'
+        + classCache.map(c => '<option value="' + esc(c.id) + '">' + esc(c.name)
+            + (c.frozen ? " (archived)" : "") + '</option>').join("")
+        + '<option value="__none">Unassigned</option>';
+      filterEl.value = [...filterEl.options].some(o => o.value === chosen) ? chosen : "";
     }
 
-    let shown = chosen ? allLogs.filter(r => r.student === chosen) : allLogs;
-    shown = shown.slice().sort((a, b) => String(b.h.date || "").localeCompare(String(a.h.date || "")));
-    let capped = shown.slice(0, TEACHER_LOG_CAP);
-
-    capped.forEach(r => {
-      let h = r.h;
-      let tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${esc(r.student)}</strong></td>
-        <td>${esc(h.date)}</td>
-        <td>${esc(h.day || "\u2014")}</td>
-        <td>${esc(h.exercise)}</td>
-        <td>${esc(h.component)}</td>
-        <td>${esc(h.sets)}</td>
-        <td>${esc(h.reps)}</td>
-        <td>${esc(h.lbs)} lbs</td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    if(countEl) {
-      countEl.innerText = shown.length === 0
-        ? "No logs yet."
-        : `Showing ${capped.length} of ${shown.length} log rows`
-          + (chosen ? ` for ${chosen}` : " across all students")
-          + (capped.length < shown.length ? " \u2014 newest first. Filter by student to see more." : "");
-    }
-
-    teacherCache.forEach(stu => {
-      let cls = classCache.find(c => c.id === stu.classId);
-      let clsLabel = cls
-        ? esc(cls.name) + (cls.frozen ? ' <span style="color:var(--danger); font-size:.75rem;">(archived)</span>' : "")
-        : '<span style="color:var(--danger); font-weight:600;">Unassigned</span>';
-      let str = document.createElement('tr');
-      str.innerHTML = `
-        <td><strong>${esc(stu.name)}</strong></td>
-        <td>${clsLabel}</td>
-        <td>${stu.count}</td>
-        <td style="white-space:nowrap;">
-          <button class="btn btn-secondary" onclick="resetStudentPin('${esc(stu.id)}')">Reset PIN</button>
-          <button class="btn btn-danger" onclick="deleteStudent('${esc(stu.id)}')">Delete</button>
-        </td>
-      `;
-      studentsBody.appendChild(str);
-    });
-
-    document.getElementById('kpiStudents').innerText = snap.size;
-    document.getElementById('kpiLogs').innerText = allLogs.length;
+    document.getElementById('kpiStudents').innerText = teacherCache.length;
+    document.getElementById('kpiLogs').innerText = teacherCache.reduce((n, s) => n + s.count, 0);
+    renderDashboardBody();
   }
 
   // ------------------------------------------------- student class assignment
