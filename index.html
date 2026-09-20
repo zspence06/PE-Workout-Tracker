@@ -1589,6 +1589,8 @@
       currentClassId = data.classId || null;
       savedRoutines = data.routines || [];
       todaysSubmission = data.submission || null;
+      // Only today's choice is worth restoring; yesterday's says nothing.
+      applyTodayDay(data.todayDate === todayLocal() ? data.todayDay : "A");
       try {
         historyLogs = await fetchHistory(docId);
         // Self-heal: if the stored summary disagrees with the real rows, fix it.
@@ -1620,7 +1622,8 @@
       todaysSubmission = null;
       try {
         await fbSetDoc(ref, { name: currentUser, classId: null, routines: [],
-                              submission: null, logCount: 0, lastLogDate: "" });
+                              submission: null, logCount: 0, lastLogDate: "",
+                              todayDate: "", todayDay: "A", todayScore: 0, todayDone: 0 });
         await fbSetDoc(fbDoc(db, "names", nKey), { name: currentUser });
       } catch(err) {
         alert("Couldn't create your account — check your internet connection and try again.");
@@ -2322,6 +2325,7 @@
     // on the record so the teacher dashboard can list a whole class without
     // downloading anyone's workouts. They are derived, never authoritative:
     // every login recomputes them from the real rows, so drift self-heals.
+    let dateVal = selectedDate();
     let payload = {
       routines: savedRoutines,
       submission: todaysSubmission,
@@ -2329,7 +2333,15 @@
       lastLogDate: historyLogs.reduce((m, h) => {
         let d = String(h.date || "");
         return d > m ? d : m;
-      }, "")
+      }, ""),
+      // Today's progress, summarised on the same terms as logCount: derived,
+      // never authoritative, recomputed on every save. This is what lets a
+      // roster of thirty draw a progress bar each without anybody's history
+      // being downloaded -- the whole point of moving history out in phase 1.
+      todayDate: dateVal,
+      todayDay: todayDay,
+      todayScore: composedScore(savedRoutines, todayDay, dateVal),
+      todayDone: savedRoutines.filter(r => r.day === todayDay && doneToday(r, dateVal)).length
     };
 
     let approx = 0;
