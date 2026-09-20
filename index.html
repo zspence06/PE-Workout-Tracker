@@ -468,7 +468,7 @@
         </div>
         <div class="form-group" style="flex: 1; min-width: 200px;">
           <label for="workoutDate">Workout Date:</label>
-          <input type="date" id="workoutDate" onchange="renderSubmitStatus()">
+          <input type="date" id="workoutDate" onchange="onDateChange()">
         </div>
       </div>
     </div>
@@ -1272,6 +1272,18 @@
     r[field] = (field in FIELD_MAX) ? cleanNumber(value, FIELD_MAX[field]) : value;
   }
 
+  // Ticking stamps the date beside the flag and unticking clears both, so a box
+  // can never be left checked with a stale date behind it.
+  function setRoutineDone(id, checked) {
+    let r = savedRoutines.find(x => x.id === id);
+    if(!r) return;
+    r.done = checked;
+    r.doneDate = checked ? selectedDate() : "";
+    renderMasterWorkoutPlan();
+    renderTodayCard();
+    saveUserData();
+  }
+
   // Student names and custom exercise names are free text typed by students and
   // land in the teacher's dashboard, inside her authenticated session. Everything
   // student-controlled goes through here before it reaches innerHTML.
@@ -1722,6 +1734,7 @@
   }
 
   function renderMasterWorkoutPlan() {
+    let date = selectedDate();
     let bodyA = document.getElementById('workoutATable');
     let bodyB = document.getElementById('workoutBTable');
     bodyA.innerHTML = "";
@@ -1734,9 +1747,9 @@
         : `<span style="color:var(--subtle);">—</span>`;
 
       let tr = document.createElement('tr');
-      if(r.done) tr.classList.add('completed-row');
+      if(doneToday(r, date)) tr.classList.add('completed-row');
       tr.innerHTML = `
-        <td><input type="checkbox" ${r.done ? 'checked' : ''} onchange="updateRoutineField(${r.id}, 'done', this.checked); toggleCompleteRow(this); saveUserData();"></td>
+        <td><input type="checkbox" ${doneToday(r, date) ? 'checked' : ''} onchange="setRoutineDone(${r.id}, this.checked)"></td>
         <td><strong>${esc(r.name)}</strong><br><span style="font-size:0.75rem; color:var(--subtle);">${esc(r.component)}</span></td>
         <td>${lastCell}</td>
         <td><input type="number" class="sheet-input" value="${r.sets}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
@@ -1838,15 +1851,6 @@
           <tbody>${rowsHtml || '<tr><td colspan="5">No exercises added yet.</td></tr>'}</tbody>
         </table>
       </div>`;
-  }
-
-  function toggleCompleteRow(cb) {
-    let row = cb.closest('tr');
-    if(cb.checked) {
-      row.classList.add('completed-row');
-    } else {
-      row.classList.remove('completed-row');
-    }
   }
 
   function deleteRoutineItem(id) {
@@ -2070,6 +2074,14 @@
     updateKPIs();
     renderSubmitStatus();
     alert(`Submission undone (${removed} log ${removed === 1 ? "row" : "rows"} removed). Fix your workout and resubmit when ready.`);
+  }
+
+  // Changing the date changes which ticks count, so the table and the bar both
+  // have to be recomputed -- not just the submitted banner.
+  function onDateChange() {
+    renderSubmitStatus();
+    renderMasterWorkoutPlan();
+    renderTodayCard();
   }
 
   function renderSubmitStatus() {
