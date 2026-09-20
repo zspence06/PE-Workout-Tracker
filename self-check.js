@@ -28,6 +28,10 @@ eval([
   grab('function todayLocal() {'),
   grab('function doneToday(r, date) {'),
   grab('function composedScore(routines, day, date) {'),
+  grab('function cleanName(v) {'),
+  grab('function rowConflicts(rows, history) {'),
+  grab('function workoutBlockers(routines, day, date, history) {'),
+  grab('function spreadsheetBlockers(rows, history) {'),
   grab('function shouldShowTarget(now, seen, currentText) {'),
   grab('function nextFreeId(start, existing) {'),
   grab('function normalizeName(name) {'),
@@ -180,6 +184,98 @@ eval([
     mk("A","core",T), mk("A","core",T), mk("B","upper",Y)
   ], "B", T), 0, 'a finished Workout A does not fill Workout B');
 
+  // Why a submit is refused. The live checklist and the button read the SAME
+  // function, so the panel can never promise something the button then denies.
+  {
+    const D = "2026-09-20";
+    const codes = r => r.blockers.map(b => b.code);
+    const full = [
+      { id:1, name:"Squat",  day:"A", targetArea:"lower", done:true, doneDate:D },
+      { id:2, name:"Lunge",  day:"A", targetArea:"lower", done:true, doneDate:D },
+      { id:3, name:"Press",  day:"A", targetArea:"lower", done:true, doneDate:D },
+      { id:4, name:"Raise",  day:"A", targetArea:"lower", done:true, doneDate:D },
+      { id:5, name:"Plank",  day:"A", targetArea:"core",  done:true, doneDate:D },
+      { id:6, name:"DeadBug",day:"A", targetArea:"core",  done:true, doneDate:D }
+    ];
+
+    assert.deepStrictEqual(codes(workoutBlockers([], "A", D, [])), ["empty-day"],
+      'a day with no exercises names that, and nothing else');
+
+    assert.deepStrictEqual(codes(workoutBlockers(full, "A", D, [])), [],
+      'a complete, conflict-free Workout A has no blockers');
+
+    // Two ticked (both lower): short on BOTH halves, and both are reported --
+    // the whole point is that one press shows every blocker at once.
+    const partial = full.map((r, i) => i < 2 ? r : { ...r, done:false, doneDate:"" });
+    assert.deepStrictEqual(codes(workoutBlockers(partial, "A", D, [])),
+      ["need-prime", "need-core"], 'both halves reported together, not one at a time');
+
+    // A routine that CANNOT reach 6 must not be told to check off more; its only
+    // route is ticking everything, so it gets its own message.
+    const short = [
+      { id:1, name:"Squat", day:"A", targetArea:"lower", done:false, doneDate:"" },
+      { id:2, name:"Lunge", day:"A", targetArea:"lower", done:false, doneDate:"" },
+      { id:3, name:"Plank", day:"A", targetArea:"core",  done:false, doneDate:"" }
+    ];
+    assert.deepStrictEqual(codes(workoutBlockers(short, "A", D, [])), ["short-routine"],
+      'a routine too short to reach 6 gets a reachable instruction');
+    assert.deepStrictEqual(
+      codes(workoutBlockers(short.map(r => ({ ...r, done:true, doneDate:D })), "A", D, [])), [],
+      'that same short routine submits once everything is ticked');
+
+    // The dead end: already in history, and the blocker carries the routine id
+    // so "Skip it" can act without interpolating a student-typed name into HTML.
+    const clash = workoutBlockers(full, "A", D, [{ date:D, exercise:"Plank" }]);
+    assert.deepStrictEqual(codes(clash), ["already-logged"], 'an existing history row blocks');
+    assert.strictEqual(clash.blockers[0].id, 5, 'the blocker carries the routine id, not just a name');
+    assert.ok(/Plank/.test(clash.blockers[0].text), 'and names the exercise');
+
+    // Case and padding must not let a duplicate through.
+    assert.deepStrictEqual(
+      codes(workoutBlockers(full, "A", D, [{ date:D, exercise:"  plank  " }])),
+      ["already-logged"], 'the history match ignores case and padding');
+    assert.deepStrictEqual(codes(workoutBlockers(full, "A", D, [{ date:"2026-09-19", exercise:"Plank" }])),
+      [], 'yesterday\'s history row does not block today');
+
+    // Same exercise twice in one day's routine.
+    const dup = full.concat([{ id:7, name:"plank", day:"A", targetArea:"core", done:true, doneDate:D }]);
+    assert.deepStrictEqual(codes(workoutBlockers(dup, "A", D, [])), ["dup-in-submission"],
+      'the same exercise twice in one day is reported once');
+
+    // Warnings are NOT blockers, and only surface when the submit would succeed.
+    const extra = full.concat([
+      { id:7, name:"Calf", day:"A", targetArea:"lower", done:false, doneDate:"" },
+      { id:8, name:"Twist", day:"A", targetArea:"core", done:false, doneDate:"" }
+    ]);
+    const warned = workoutBlockers(extra, "A", D, []);
+    assert.deepStrictEqual(codes(warned), [], 'unticked extras do not block a met requirement');
+    assert.deepStrictEqual(warned.warnings.map(w => w.code), ["not-ticked"],
+      'but they are warned about, because they will not be logged');
+    assert.deepStrictEqual(warned.warnings[0].exercises, ["Calf", "Twist"], 'and named');
+    assert.deepStrictEqual(workoutBlockers(full, "A", D, []).warnings, [],
+      'nothing unticked, nothing to warn about');
+    assert.deepStrictEqual(workoutBlockers(partial, "A", D, []).warnings, [],
+      'a blocked submit does not also nag about unticked rows');
+
+    // The spreadsheet commit shares the conflict half and adds its own empty case.
+    assert.deepStrictEqual(spreadsheetBlockers([], []).blockers.map(b => b.code), ["no-rows"],
+      'committing nothing says so');
+    assert.deepStrictEqual(
+      spreadsheetBlockers([{ date:D, exercise:"Squat" }], [{ date:D, exercise:"Squat" }])
+        .blockers.map(b => b.code), ["already-logged"],
+      'the spreadsheet hits the same already-logged wall, explained the same way');
+    assert.deepStrictEqual(
+      spreadsheetBlockers([{ date:D, exercise:"Squat" }, { date:D, exercise:"SQUAT" }], [])
+        .blockers.map(b => b.code), ["dup-in-submission"],
+      'two rows for one exercise on one date is caught before the write');
+    assert.deepStrictEqual(
+      spreadsheetBlockers([{ date:D, exercise:"Squat" }, { date:"2026-09-19", exercise:"Squat" }], [])
+        .blockers, [], 'the same exercise on two different dates is fine');
+
+    assert.strictEqual(cleanName("  Back Squat "), "Back Squat", 'names are trimmed');
+    assert.strictEqual(cleanName(null), "", 'and null-safe');
+  }
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -191,6 +287,7 @@ eval([
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
   console.log('routineid-check OK - no collision when several exercises are added in the same millisecond');
   console.log('target-check   OK - once per hour per device, and always on a changed target');
+  console.log('blocker-check  OK - every blocker reported at once, short routines reachable, warnings never block');
   console.log('daily-check    OK - composition enforced, extras capped, stale and legacy ticks ignored');
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

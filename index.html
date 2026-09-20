@@ -1376,6 +1376,97 @@
     return (el && el.value) ? el.value : todayLocal();
   }
 
+  function cleanName(v) {
+    return String(v == null ? "" : v).trim();
+  }
+
+  // Everything that would stop a set of rows reaching history, computed the same
+  // way for the A/B submit and the spreadsheet commit so a clash is explained
+  // identically wherever a student meets it. Pure -- rows and history in,
+  // findings out, no DOM. Each name is reported once however many rows hit it.
+  function rowConflicts(rows, history) {
+    let seen = new Set(), dupes = new Map(), clashes = new Map(), out = [];
+    rows.forEach(r => {
+      let name = cleanName(r.exercise);
+      let lower = name.toLowerCase();
+      let key = String(r.date || "") + "||" + lower;
+      if(seen.has(key) && !dupes.has(lower)) dupes.set(lower, r);
+      seen.add(key);
+      let hit = history.some(h => String(h.date) === String(r.date)
+        && cleanName(h.exercise).toLowerCase() === lower);
+      if(hit && !clashes.has(lower)) clashes.set(lower, r);
+    });
+    dupes.forEach(r => out.push({ code: "dup-in-submission", id: r.id,
+      exercise: cleanName(r.exercise),
+      text: '"' + cleanName(r.exercise) + '" is in this submission twice. An exercise can '
+        + 'only be logged once a day \u2014 delete one copy with the red X button.' }));
+    // The dead end: history has no delete anywhere in the student UI, so this
+    // one cannot be cleared by removing the other row. Skipping is the way out.
+    clashes.forEach(r => out.push({ code: "already-logged", id: r.id,
+      exercise: cleanName(r.exercise),
+      text: '"' + cleanName(r.exercise) + '" is already in your History Log for '
+        + String(r.date) + '.' }));
+    return out;
+  }
+
+  // The A/B submit, in the order a student should deal with it.
+  function workoutBlockers(routines, day, date, history) {
+    let items = routines.filter(r => r.day === day);
+    if(items.length === 0) {
+      return { blockers: [{ code: "empty-day", text: "Workout " + day + " has no exercises "
+        + "yet. Add some on the Build Routine & Library tab." }], warnings: [] };
+    }
+    let blockers = [], warnings = [];
+    let ticked = items.filter(r => doneToday(r, date));
+    let prime = day === "A" ? "lower" : "upper";
+    let primeLabel = day === "A" ? "lower body" : "upper body";
+    if(composedScore(routines, day, date) < DAILY_TARGET && ticked.length < items.length) {
+      // A routine that cannot reach 6 however hard they try must not be told to
+      // check off more of it -- that is an instruction it is impossible to obey.
+      let ceiling = composedScore(items.map(r => ({ ...r, done: true, doneDate: date })), day, date);
+      if(ceiling < DAILY_TARGET) {
+        blockers.push({ code: "short-routine", text: "Workout " + day + " is short of the "
+          + "requirement (4 " + primeLabel + " + 2 core), so it cannot reach 6 of 6. Check off "
+          + "everything in the list to submit it as it is, or add more exercises." });
+      } else {
+        let primeDone = ticked.filter(r => r.targetArea === prime).length;
+        let coreDone = ticked.filter(r => r.targetArea === "core").length;
+        if(primeDone < 4) {
+          blockers.push({ code: "need-prime", text: (4 - primeDone) + " more " + primeLabel
+            + " exercise" + ((4 - primeDone) === 1 ? "" : "s") + " checked off \u2014 you have "
+            + primeDone + " of 4." });
+        }
+        if(coreDone < 2) {
+          blockers.push({ code: "need-core", text: (2 - coreDone) + " more core exercise"
+            + ((2 - coreDone) === 1 ? "" : "s") + " checked off \u2014 you have "
+            + coreDone + " of 2." });
+        }
+      }
+    }
+    let rows = ticked.map(r => ({ exercise: r.name, date: date, id: r.id }));
+    rowConflicts(rows, history).forEach(c => blockers.push(c));
+    // A warning is not a blocker, and only worth raising on a submit that would
+    // otherwise go through -- nagging about unticked rows on an already-blocked
+    // submit just buries the thing they actually have to fix.
+    if(blockers.length === 0 && ticked.length < items.length) {
+      let skipped = items.filter(r => !doneToday(r, date)).map(r => cleanName(r.name));
+      warnings.push({ code: "not-ticked", exercises: skipped,
+        text: skipped.length + (skipped.length === 1 ? " exercise won't" : " exercises won't")
+          + " be logged because " + (skipped.length === 1 ? "it isn't" : "they aren't")
+          + " checked off: " + skipped.join(", ") + "." });
+    }
+    return { blockers: blockers, warnings: warnings };
+  }
+
+  // The spreadsheet commit: the same conflict half, plus its own empty case.
+  function spreadsheetBlockers(rows, history) {
+    if(rows.length === 0) {
+      return { blockers: [{ code: "no-rows", text: "There are no rows to commit. Use "
+        + "\u201c+ Add Blank Row\u201d, or tap an exercise tag to send it here." }], warnings: [] };
+    }
+    return { blockers: rowConflicts(rows, history), warnings: [] };
+  }
+
   // Sets, reps and weight are free-entry number boxes. Clamp rather than reject
   // so a student is never blocked mid-workout by a typo.
   function cleanNumber(value, max) {
