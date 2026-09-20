@@ -445,6 +445,28 @@
       color: var(--success);
     }
 
+    .mini-bar {
+      width: 120px;
+      height: 8px;
+      background-color: #E2E8F0;
+      border-radius: 4px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+    }
+
+    .mini-fill { height: 100%; background-color: var(--primary); }
+    .mini-fill.is-complete { background-color: var(--success); }
+    .mini-label { font-size: 0.8rem; color: var(--subtle); margin-left: 8px; }
+    .mini-label.muted { font-style: italic; }
+
+    .class-summary {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--subtle);
+      margin: 2px 0 6px;
+    }
+
     .print-only { display: none; }
     @media print {
       .container, .modal-overlay { display: none !important; }
@@ -2479,12 +2501,40 @@
     await renderTeacherLogs();
   }
 
+  // The stored summary describes whatever day the student last worked on. If
+  // that is not today it says nothing about today, so it reports as not started
+  // rather than letting Thursday's full green bar read as Friday's progress.
+  function todayStats(stu, today) {
+    let fresh = stu.todayDate === today;
+    return {
+      score: fresh ? stu.todayScore : 0,
+      done: fresh ? stu.todayDone : 0,
+      day: fresh ? stu.todayDay : "",
+      started: fresh && stu.todayDone > 0,
+      complete: fresh && stu.todayScore >= DAILY_TARGET,
+      submitted: stu.submittedDate === today
+    };
+  }
+
   function studentRowHtml(stu) {
     let open = expandedStudents.has(stu.id);
     let rows = historyByStudent[stu.id];
     let flag = movedRecently(stu)
       ? ' <span style="font-size:.72rem; color:var(--danger); font-weight:700;" '
         + 'title="This student changed their own class in the last week">MOVED THEMSELVES</span>' : "";
+    let t = todayStats(stu, todayLocal());
+    let pct = Math.round((t.score / DAILY_TARGET) * 100);
+    let extra = t.done - t.score;
+    let progress = t.started
+      ? '<div class="mini-bar"><div class="mini-fill' + (t.complete ? " is-complete" : "")
+        + '" style="width:' + pct + '%;"></div></div>'
+        + '<span class="mini-label">' + t.score + ' of ' + DAILY_TARGET
+        + (t.day ? ' &middot; ' + esc(t.day) : "")
+        + (extra > 0 ? ' &middot; +' + extra : "")
+        + (t.submitted ? ' &middot; submitted &#9989;' : "") + '</span>'
+      : '<span class="mini-label muted">Not started today'
+        + (stu.lastLogDate ? ' &middot; last ' + esc(stu.lastLogDate) : "") + '</span>';
+
     let options = '<option value="">Unassigned</option>' + classCache.map(c =>
       '<option value="' + esc(c.id) + '"' + (c.id === stu.classId ? " selected" : "") + '>'
       + esc(c.name) + (c.frozen ? " (archived)" : "") + '</option>').join("");
@@ -2512,9 +2562,9 @@
       + '<div style="cursor:pointer; flex:1; min-width:200px;" onclick="toggleStudentLogs(\'' + esc(stu.id) + '\')">'
       + '<span style="font-weight:700; color:var(--primary);">' + (open ? "&#9662;" : "&#9656;") + '</span> '
       + '<strong>' + esc(stu.name) + '</strong>' + flag
-      + '<br><span style="font-size:.8rem; color:var(--subtle); margin-left:18px;">'
-      + stu.count + ' workout' + (stu.count === 1 ? "" : "s")
-      + (stu.lastLogDate ? ' &middot; last ' + esc(stu.lastLogDate) : " &middot; none yet")
+      + '<br><span style="margin-left:18px;">' + progress + '</span>'
+      + '<br><span style="font-size:.76rem; color:var(--subtle); margin-left:18px;">'
+      + stu.count + ' exercise' + (stu.count === 1 ? "" : "s") + ' logged all term'
       + '</span></div>'
       + '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">'
       + '<select class="sheet-select" style="max-width:190px;" onchange="reassignStudent(\'' + esc(stu.id) + '\', this.value)">'
@@ -2547,8 +2597,29 @@
       return;
     }
 
+    let today = todayLocal();
     host.innerHTML = groups.map(g => {
       let isUnassigned = g.id === "";
+      let stats = g.students.map(s => todayStats(s, today));
+      let started = stats.filter(x => x.started);
+      let atFull = stats.filter(x => x.complete).length;
+      let sent = stats.filter(x => x.submitted).length;
+      // Averaged over the students who actually started, and labelled as such:
+      // absences would otherwise sink a number meant to read the room.
+      let avg = started.length
+        ? Math.round(started.reduce((n, x) => n + x.score, 0) / started.length / DAILY_TARGET * 100)
+        : 0;
+      let summary = g.students.length
+        ? '<p class="class-summary">' + started.length + ' started &middot; '
+          + atFull + ' at ' + DAILY_TARGET + '/' + DAILY_TARGET + ' &middot; '
+          + sent + ' submitted</p>'
+          + (started.length
+              ? '<div class="progress-bar-container" style="height:10px; margin:0 0 4px;">'
+                + '<div class="progress-bar-fill" style="width:' + avg + '%;"></div></div>'
+                + '<p class="class-summary">' + avg + '% average of '
+                + started.length + ' active</p>'
+              : "")
+        : "";
       let heading = esc(g.name)
         + (g.frozen ? ' <span style="font-size:.72rem; color:var(--danger);">ARCHIVED</span>' : "")
         + ' <span style="font-weight:400; color:var(--subtle); font-size:.9rem;">('
@@ -2558,7 +2629,7 @@
         : '<p style="color:var(--subtle);">Nobody in this class yet.</p>';
       return '<div style="margin-bottom:18px;">'
         + '<h4 style="margin:0 0 8px; color:' + (isUnassigned && g.students.length ? "var(--danger)" : "var(--primary)") + ';">'
-        + heading + '</h4>' + body + '</div>';
+        + heading + '</h4>' + summary + body + '</div>';
     }).join("");
   }
 
@@ -2587,7 +2658,12 @@
         classChangedAt: d.classChangedAt || null,
         classChangedBy: d.classChangedBy || null,
         count: d.logCount || 0,
-        lastLogDate: d.lastLogDate || ""
+        lastLogDate: d.lastLogDate || "",
+        todayDate: d.todayDate || "",
+        todayDay: d.todayDay || "",
+        todayScore: d.todayScore || 0,
+        todayDone: d.todayDone || 0,
+        submittedDate: (d.submission && d.submission.date) || ""
       });
     });
     teacherCache.sort((a, b) => a.name.localeCompare(b.name));
