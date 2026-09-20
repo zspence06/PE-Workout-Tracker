@@ -342,6 +342,40 @@
       transition: width 0.3s ease-in-out;
     }
 
+    .day-toggle {
+      display: flex;
+      border: 2px solid var(--primary);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .day-btn {
+      background: #FFFFFF;
+      color: var(--primary);
+      border: none;
+      padding: 9px 18px;
+      font-weight: 700;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+
+    .day-btn.active {
+      background: var(--primary);
+      color: #FFFFFF;
+    }
+
+    .today-split {
+      display: flex;
+      gap: 22px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--subtle);
+    }
+
+    .progress-bar-fill.is-complete { background-color: var(--success); }
+
     .ab-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
@@ -473,11 +507,35 @@
       </div>
     </div>
 
-    <!-- PE BALANCE & PROGRESS BAR CARD -->
-    <div class="card">
+    <!-- TODAY'S WORKOUT PROGRESS -->
+    <div class="card hidden" id="todayCard">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <h3 style="margin:0; color:var(--primary);">&#127947;&#65039; Today's Workout</h3>
+        <div class="day-toggle" role="group" aria-label="Which workout are you doing today">
+          <button type="button" id="dayBtnA" class="day-btn active" onclick="setTodayDay('A')">Workout A</button>
+          <button type="button" id="dayBtnB" class="day-btn" onclick="setTodayDay('B')">Workout B</button>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-top:14px;">
+        <span id="todayLabel" style="font-weight:600;">0 of 6</span>
+        <span id="todayPct" style="font-weight:700; color:var(--primary);">0%</span>
+      </div>
+      <div class="progress-bar-container" id="todayBar" role="progressbar"
+           aria-valuemin="0" aria-valuemax="6" aria-valuenow="0">
+        <div id="todayBarFill" class="progress-bar-fill"></div>
+      </div>
+      <div class="today-split">
+        <span id="todayPrime">Lower body 0 / 4</span>
+        <span id="todayCore">Core 0 / 2</span>
+      </div>
+      <p id="todayHint" style="margin:10px 0 0; font-size:0.85rem; color:var(--subtle);"></p>
+    </div>
+
+    <!-- ROUTINE SETUP: is the routine BUILT correctly, not today's progress -->
+    <div class="card hidden" id="routineSetupCard">
       <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
-        <h3 style="margin: 0; color: var(--primary);">📋 Routine Balance & Program Requirements</h3>
-        <span id="progressPercentText" style="font-weight: 700; color: var(--primary);">0% Complete</span>
+        <h3 style="margin: 0; color: var(--primary);">📋 Routine Setup</h3>
+        <span id="progressPercentText" style="font-weight: 700; color: var(--primary);">0 of 12 slots filled</span>
       </div>
       <p style="margin: 5px 0 10px 0; font-size: 0.85rem; color: var(--subtle);">
         Each workout day requires a <strong>minimum of 6 total exercises</strong>:
@@ -1581,6 +1639,7 @@
     renderMasterWorkoutPlan();
     renderSubmitStatus();
     updateProgressUI();
+    renderTodayCard();
   }
 
   function handleTargetAreaChange() {
@@ -2116,6 +2175,67 @@
     });
   }
 
+  let todayDay = "A";
+
+  // Split from setTodayDay so the login path can restore a stored choice without
+  // triggering the save that a real click should.
+  function applyTodayDay(day) {
+    todayDay = (day === "B") ? "B" : "A";
+    document.getElementById('dayBtnA').classList.toggle('active', todayDay === "A");
+    document.getElementById('dayBtnB').classList.toggle('active', todayDay === "B");
+  }
+
+  function setTodayDay(day) {
+    applyTodayDay(day);
+    renderTodayCard();
+    saveUserData();
+  }
+
+  function renderTodayCard() {
+    let card = document.getElementById('todayCard');
+    let setup = document.getElementById('routineSetupCard');
+    if(!card) return;
+    // Neither bar means anything to a logged-out visitor, who would otherwise
+    // land on four red requirement boxes.
+    card.classList.toggle('hidden', !currentUser);
+    if(setup) setup.classList.toggle('hidden', !currentUser);
+    if(!currentUser) return;
+
+    let date = selectedDate();
+    let prime = todayDay === "A" ? "lower" : "upper";
+    let primeLabel = todayDay === "A" ? "Lower body" : "Upper body";
+    let hit = savedRoutines.filter(r => r.day === todayDay && doneToday(r, date));
+    let score = composedScore(savedRoutines, todayDay, date);
+    let pct = Math.round((score / DAILY_TARGET) * 100);
+
+    document.getElementById('todayLabel').innerText = score + " of " + DAILY_TARGET;
+    document.getElementById('todayPct').innerText = pct + "%";
+    document.getElementById('todayBar').setAttribute('aria-valuenow', score);
+
+    let fill = document.getElementById('todayBarFill');
+    fill.style.width = pct + "%";
+    fill.classList.toggle('is-complete', score >= DAILY_TARGET);
+
+    document.getElementById('todayPrime').innerText =
+      primeLabel + " " + hit.filter(r => r.targetArea === prime).length + " / 4";
+    document.getElementById('todayCore').innerText =
+      "Core " + hit.filter(r => r.targetArea === "core").length + " / 2";
+
+    let planned = savedRoutines.filter(r => r.day === todayDay).length;
+    let extra = hit.length - score;
+    let hint;
+    if(planned === 0) {
+      hint = "Nothing in Workout " + todayDay + " yet \u2014 add exercises on the "
+        + "\"Build Routine & Library\" tab.";
+    } else if(score >= DAILY_TARGET) {
+      hint = "Requirement met \u2014 ready to submit"
+        + (extra > 0 ? " (" + extra + " extra will be logged too)." : ".");
+    } else {
+      hint = (DAILY_TARGET - score) + " more to meet the requirement.";
+    }
+    document.getElementById('todayHint').innerText = hint;
+  }
+
   function updateProgressUI() {
     let aLower = savedRoutines.filter(r => r.day === "A" && r.targetArea === "lower").length;
     let aCore = savedRoutines.filter(r => r.day === "A" && r.targetArea === "core").length;
@@ -2131,7 +2251,9 @@
     let pct = Math.round((totalScore / 12) * 100);
 
     document.getElementById('progressBarFill').style.width = pct + "%";
-    document.getElementById('progressPercentText').innerText = pct + "% Complete";
+    // "Complete" belongs to the daily card now; this one reports how much of the
+    // routine has been BUILT, which is a different question with the same shape.
+    document.getElementById('progressPercentText').innerText = totalScore + " of 12 slots filled";
   }
 
   function updateReqCard(cardId, countId, current, required, label) {
@@ -2220,8 +2342,10 @@
     document.getElementById('classPickerModal').classList.add('hidden');
     document.getElementById('studentClassLine').innerText = "";
     document.getElementById('saveStatus').style.display = "none";
+    applyTodayDay("A");
     renderSavedTags(); renderHistoryTable(); renderMasterWorkoutPlan();
     renderSpreadsheet(); renderSubmitStatus(); updateProgressUI();
+    renderTodayCard();
     switchStudentTab('tab1');
     alert("Logged out. The next student can log in now.");
   }
