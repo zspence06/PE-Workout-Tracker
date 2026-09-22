@@ -607,6 +607,20 @@
 
 
 
+    .day-row {
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 10px; padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-row-label { font-weight: 700; }
+    .day-row-note { font-size: .8rem; color: var(--subtle); font-weight: 600; }
+
+    .day-suggestion-warn {
+      background: var(--warn-bg); color: var(--warn); font-weight: 700;
+      border-radius: 6px; padding: 8px 10px;
+    }
+
     .day-suggestion {
       margin: 10px 0 0; font-size: 0.85rem; font-weight: 600; color: var(--primary);
       background: var(--accent-light); border-radius: 6px; padding: 7px 10px;
@@ -1566,6 +1580,7 @@
     <div class="sub-tabs">
       <button class="sub-tab-btn active" onclick="switchTeacherTab('teacherTab1', event)">Today &amp; Roster</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab2', event)">Learning Target</button>
+      <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab4', event)">A / B Day</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab3', event)">Class Periods</button>
       <button class="sub-tab-btn help-tab-btn" onclick="switchTeacherTab('teacherTabHelp', event)">&#10067; Help</button>
     </div>
@@ -1714,6 +1729,57 @@
           the class from the student picker; students already in it keep working normally.
         </p>
         <div id="classList"></div>
+      </div>
+    </div>
+
+    <!-- TEACHER TAB 4: WHICH WORKOUT IS TODAY -->
+    <div id="teacherTab4" class="teacher-tab hidden">
+      <div class="card">
+        <h3>Which workout is today?</h3>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          Set it once and every student sees it the next time they open the tracker &mdash;
+          no more thirty people guessing. <strong>Each setting applies to today only</strong>
+          and stops counting on its own tomorrow, so it can never be left switched on by
+          mistake. The most specific setting wins:
+          <strong>one student</strong> beats <strong>their class</strong> beats
+          <strong>the whole school</strong>.
+        </p>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          Students are told which workout it is and who set it. They are
+          <strong>not locked out of the other one</strong> &mdash; somebody catching up a
+          missed day needs it &mdash; but choosing the other one warns them first.
+        </p>
+      </div>
+
+      <div class="card">
+        <h4 style="margin-top:0;">Everyone</h4>
+        <div class="day-row">
+          <span class="day-row-label">Whole school today</span>
+          <div class="day-toggle" role="group" aria-label="A or B day for the whole school">
+            <button type="button" class="day-btn" id="schoolDayA" onclick="setSchoolDay('A')">Workout A</button>
+            <button type="button" class="day-btn" id="schoolDayB" onclick="setSchoolDay('B')">Workout B</button>
+            <button type="button" class="day-btn" id="schoolDayOff" onclick="setSchoolDay('')">Let them alternate</button>
+          </div>
+        </div>
+        <p id="schoolDayStamp" class="rep-meta" style="margin:8px 4px 0;"></p>
+      </div>
+
+      <div class="card">
+        <h4 style="margin-top:0;">By class period</h4>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          Use this when periods are on opposite days. A class set here ignores the
+          whole-school setting above.
+        </p>
+        <div id="classDayList"></div>
+      </div>
+
+      <div class="card">
+        <h4 style="margin-top:0;">One student</h4>
+        <p style="color: var(--subtle); font-size: 0.9rem;">
+          On the <strong>Today &amp; Roster</strong> tab every student has a
+          <em>Day</em> dropdown next to their class. Use it for somebody making up a
+          workout they missed.
+        </p>
       </div>
     </div>
 
@@ -2596,6 +2662,7 @@
     dateEl.max = today;
     renderDateWarning();
     loadLearningTarget().then(maybeShowTargetModal);
+    loadSchoolDay().then(renderDaySuggestion);
 
     // Every panel that depends on being logged in, painted once up front. The
     // builder lock used to be drawn only by a later render, so on a cold load
@@ -2796,6 +2863,7 @@
       savedRoutines = data.routines || [];
       todaysSubmission = data.submission || null;
       let sameDay = data.todayDate === todayLocal();
+      myDayOverride = { abDay: data.abDay, abDayDate: data.abDayDate };
       try {
         historyLogs = await fetchHistory(docId);
         // Self-heal: if the stored summary disagrees with the real rows, fix it.
@@ -2850,6 +2918,11 @@
     document.getElementById('workoutDate').value = todayLocal();
     renderDateWarning();
     await ensureClassAssigned();
+    // After the class is known, because a per-class instruction is the common
+    // one. A day the student already picked for today stands: they may be
+    // halfway through it, and yanking the toggle underneath them would throw
+    // away the ticks that belong to the other workout.
+    applyTeacherDay();
     renderSavedTags();
     renderHistoryTable();
     renderMasterWorkoutPlan();
@@ -2860,6 +2933,23 @@
     if(document.getElementById('classPickerModal').classList.contains('hidden')) {
       flushPendingNotice();
     }
+  }
+
+  // Reads the instruction and sets the toggle. Deliberately does NOT save:
+  // nothing is written to the student's record just because they opened the
+  // page, and the value travels with the next real save anyway.
+  function applyTeacherDay() {
+    if(!currentUser) return;
+    let date = selectedDate();
+    if(currentDocId && todaysSubmissionDateIsToday(date)) return;
+    let eff = teacherDayFor(date);
+    if(eff.day && eff.day !== todayDay) applyTodayDay(eff.day);
+  }
+
+  // A student who has already recorded a choice for this date owns it.
+  function todaysSubmissionDateIsToday(date) {
+    return savedRoutines.some(r => doneToday(r, date))
+        || (todaysSubmission && todaysSubmission.date === date);
   }
 
   function handleTargetAreaChange() {
@@ -3504,6 +3594,7 @@
   // have to be recomputed -- not just the submitted banner.
   function onDateChange() {
     renderDateWarning();
+    applyTeacherDay();
     renderSubmitStatus();
     renderMasterWorkoutPlan();
     renderTodayCard();
@@ -3564,6 +3655,63 @@
 
   // Split from setTodayDay so the login path can restore a stored choice without
   // triggering the save that a real click should.
+  // ------------------------------------------------------ teacher's A/B day
+  //
+  // A school on an A/B block does not want thirty teenagers each guessing which
+  // one today is. The teacher can say so at three levels, and the most specific
+  // one that names TODAY wins:
+  //
+  //   student  -> for one person catching up a missed day
+  //   class    -> the usual case; 1st Hour is A while 3rd Hour is B
+  //   school   -> one switch for everyone
+  //
+  // Every level carries the DATE it was set for and is ignored on any other day,
+  // exactly as `done` carries `doneDate`. That is what stops Thursday's setting
+  // silently governing Friday. Nothing expires anything: yesterday just stops
+  // counting, so there is no cleanup job and nothing destructive ever runs.
+  function pickDay(rec, dayKey, dateKey, today) {
+    if(!rec) return null;
+    let d = rec[dayKey];
+    return (d === "A" || d === "B") && rec[dateKey] === today ? d : null;
+  }
+
+  function effectiveDay(student, cls, school, today) {
+    let s = pickDay(student, "abDay", "abDayDate", today);
+    if(s) return { day: s, from: "student" };
+    let c = pickDay(cls, "abDay", "abDayDate", today);
+    if(c) return { day: c, from: "class" };
+    let g = pickDay(school, "text", "date", today);
+    if(g) return { day: g, from: "school" };
+    return { day: null, from: null };
+  }
+
+  // What the student's own copy of the page knows: the school-wide setting, and
+  // the two fields off their own record. The class comes from studentClasses,
+  // which is already fetched for the class picker, so per-class costs no read.
+  let schoolDaySetting = null;
+  let myDayOverride = null;
+
+  async function loadSchoolDay() {
+    try {
+      let snap = await fbGetDoc(fbDoc(db, "settings", "abDay"));
+      schoolDaySetting = snap.exists() ? snap.data() : null;
+    } catch(err) {
+      // Same posture as the learning target: an unreachable setting means no
+      // instruction, not a broken page.
+      console.error("A/B day setting unavailable:", err);
+      schoolDaySetting = null;
+    }
+    return schoolDaySetting;
+  }
+
+  function myClassRecord() {
+    return studentClasses.find(c => c.id === currentClassId) || null;
+  }
+
+  function teacherDayFor(date) {
+    return effectiveDay(myDayOverride, myClassRecord(), schoolDaySetting, date);
+  }
+
   function applyTodayDay(day) {
     todayDay = (day === "B") ? "B" : "A";
     document.getElementById('dayBtnA').classList.toggle('active', todayDay === "A");
@@ -3603,11 +3751,43 @@
     let el = document.getElementById('daySuggestion');
     if(!el) return;
     let date = selectedDate();
+
+    // An instruction from the teacher outranks a guess from the history, and
+    // saying WHERE it came from is the difference between an instruction and a
+    // silent default the student has no way to question.
+    let eff = currentUser ? teacherDayFor(date) : { day: null, from: null };
+    if(eff.day) {
+      let cls = myClassRecord();
+      let who = eff.from === "student"
+          ? "Mr. Spencer has you on Workout " + eff.day + " today."
+          : eff.from === "class"
+            ? "Mr. Spencer set " + (cls && cls.name ? cls.name : "your class")
+              + " to Workout " + eff.day + " today."
+            : "Today is a Workout " + eff.day + " day.";
+      el.classList.remove('hidden');
+      // Warned, not blocked: a student catching up a missed day has a real
+      // reason to be on the other one, and the app has never locked a choice
+      // it can explain instead.
+      if(todayDay !== eff.day) {
+        el.className = "day-suggestion day-suggestion-warn";
+        el.innerText = "⚠ " + who + " You have Workout " + todayDay
+          + " selected. That is fine if you are catching up a day you missed — "
+          + "otherwise switch to Workout " + eff.day + ".";
+      } else {
+        el.className = "day-suggestion";
+        el.innerText = who;
+      }
+      return;
+    }
+
     let last = currentUser ? lastLoggedDay(historyLogs, date) : null;
-    if(!last) { el.classList.add('hidden'); return; }
+    // className, not just .add('hidden'): a warning styled onto this element by
+    // the branch above would otherwise still be on it the next time it is shown.
+    if(!last) { el.className = "day-suggestion hidden"; return; }
     el.classList.remove('hidden');
+    el.className = "day-suggestion";
     el.innerText = "Last workout: " + last.day + " on " + formatDateShort(last.date)
-      + " \u2014 so today is probably Workout " + (last.day === "A" ? "B" : "A") + ".";
+      + " — so today is probably Workout " + (last.day === "A" ? "B" : "A") + ".";
   }
 
   // One renderer for all three panels. Every string it shows comes out of the
@@ -3965,6 +4145,7 @@
     if(savesInFlight > 0 && !confirm("A save is still in progress. Log out anyway?")) return;
     currentUser = null; currentDocId = null; currentClassId = null;
     savedRoutines = []; historyLogs = []; todaysSubmission = null;
+    myDayOverride = null;
     sizeWarned = false;
     document.getElementById('studentName').value = "";
     document.getElementById('studentPin').value = "";
@@ -4015,6 +4196,7 @@
   }
 
   function switchTeacherTab(tabId, evt) {
+    if(tabId === "teacherTab4") loadSchoolDay().then(renderDayControls);
     document.querySelectorAll('.teacher-tab').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
     if(tabId === 'teacherTab3') renderClasses();
@@ -4200,6 +4382,9 @@
       : '<span class="mini-label muted">Not started today'
         + (stu.lastLogDate ? ' &middot; last ' + esc(stu.lastLogDate) : "") + '</span>';
 
+    // Only an override set for TODAY counts, same rule the student's page uses.
+    let myDay = pickDay(stu, "abDay", "abDayDate", todayLocal());
+
     let options = '<option value="">Unassigned</option>' + classCache.map(c =>
       '<option value="' + esc(c.id) + '"' + (c.id === stu.classId ? " selected" : "") + '>'
       + esc(c.name) + (c.frozen ? " (archived)" : "") + '</option>').join("");
@@ -4266,6 +4451,11 @@
       + '<select class="sheet-select" style="max-width:190px;" aria-label="Class period for ' + esc(stu.name) + '" onchange="reassignStudent(\'' + esc(stu.id) + '\', this.value)">'
       + options + '</select>'
       + '<button class="btn btn-secondary" aria-label="Change the name on ' + esc(stu.name) + '\'s record" onclick="renameStudent(\'' + esc(stu.id) + '\')">Rename</button>'
+      + '<select class="sheet-select" style="max-width:150px;" aria-label="Which workout ' + esc(stu.name) + ' does today" onchange="setStudentDay(\'' + esc(stu.id) + '\', this.value)">'
+      + '<option value=""' + (myDay ? "" : " selected") + '>Day: follow class</option>'
+      + '<option value="A"' + (myDay === "A" ? " selected" : "") + '>Day: A</option>'
+      + '<option value="B"' + (myDay === "B" ? " selected" : "") + '>Day: B</option>'
+      + '</select>'
       + '<button class="btn btn-secondary" aria-label="Reset PIN for ' + esc(stu.name) + '" onclick="resetStudentPin(\'' + esc(stu.id) + '\')">Reset PIN</button>'
       + '<button class="btn btn-danger btn-row-danger" aria-label="Delete ' + esc(stu.name) + ' and all their data" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
       + '</div></div>'
@@ -4609,7 +4799,9 @@
         todayDay: d.todayDay || "",
         todayScore: d.todayScore || 0,
         todayDone: d.todayDone || 0,
-        submittedDate: (d.submission && d.submission.date) || ""
+        submittedDate: (d.submission && d.submission.date) || "",
+        abDay: d.abDay || "",
+        abDayDate: d.abDayDate || ""
       });
     });
     teacherCache.sort(byName);
@@ -4628,6 +4820,7 @@
     lastLoadedAt = new Date();
     renderKPIs();
     renderDashboardBody();
+    renderDayControls();
   }
 
   // ------------------------------------------------- student class assignment
@@ -5296,6 +5489,107 @@
     } catch(err) {
       notice("Couldn't change the name: " + err.message);
     }
+  }
+
+  // ------------------------------------------------ teacher's A/B day controls
+  //
+  // Three writes, three documents, and not one of them needs a rules change:
+  // `settings` already requires a `text` string (so the letter lives there),
+  // `classes` only constrains `name` on update, and a signed-in teacher may
+  // write a student record without any shape check at all.
+  async function setSchoolDay(day) {
+    try {
+      await fbSetDoc(fbDoc(db, "settings", "abDay"),
+        { text: day, date: todayLocal(), updatedAt: new Date().toISOString() });
+    } catch(err) {
+      notice("Couldn't set the day: " + (err && err.code ? err.code : err.message)
+        + "\n\nStudents have NOT been told.");
+      return;
+    }
+    await loadSchoolDay();
+    renderDayControls();
+    toast(day ? "Whole school is on Workout " + day + " today."
+              : "Cleared — students go back to alternating off their own last workout.", "good");
+  }
+
+  async function setClassDay(classId, day) {
+    let cls = classCache.find(c => c.id === classId);
+    try {
+      await fbUpdateDoc(fbDoc(db, "classes", classId), { abDay: day, abDayDate: todayLocal() });
+    } catch(err) {
+      notice("Couldn't set the day for that class: " + (err && err.code ? err.code : err.message));
+      return;
+    }
+    classCache = await fetchClasses();
+    renderDayControls();
+    toast(day ? (cls ? cls.name : "That class") + " is on Workout " + day + " today."
+              : (cls ? cls.name : "That class") + " follows the whole-school setting again.", "good");
+  }
+
+  async function setStudentDay(studentId, day) {
+    let stu = teacherCache.find(st => st.id === studentId);
+    try {
+      await fbUpdateDoc(fbDoc(db, "students", studentId), { abDay: day, abDayDate: todayLocal() });
+    } catch(err) {
+      notice("Couldn't set the day for that student: " + (err && err.code ? err.code : err.message));
+      await renderTeacherLogs();
+      return;
+    }
+    // The roster row is drawn from teacherCache, so it has to be told too or the
+    // dropdown springs back to its old value on the next render.
+    if(stu) { stu.abDay = day; stu.abDayDate = todayLocal(); }
+    renderDashboardBody();
+    toast(day ? (stu ? stu.name : "That student") + " is on Workout " + day + " today."
+              : (stu ? stu.name : "That student") + " follows their class again.", "good");
+  }
+
+  function dayBtnState(id, on) {
+    let b = document.getElementById(id);
+    if(b) { b.classList.toggle('active', on); b.setAttribute('aria-pressed', on ? "true" : "false"); }
+  }
+
+  function renderDayControls() {
+    let today = todayLocal();
+    let school = pickDay(schoolDaySetting, "text", "date", today);
+    dayBtnState('schoolDayA', school === "A");
+    dayBtnState('schoolDayB', school === "B");
+    dayBtnState('schoolDayOff', !school);
+
+    let stamp = document.getElementById('schoolDayStamp');
+    if(stamp) {
+      // A setting from yesterday is not in force, and saying "set Thursday" under
+      // a highlighted button on Friday is exactly how a teacher would be misled.
+      let raw = schoolDaySetting && schoolDaySetting.text;
+      stamp.innerText = school
+        ? "Every class is on Workout " + school + " today unless its own setting says otherwise."
+        : (raw === "A" || raw === "B"
+            ? "The last setting was Workout " + raw + " on "
+              + (schoolDaySetting.date || "an earlier day") + ", which no longer applies."
+            : "No whole-school setting — each student alternates off their own last workout.");
+    }
+
+    let host = document.getElementById('classDayList');
+    if(!host) return;
+    let live = classCache.filter(c => !c.frozen);
+    if(!live.length) {
+      host.innerHTML = '<p style="color:var(--subtle);">No active classes yet.</p>';
+      return;
+    }
+    host.innerHTML = live.map(c => {
+      let d = pickDay(c, "abDay", "abDayDate", today);
+      let mk = (val, label) => '<button type="button" class="day-btn'
+        + ((val ? d === val : !d) ? " active" : "") + '" aria-pressed="'
+        + ((val ? d === val : !d) ? "true" : "false") + '" onclick="setClassDay(\'' + esc(c.id)
+        + '\', \'' + val + '\')">' + label + '</button>';
+      return '<div class="day-row"><span class="day-row-label">' + esc(c.name)
+        + (d ? "" : '<br><span class="day-row-note">'
+            + (school ? "Following the whole school: Workout " + school
+                      : "Students alternate on their own") + '</span>')
+        + '</span>'
+        + '<div class="day-toggle" role="group" aria-label="A or B day for ' + esc(c.name) + '">'
+        + mk("A", "Workout A") + mk("B", "Workout B") + mk("", "Follow school")
+        + '</div></div>';
+    }).join("");
   }
 
   function updateKPIs() {
