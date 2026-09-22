@@ -4515,8 +4515,14 @@
   // Picking a sort by hand is leaving the breakdown, whatever it is picked to.
   // Without this the roster re-sorted under a tile that was still lit and a note
   // that still claimed "most-logged first".
+  //
+  // It clears the flag directly rather than calling leaveLogsDrill(), because
+  // that puts the sort back to A-Z -- which is right when a TILE or a CHIP took
+  // you out of the breakdown, and wrong here: the teacher has just chosen this
+  // sort. Picking "most logged all term" from the dropdown while the breakdown
+  // was open had its own selection flipped back out from under it.
   function onSortChange() {
-    leaveLogsDrill();
+    logsDrill = false;
     syncFilterUI();
     renderDashboardBody();
   }
