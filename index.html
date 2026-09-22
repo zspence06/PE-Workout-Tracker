@@ -4893,6 +4893,14 @@
     }
     currentClassId = classId;
     renderStudentClassLine();
+    // The class picker is fire-and-forget -- ensureClassAssigned() calls
+    // showClassPicker() and returns, so login finishes and applyTeacherDay()
+    // has already run with no class. Joining one IS the moment the class's
+    // instruction becomes knowable, so read it here too. This is the first
+    // login and the invite-link move, which is exactly when a teacher is
+    // watching over a student's shoulder.
+    applyTeacherDay();
+    renderTodayCard();
     document.getElementById('classPickerModal').classList.add('hidden');
     flushPendingNotice();
     return true;
