@@ -42,6 +42,8 @@ eval([
   grab('function lastLoggedDay(history, before) {'),
   grab('function suggestedDay(history, today) {'),
   grab('function submissionIdFor(day, date, history) {'),
+  grab('function pickDay(rec, dayKey, dateKey, today) {'),
+  grab('function effectiveDay(student, cls, school, today) {'),
 ].join('\n'));
 
 (async () => {
@@ -400,6 +402,46 @@ eval([
       'latest by date, not by array position');
   }
 
+  // The teacher's A/B instruction: most specific wins, and every level is
+  // scoped to the day it was set for, so yesterday cannot govern today.
+  {
+    const T = "2026-09-22", Y = "2026-09-21";
+    const S = (d, on) => ({ abDay: d, abDayDate: on });
+    const G = (d, on) => ({ text: d, date: on });
+
+    assert.deepStrictEqual(effectiveDay(null, null, null, T), { day: null, from: null },
+      'no instruction anywhere leaves the student alternating');
+    assert.deepStrictEqual(effectiveDay(null, null, G("A", T), T), { day: "A", from: "school" });
+    assert.deepStrictEqual(effectiveDay(null, S("B", T), G("A", T), T), { day: "B", from: "class" },
+      'a class setting beats the whole school');
+    assert.deepStrictEqual(effectiveDay(S("A", T), S("B", T), G("B", T), T), { day: "A", from: "student" },
+      'one student beats their class');
+
+    // Every level expires on its own. Nothing deletes it; it just stops counting.
+    assert.deepStrictEqual(effectiveDay(S("A", Y), null, null, T), { day: null, from: null },
+      "yesterday's student override does not govern today");
+    assert.deepStrictEqual(effectiveDay(S("A", Y), S("B", Y), G("A", Y), T), { day: null, from: null },
+      'a whole stale stack falls through to alternating');
+    assert.deepStrictEqual(effectiveDay(S("A", Y), S("B", T), null, T), { day: "B", from: "class" },
+      'a stale override falls through to the live class setting, not past it');
+
+    // Clearing a level is an empty string, not a delete -- so it must not read
+    // as an instruction, and must let the level below through.
+    assert.deepStrictEqual(effectiveDay(S("", T), S("B", T), null, T), { day: "B", from: "class" },
+      'cleared student override falls through to the class');
+    assert.deepStrictEqual(effectiveDay(null, S("", T), G("A", T), T), { day: "A", from: "school" },
+      'cleared class setting falls through to the school');
+    assert.deepStrictEqual(effectiveDay(null, null, G("", T), T), { day: null, from: null });
+
+    // Garbage in a field a teacher never types into is still garbage.
+    ["C", "a", "b", 1, true, null, undefined, "AB"].forEach(bad => {
+      assert.strictEqual(pickDay({ abDay: bad, abDayDate: T }, "abDay", "abDayDate", T), null,
+        'only "A" and "B" are days: ' + String(bad));
+    });
+    // Legacy records predate the fields entirely and must read as no instruction.
+    assert.strictEqual(pickDay({ name: "x", routines: [] }, "abDay", "abDayDate", T), null);
+  }
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -417,4 +459,5 @@ eval([
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
   console.log('alternate-check OK - A/B alternates off the last real workout, ignoring Quick Log rows and today\'s own');
   console.log('submitted-check OK - A and B resolve independently from the rows; hand-logged rows are not a submission');
+  console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });
