@@ -499,6 +499,29 @@
       text-align: center;
     }
 
+    /* The tiles are <button>s so a number can be tapped to see who is in it.
+       A button brings its own font, colour and alignment, so those are reset
+       back to the card's -- the tile must look identical to the one that was
+       a <div>, only now it responds. */
+    button.kpi-card {
+      font: inherit; color: inherit; width: 100%; display: block;
+      cursor: pointer; -webkit-appearance: none; appearance: none;
+      transition: transform .08s ease, box-shadow .12s ease;
+    }
+    button.kpi-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+    button.kpi-card:active { transform: translateY(1px); }
+    button.kpi-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+    /* Active tile and active chip say the same thing, so they look the same. */
+    button.kpi-card.active {
+      background: var(--primary); border-color: var(--primary);
+    }
+    button.kpi-card.active, button.kpi-card.active .kpi-value { color: #FFFFFF; }
+    button.kpi-card.active .kpi-hint { color: rgba(255,255,255,.85); }
+
+    .kpi-hint { font-size: .68rem; font-weight: 700; color: var(--subtle);
+                letter-spacing: .02em; margin-top: 4px; }
+
     .kpi-value {
       font-size: 1.8rem;
       font-weight: 700;
@@ -1559,34 +1582,47 @@
         </span>
       </div>
 
+      <!-- Every tile is a button: the number it shows is a list, and the list is
+           what a teacher actually wants. Tapping one filters the roster below to
+           exactly the students it counted; tapping it again puts everyone back. -->
       <div class="kpi-grid">
-        <div class="kpi-card">
+        <button type="button" class="kpi-card" data-kpi="" onclick="drillTo('')"
+                aria-pressed="true">
           <div>Registered Students</div>
           <div class="kpi-value" id="kpiStudents">0</div>
-        </div>
-        <div class="kpi-card kpi-good">
+          <div class="kpi-hint">SHOW EVERYONE</div>
+        </button>
+        <button type="button" class="kpi-card kpi-good" data-kpi="submitted" onclick="drillTo('submitted')"
+                aria-pressed="false">
           <div>Submitted Today</div>
           <div class="kpi-value" id="kpiSubmitted">0</div>
           <div class="kpi-note" id="kpiShort"></div>
-        </div>
-        <div class="kpi-card kpi-progress">
+          <div class="kpi-hint">TAP TO LIST</div>
+        </button>
+        <button type="button" class="kpi-card kpi-progress" data-kpi="partial" onclick="drillTo('partial')"
+                aria-pressed="false">
           <div>In Progress Today</div>
           <div class="kpi-value" id="kpiPartial">0</div>
-        </div>
-        <div class="kpi-card kpi-warn">
+          <div class="kpi-hint">TAP TO LIST</div>
+        </button>
+        <button type="button" class="kpi-card kpi-warn" data-kpi="none" onclick="drillTo('none')"
+                aria-pressed="false">
           <div>Not Started Today</div>
           <div class="kpi-value" id="kpiNotStarted">0</div>
-        </div>
-        <div class="kpi-card">
+          <div class="kpi-hint">TAP TO LIST</div>
+        </button>
+        <button type="button" class="kpi-card" data-kpi="logs" onclick="drillTo('logs')"
+                aria-pressed="false">
           <!-- This counts exercise ROWS, not sessions: a student who logs six
                exercises adds six. Calling it "workouts" made a class look four
                times busier than it was. -->
           <div>Exercises Logged (all term)</div>
           <div class="kpi-value" id="kpiLogs">0</div>
-        </div>
+          <div class="kpi-hint">TAP FOR THE BREAKDOWN</div>
+        </button>
       </div>
 
-      <div class="card">
+      <div class="card" id="rosterCard">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
           <h3 style="margin:0;">Students by Class</h3>
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
@@ -1597,9 +1633,11 @@
             </div>
             <div class="form-group" style="margin:0; min-width:150px;">
               <select id="studentSort" onchange="renderDashboardBody()" aria-label="Sort students">
-                <option value="name">Sort: A&ndash;Z</option>
+                <option value="name">Sort: A&ndash;Z (first name)</option>
+                <option value="lastname">Sort: A&ndash;Z (last name)</option>
                 <option value="behind">Sort: least done first</option>
                 <option value="term">Sort: fewest logged all term</option>
+                <option value="term-desc">Sort: most logged all term</option>
               </select>
             </div>
             <!-- Grouped and labelled because sitting loose next to the class
@@ -1628,10 +1666,10 @@
           <input type="text" id="studentSearch" class="form-control" placeholder="&#128269; Find a student by name&hellip;"
                  autocomplete="off" oninput="renderDashboardBody()" aria-label="Find a student by name">
           <div class="status-chips" role="group" aria-label="Filter by today's status">
-            <button type="button" class="chip active" data-status="" onclick="setStatusFilter(&#39;&#39;, this)">Everyone</button>
-            <button type="button" class="chip" data-status="none" onclick="setStatusFilter(&#39;none&#39;, this)">Not started</button>
-            <button type="button" class="chip" data-status="partial" onclick="setStatusFilter(&#39;partial&#39;, this)">In progress</button>
-            <button type="button" class="chip" data-status="submitted" onclick="setStatusFilter(&#39;submitted&#39;, this)">Submitted</button>
+            <button type="button" class="chip active" data-status="" onclick="setStatusFilter(&#39;&#39;)">Everyone</button>
+            <button type="button" class="chip" data-status="none" onclick="setStatusFilter(&#39;none&#39;)">Not started</button>
+            <button type="button" class="chip" data-status="partial" onclick="setStatusFilter(&#39;partial&#39;)">In progress</button>
+            <button type="button" class="chip" data-status="submitted" onclick="setStatusFilter(&#39;submitted&#39;)">Submitted</button>
           </div>
         </div>
         <p id="dashFilterNote" class="dash-filter-note hidden"></p>
@@ -4238,11 +4276,88 @@
   // "" = everyone. Kept out of the DOM so a re-render cannot lose it.
   let statusFilter = "";
 
-  function setStatusFilter(value, btn) {
+  // One alphabetical order, so the dashboard and the printout can never disagree
+  // about who comes first. localeCompare with sensitivity:'base' is what makes
+  // "de Vries", "O'Neill" and "Ángel" land where a teacher expects rather than
+  // where their code points fall; numeric:true keeps "Student 2" before
+  // "Student 10". The roster used to have NO name sort at all -- the default
+  // dropdown said A-Z while the list came back in Firestore document-id order,
+  // which is a PBKDF2 hash, which is random.
+  const nameCollator = new Intl.Collator(undefined, { sensitivity: "base", numeric: true });
+
+  function byName(a, b) {
+    return nameCollator.compare(String(a.name || ""), String(b.name || ""));
+  }
+
+  // A class list is read off a gradebook, and a gradebook is by last name.
+  // Whatever the student typed last is treated as the surname; a one-word name
+  // is its own surname rather than being dropped to the bottom.
+  function lastNameOf(n) {
+    let parts = String(n || "").trim().split(/\s+/).filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : "";
+  }
+
+  function byLastName(a, b) {
+    return nameCollator.compare(lastNameOf(a.name), lastNameOf(b.name)) || byName(a, b);
+  }
+
+  // Tapping the "Exercises Logged" tile is a different question from the other
+  // four -- it decomposes a total rather than picking a status -- so it rides
+  // alongside statusFilter instead of inside it.
+  let logsDrill = false;
+
+  function setStatusFilter(value) {
     statusFilter = value;
-    document.querySelectorAll('.status-chips .chip').forEach(b => b.classList.remove('active'));
-    if(btn) btn.classList.add('active');
+    leaveLogsDrill();
+    syncFilterUI();
     renderDashboardBody();
+  }
+
+  // Both ways out of the breakdown -- a chip or another tile -- put the sort
+  // back. Only one of them used to, so picking "Not started" from inside the
+  // breakdown left the list in most-logged-first order under a heading that
+  // said nothing about it.
+  function leaveLogsDrill() {
+    if(!logsDrill) return;
+    logsDrill = false;
+    let sortEl = document.getElementById('studentSort');
+    if(sortEl && sortEl.value === "term-desc") sortEl.value = "name";
+  }
+
+  // The tiles and the chips are two controls onto ONE filter. Painting the
+  // active state from that filter, rather than from whichever element was
+  // clicked, is what stops a tile and a chip claiming different things.
+  function syncFilterUI() {
+    document.querySelectorAll('.status-chips .chip').forEach(b => {
+      b.classList.toggle('active', (b.dataset.status || "") === statusFilter);
+    });
+    document.querySelectorAll('.kpi-grid .kpi-card').forEach(b => {
+      let key = b.dataset.kpi || "";
+      let on = logsDrill ? key === "logs"
+                         : key !== "logs" && key === statusFilter;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? "true" : "false");
+    });
+  }
+
+  // A number a teacher cannot act on is decoration. Each tile filters the roster
+  // to exactly the students it counted; pressing the live one again clears it.
+  function drillTo(kind) {
+    let sortEl = document.getElementById('studentSort');
+    if(kind === "logs") {
+      logsDrill = !logsDrill;
+      statusFilter = "";
+      if(sortEl) sortEl.value = logsDrill ? "term-desc" : "name";
+    } else {
+      leaveLogsDrill();
+      statusFilter = (statusFilter === kind) ? "" : kind;
+    }
+    syncFilterUI();
+    renderDashboardBody();
+    // On a phone the tiles fill the screen and the list they just filtered is
+    // below the fold, so a tap would otherwise look like it did nothing.
+    let card = document.getElementById('rosterCard');
+    if(card && card.scrollIntoView) card.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   // Which bucket a student is in TODAY. Submitted wins over in-progress: a
@@ -4295,6 +4410,7 @@
     document.getElementById('kpiPartial').innerText = rows.filter(s => stat(s) === "partial").length;
     document.getElementById('kpiNotStarted').innerText = rows.filter(s => stat(s) === "none").length;
 
+    syncFilterUI();
     renderStamp();
   }
 
@@ -4360,24 +4476,44 @@
       if(statusFilter) rows = rows.filter(st => studentStatus(st, today) === statusFilter);
       if(q) rows = rows.filter(st => String(st.name || "").toLowerCase().includes(q));
       hiddenCount += g.all.length - rows.length;
+      // Every branch ends alphabetical, including the default one -- which had
+      // no branch at all, so "Sort: A-Z" listed students in document-id order.
       if(sort === "behind") {
         rows = rows.slice().sort((a, b) =>
-          todayStats(a, today).score - todayStats(b, today).score
-          || a.name.localeCompare(b.name));
+          todayStats(a, today).score - todayStats(b, today).score || byName(a, b));
       } else if(sort === "term") {
-        rows = rows.slice().sort((a, b) => (a.count || 0) - (b.count || 0)
-          || a.name.localeCompare(b.name));
+        rows = rows.slice().sort((a, b) => (a.count || 0) - (b.count || 0) || byName(a, b));
+      } else if(sort === "term-desc") {
+        rows = rows.slice().sort((a, b) => (b.count || 0) - (a.count || 0) || byName(a, b));
+      } else if(sort === "lastname") {
+        rows = rows.slice().sort(byLastName);
+      } else {
+        rows = rows.slice().sort(byName);
       }
       g.students = rows;
     });
 
     let note = document.getElementById('dashFilterNote');
     if(note) {
-      let active = statusFilter || q;
-      note.classList.toggle('hidden', !active || hiddenCount === 0);
-      if(active && hiddenCount > 0) {
-        note.innerText = hiddenCount + " student" + (hiddenCount === 1 ? " is" : "s are")
-          + " hidden by the filter above. Class totals below still count everyone.";
+      // The breakdown hides nobody, so it needs its own line: the tile was
+      // pressed, something visibly changed, and the teacher is owed the reason.
+      if(logsDrill) {
+        let pop = kpiPopulation();
+        let total = pop.rows.reduce((n, st) => n + (st.count || 0), 0);
+        let withAny = pop.rows.filter(st => (st.count || 0) > 0).length;
+        note.classList.remove('hidden');
+        note.innerText = total + " exercise row" + (total === 1 ? "" : "s")
+          + " logged all term across " + pop.rows.length + " student"
+          + (pop.rows.length === 1 ? "" : "s") + " in " + pop.label + " \u2014 "
+          + withAny + " of them have logged at least one. Listed most-logged first "
+          + "within each class; every student's own total is on their line.";
+      } else {
+        let active = statusFilter || q;
+        note.classList.toggle('hidden', !active || hiddenCount === 0);
+        if(active && hiddenCount > 0) {
+          note.innerText = hiddenCount + " student" + (hiddenCount === 1 ? " is" : "s are")
+            + " hidden by the filter above. Class totals below still count everyone.";
+        }
       }
     }
 
@@ -4462,7 +4598,7 @@
         submittedDate: (d.submission && d.submission.date) || ""
       });
     });
-    teacherCache.sort((a, b) => a.name.localeCompare(b.name));
+    teacherCache.sort(byName);
 
     // Keep the chosen filter across the re-render a reassign or delete causes.
     let filterEl = document.getElementById('classFilter');
@@ -4785,10 +4921,12 @@
     let keep = st => (!statusFilter || studentStatus(st, today) === statusFilter)
       && (!q || String(st.name || "").toLowerCase().includes(q));
 
+    // Alphabetical here as well: the printout is the copy that gets graded, and
+    // it was coming out in the same document-id order the dashboard was.
     let groups = classCache.map(c => ({ id: c.id, name: c.name,
-      students: teacherCache.filter(s => s.classId === c.id).filter(keep) }));
+      students: teacherCache.filter(s => s.classId === c.id).filter(keep).sort(byName) }));
     groups.push({ id: "__none", name: "Unassigned",
-      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)).filter(keep) });
+      students: teacherCache.filter(s => !s.classId || !classCache.some(c => c.id === s.classId)).filter(keep).sort(byName) });
     if(filter !== "") groups = groups.filter(g => g.id === filter);
     groups = groups.filter(g => g.students.length > 0);
 
