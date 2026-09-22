@@ -4227,6 +4227,7 @@
       + '<div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">'
       + '<select class="sheet-select" style="max-width:190px;" aria-label="Class period for ' + esc(stu.name) + '" onchange="reassignStudent(\'' + esc(stu.id) + '\', this.value)">'
       + options + '</select>'
+      + '<button class="btn btn-secondary" aria-label="Change the name on ' + esc(stu.name) + '\'s record" onclick="renameStudent(\'' + esc(stu.id) + '\')">Rename</button>'
       + '<button class="btn btn-secondary" aria-label="Reset PIN for ' + esc(stu.name) + '" onclick="resetStudentPin(\'' + esc(stu.id) + '\')">Reset PIN</button>'
       + '<button class="btn btn-danger btn-row-danger" aria-label="Delete ' + esc(stu.name) + ' and all their data" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
       + '</div></div>'
@@ -4994,6 +4995,155 @@
         + `log${rows.length === 1 ? "" : "s"} came with it. Let them know.`);
     } catch(err) {
       notice("Couldn't reset PIN: " + err.message);
+    }
+  }
+
+  // Changing a student's name is two completely different operations wearing one
+  // button, and which one it is depends entirely on normalizeName().
+  //
+  //   "jane doe" -> "Jane Doe"      normalizes the same, so the PBKDF2 address is
+  //                                 the same document, and this is a field edit.
+  //   "Jane Doe" -> "Jane Smith"    normalizes differently, so the address moves,
+  //                                 and the record has to be RELOCATED.
+  //
+  // The second case needs a new PIN and there is no way around it: the address is
+  // PBKDF2(pin, name) and the teacher does not know the PIN -- that is the whole
+  // point of the design. So a real rename issues a new PIN, exactly as Reset PIN
+  // does, and the copy-then-delete below is the same machinery for the same reason.
+  async function renameStudent(studentId) {
+    let ref = fbDoc(db, "students", studentId);
+    try {
+      let snap = await fbGetDoc(ref);
+      if(!snap.exists()) { toast("Student not found.", "warn"); return; }
+      let data = snap.data();
+      let oldName = data.name || "";
+
+      let newName = await askFor({
+        title: "Change name",
+        help: "Fixing capitalisation or a spelling that reads the same keeps their PIN. "
+            + "Changing the name itself moves the record, which needs a new PIN.",
+        label: "Name on the record", value: oldName, maxlength: 60,
+        validate: v => {
+          let n = cleanName(v);
+          if(!n) return "Type the name as it should appear.";
+          if(n.length > 60) return "That name is too long.";
+          if(!normalizeName(n)) return "A name needs at least one letter or number.";
+          return null;
+        }
+      });
+      if(newName === null) return;
+      newName = cleanName(newName);
+      if(newName === oldName) { toast("That is already the name on the record.", "warn"); return; }
+
+      // ---- case 1: same address. Nothing moves, so nothing can be lost. ----
+      if(normalizeName(newName) === normalizeName(oldName)) {
+        try {
+          await fbUpdateDoc(ref, { name: newName });
+          // The registry is keyed on the NORMALIZED name, so it still points
+          // here -- but it stores the display name, and a stale one there is
+          // what a future teacher would read.
+          await fbSetDoc(fbDoc(db, "names", await nameKey(newName)), { name: newName });
+        } catch(err) {
+          notice("Couldn't change the name: " + (err && err.code ? err.code : err.message));
+          return;
+        }
+        await renderTeacherLogs();
+        notice('Renamed to "' + newName + '". Their PIN, their class and all '
+          + 'their workouts are unchanged \u2014 they log in exactly as before.',
+          "Name updated");
+        return;
+      }
+
+      // ---- case 2: the address moves. ----
+      // A name already claimed by somebody else must not be taken, or two students
+      // collide on one login. A key with NO student behind it is the leftover the
+      // delete path warns about, and taking that one over is safe.
+      let claimKey = await nameKey(newName);
+      let claimed = false;
+      try { claimed = (await fbGetDoc(fbDoc(db, "names", claimKey))).exists(); }
+      catch(err) { notice("Couldn't check whether that name is free, so nothing was changed."); return; }
+      if(claimed) {
+        let live = teacherCache.some(st => st.id !== studentId
+          && normalizeName(st.name || "") === normalizeName(newName));
+        if(live) {
+          notice('Another student is already registered as "' + newName + '".\n\n'
+            + 'Add a middle initial or class period to tell them apart \u2014 '
+            + 'for example "' + newName + ' B".', "Name already taken");
+          return;
+        }
+        if(!confirm('"' + newName + '" is still reserved by a deleted record, but no '
+          + 'student is using it.\n\nRelease it and give it to ' + oldName + '?')) return;
+      }
+
+      let newPin = await askFor({
+        title: "New PIN for " + newName,
+        help: "The login address is built from the name AND the PIN, so changing the name "
+            + "moves the record. Their old PIN cannot come with it. Their workout history can, "
+            + "and does.",
+        label: "New 4-digit PIN", numeric: true, maxlength: 4,
+        validate: v => /^\d{4}$/.test(v) ? null : "The PIN has to be exactly 4 digits."
+      });
+      if(!newPin) return;
+
+      let newId = await studentDocId(newName, newPin);
+      if(newId === studentId) { toast("That name and PIN lead to the same record.", "warn"); return; }
+      if((await fbGetDoc(fbDoc(db, "students", newId))).exists()) {
+        toast("That name and PIN are already in use together. Pick a different PIN.", "warn");
+        return;
+      }
+
+      if(!confirm('Rename "' + oldName + '" to "' + newName + '" and set their PIN to '
+        + newPin + '?\n\nTheir old name and PIN both stop working immediately, so tell '
+        + 'them both new ones.')) return;
+
+      let rows = await fetchHistory(studentId);
+
+      // Everything is written to the new address BEFORE anything leaves the old
+      // one. Firestore does not carry subcollections along with a document, so a
+      // path that copies a student record and forgets the history silently throws
+      // away every workout they have logged.
+      for(let i = 0; i < rows.length; i += 400) {
+        let batch = fbWriteBatch(db);
+        rows.slice(i, i + 400).forEach(r => {
+          let { logId, ...fields } = r;
+          batch.set(fbDoc(db, "students", newId, "history", logId), fields);
+        });
+        await batch.commit();
+      }
+      // Spread, not rebuild: every field on the record -- class, the day summary,
+      // routines, the submission -- travels untouched. Only the name is replaced.
+      await fbSetDoc(fbDoc(db, "students", newId), { ...data, name: newName });
+      await fbSetDoc(fbDoc(db, "names", claimKey), { name: newName });
+
+      // Past this point the new name and PIN already work, so a failure below is
+      // leftovers, not a lost student. Say exactly that, because the difference
+      // matters to whoever reads it.
+      try {
+        for(let i = 0; i < rows.length; i += 400) {
+          let batch = fbWriteBatch(db);
+          rows.slice(i, i + 400).forEach(r =>
+            batch.delete(fbDoc(db, "students", studentId, "history", r.logId)));
+          await batch.commit();
+        }
+        await fbDeleteDoc(ref);
+        if(oldName) await fbDeleteDoc(fbDoc(db, "names", await nameKey(oldName)));
+      } catch(err) {
+        console.error("Old record cleanup failed:", err);
+        await renderTeacherLogs();
+        notice('"' + newName + '" works now with PIN ' + newPin + ', and all '
+          + rows.length + ' workout row' + (rows.length === 1 ? "" : "s") + ' came across. '
+          + 'The OLD record could not be removed, so "' + oldName + '" STILL WORKS TOO '
+          + 'and will show up twice on this page.\n\nRun the rename again to clear it.',
+          "Renamed, but not tidied up");
+        return;
+      }
+      await renderTeacherLogs();
+      notice('"' + oldName + '" is now "' + newName + '", PIN ' + newPin + '. All '
+        + rows.length + ' workout row' + (rows.length === 1 ? "" : "s")
+        + ' and their class came with them. Tell them the new name and PIN \u2014 '
+        + 'the old ones no longer work.', "Renamed");
+    } catch(err) {
+      notice("Couldn't change the name: " + err.message);
     }
   }
 
