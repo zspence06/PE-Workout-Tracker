@@ -400,6 +400,23 @@ eval([
       'latest by date, not by array position');
   }
 
+  // Every exercise card offers a form video, and none of them may be a Short.
+  // A /shorts/ URL opens a vertical swipe feed on a phone -- the next flick
+  // leaves the tutorial for whatever the algorithm serves a teenager next.
+  {
+    const entries = [...src.matchAll(/"([^"]+)":\s*\{\s*cues:\s*"([^"]*)",\s*video:\s*"([^"]+)"\s*\}/g)]
+      .map(m => ({ name: m[1], cues: m[2], video: m[3] }));
+    assert.ok(entries.length > 200, 'exercise library did not parse: ' + entries.length);
+    const shorts = entries.filter(e => e.video.includes('/shorts/'));
+    assert.deepStrictEqual(shorts.map(e => e.name), [], 'Shorts links must not ship');
+    entries.forEach(e => {
+      assert.ok(e.cues.trim().length > 0, e.name + ' has no coaching cues');
+      assert.ok(/^https:\/\/www\.youtube\.com\/(watch\?v=[A-Za-z0-9_-]{6,}|results\?search_query=\S+)$/.test(e.video),
+        e.name + ' has an unrecognised video link: ' + e.video);
+    });
+    globalThis.__videoCount = entries.length;
+  }
+
   // One login must stay fast enough for a school Chromebook.
   const t0 = Date.now();
   await studentDocId('Timing Test', '1234');
@@ -417,4 +434,5 @@ eval([
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
   console.log('alternate-check OK - A/B alternates off the last real workout, ignoring Quick Log rows and today\'s own');
   console.log('submitted-check OK - A and B resolve independently from the rows; hand-logged rows are not a submission');
+  console.log('video-check   OK - ' + globalThis.__videoCount + ' exercises, every one a cued full-length video or a name search, zero Shorts');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });
