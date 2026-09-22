@@ -130,9 +130,19 @@ def main():
             ' + String(d.getMonth() + 1).padStart(2, "0") + "-"'
             ' + String(d.getDate()).padStart(2, "0"); })(new Date());\n'
             'window.__SANDBOX_SEED = ' + seed + ';\n</script>')
-    html = BOOT.sub(lambda m: boot + "\n" + STUB, html, count=1)
+    m = BOOT.search(html)
+    head, tail = html[:m.start()], html[m.end():]
+    html = head + boot + "\n" + STUB + tail
+
+    # The whole value of this file is that a test run through it is evidence
+    # about the REAL page. That only holds if nothing outside the bootstrap
+    # moved, so prove it every time rather than trusting the regex.
+    assert html.startswith(head) and html.endswith(tail), \
+        "sandbox diverges from index.html outside the Firebase bootstrap"
+
     out.write_text(html, encoding="utf-8")
-    print("wrote", out, "(", len(html), "chars )")
+    print("wrote", out, "(", len(html), "chars ) -- identical to index.html "
+          "except the Firebase bootstrap")
 
 
 if __name__ == "__main__":
