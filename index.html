@@ -1632,7 +1632,7 @@
               </select>
             </div>
             <div class="form-group" style="margin:0; min-width:150px;">
-              <select id="studentSort" onchange="renderDashboardBody()" aria-label="Sort students">
+              <select id="studentSort" onchange="onSortChange()" aria-label="Sort students">
                 <option value="name">Sort: A&ndash;Z (first name)</option>
                 <option value="lastname">Sort: A&ndash;Z (last name)</option>
                 <option value="behind">Sort: least done first</option>
@@ -4317,6 +4317,15 @@
   // back. Only one of them used to, so picking "Not started" from inside the
   // breakdown left the list in most-logged-first order under a heading that
   // said nothing about it.
+  // Picking a sort by hand is leaving the breakdown, whatever it is picked to.
+  // Without this the roster re-sorted under a tile that was still lit and a note
+  // that still claimed "most-logged first".
+  function onSortChange() {
+    leaveLogsDrill();
+    syncFilterUI();
+    renderDashboardBody();
+  }
+
   function leaveLogsDrill() {
     if(!logsDrill) return;
     logsDrill = false;
@@ -4506,7 +4515,11 @@
           + " logged all term across " + pop.rows.length + " student"
           + (pop.rows.length === 1 ? "" : "s") + " in " + pop.label + " \u2014 "
           + withAny + " of them have logged at least one. Listed most-logged first "
-          + "within each class; every student's own total is on their line.";
+          + "within each class; every student's own total is on their line."
+          + (hiddenCount > 0
+              ? " Your search is hiding " + hiddenCount + " of them; the totals above "
+                + "still count everyone."
+              : "");
       } else {
         let active = statusFilter || q;
         note.classList.toggle('hidden', !active || hiddenCount === 0);
