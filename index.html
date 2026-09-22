@@ -4501,6 +4501,13 @@
   // alongside statusFilter instead of inside it.
   let logsDrill = false;
 
+  // What the sort was before the breakdown took it over. Leaving used to drop
+  // the teacher on first-name A-Z whatever they had chosen -- so someone who
+  // works in last-name order, which is the order a gradebook is in and the
+  // reason that option exists, lost it every time they glanced at the term
+  // total and came back.
+  let sortBeforeDrill = "name";
+
   function setStatusFilter(value) {
     statusFilter = value;
     leaveLogsDrill();
@@ -4531,7 +4538,9 @@
     if(!logsDrill) return;
     logsDrill = false;
     let sortEl = document.getElementById('studentSort');
-    if(sortEl && sortEl.value === "term-desc") sortEl.value = "name";
+    // Only undo the order the breakdown itself imposed; anything else was the
+    // teacher's own choice before it opened and is theirs to keep.
+    if(sortEl && sortEl.value === "term-desc") sortEl.value = sortBeforeDrill;
   }
 
   // The tiles and the chips are two controls onto ONE filter. Painting the
@@ -4555,9 +4564,14 @@
   function drillTo(kind) {
     let sortEl = document.getElementById('studentSort');
     if(kind === "logs") {
-      logsDrill = !logsDrill;
       statusFilter = "";
-      if(sortEl) sortEl.value = logsDrill ? "term-desc" : "name";
+      if(logsDrill) {
+        leaveLogsDrill();
+      } else {
+        sortBeforeDrill = sortEl ? sortEl.value : "name";
+        logsDrill = true;
+        if(sortEl) sortEl.value = "term-desc";
+      }
     } else {
       leaveLogsDrill();
       statusFilter = (statusFilter === kind) ? "" : kind;
