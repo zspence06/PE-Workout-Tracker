@@ -5039,13 +5039,19 @@
       if(normalizeName(newName) === normalizeName(oldName)) {
         try {
           await fbUpdateDoc(ref, { name: newName });
-          // The registry is keyed on the NORMALIZED name, so it still points
-          // here -- but it stores the display name, and a stale one there is
-          // what a future teacher would read.
-          await fbSetDoc(fbDoc(db, "names", await nameKey(newName)), { name: newName });
         } catch(err) {
           notice("Couldn't change the name: " + (err && err.code ? err.code : err.message));
           return;
+        }
+        // The name has already changed by here. The registry is keyed on the
+        // NORMALIZED name so it still points at this record either way; it only
+        // carries the display name, which nothing in the app reads back. Failing
+        // to freshen it is not worth telling the teacher the rename failed when
+        // it did not.
+        try {
+          await fbSetDoc(fbDoc(db, "names", await nameKey(newName)), { name: newName });
+        } catch(err) {
+          console.error("Name registry refresh failed:", err);
         }
         await renderTeacherLogs();
         notice('Renamed to "' + newName + '". Their PIN, their class and all '
@@ -5055,25 +5061,38 @@
       }
 
       // ---- case 2: the address moves. ----
-      // A name already claimed by somebody else must not be taken, or two students
-      // collide on one login. A key with NO student behind it is the leftover the
-      // delete path warns about, and taking that one over is safe.
+      //
+      // "Is this name taken?" has to be asked of the ROSTER, not of the names
+      // registry. The registry is a derived index, and it can be missing an
+      // entry for a student who is right there in the list -- signup writes the
+      // record and the registry as two separate calls, so a dropped connection
+      // between them leaves exactly that. Asking the registry first and only
+      // consulting the roster if it said yes let a rename land on a live
+      // student's name and produce two people with one name. Same discipline
+      // deleteStudent already applies to logCount: do not trust the summary,
+      // read the real thing -- and the roster is already in hand, so it is free.
+      let live = teacherCache.some(st => st.id !== studentId
+        && normalizeName(st.name || "") === normalizeName(newName));
+      if(live) {
+        notice('Another student is already registered as "' + newName + '".\n\n'
+          + 'Add a middle initial or class period to tell them apart \u2014 '
+          + 'for example "' + newName + ' B".', "Name already taken");
+        return;
+      }
+      if(!teacherCache.length) {
+        notice("The roster has not loaded, so it is not possible to tell whether that "
+          + "name is already in use. Press Refresh and try again.", "Nothing changed");
+        return;
+      }
+
+      // Nobody live holds it. A registry key with no student behind it is the
+      // leftover the delete path warns about, and taking that one over is safe.
       let claimKey = await nameKey(newName);
       let claimed = false;
       try { claimed = (await fbGetDoc(fbDoc(db, "names", claimKey))).exists(); }
       catch(err) { notice("Couldn't check whether that name is free, so nothing was changed."); return; }
-      if(claimed) {
-        let live = teacherCache.some(st => st.id !== studentId
-          && normalizeName(st.name || "") === normalizeName(newName));
-        if(live) {
-          notice('Another student is already registered as "' + newName + '".\n\n'
-            + 'Add a middle initial or class period to tell them apart \u2014 '
-            + 'for example "' + newName + ' B".', "Name already taken");
-          return;
-        }
-        if(!confirm('"' + newName + '" is still reserved by a deleted record, but no '
-          + 'student is using it.\n\nRelease it and give it to ' + oldName + '?')) return;
-      }
+      if(claimed && !confirm('"' + newName + '" is still reserved by a deleted record, but no '
+        + 'student is using it.\n\nRelease it and give it to ' + oldName + '?')) return;
 
       let newPin = await askFor({
         title: "New PIN for " + newName,
@@ -5113,12 +5132,16 @@
       // Spread, not rebuild: every field on the record -- class, the day summary,
       // routines, the submission -- travels untouched. Only the name is replaced.
       await fbSetDoc(fbDoc(db, "students", newId), { ...data, name: newName });
-      await fbSetDoc(fbDoc(db, "names", claimKey), { name: newName });
 
-      // Past this point the new name and PIN already work, so a failure below is
-      // leftovers, not a lost student. Say exactly that, because the difference
-      // matters to whoever reads it.
+      // THE POINT OF NO RETURN IS THIS LINE, not the name claim below it. The
+      // moment that record lands the new name and PIN work, so every write after
+      // it is tidy-up and a failure in any of them is leftovers, not a lost
+      // student -- including the claim, which used to sit outside this block and
+      // send a failure to the outer catch. That catch says "couldn't change the
+      // name", which was the opposite of the truth: the rename had happened,
+      // BOTH logins worked, and the roster had quietly grown by one.
       try {
+        await fbSetDoc(fbDoc(db, "names", claimKey), { name: newName });
         for(let i = 0; i < rows.length; i += 400) {
           let batch = fbWriteBatch(db);
           rows.slice(i, i + 400).forEach(r =>
