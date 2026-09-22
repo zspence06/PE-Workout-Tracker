@@ -616,14 +616,18 @@
     .day-row-label { font-weight: 700; }
     .day-row-note { font-size: .8rem; color: var(--subtle); font-weight: 600; }
 
-    .day-suggestion-warn {
-      background: var(--warn-bg); color: var(--warn); font-weight: 700;
-      border-radius: 6px; padding: 8px 10px;
-    }
-
     .day-suggestion {
       margin: 10px 0 0; font-size: 0.85rem; font-weight: 600; color: var(--primary);
       background: var(--accent-light); border-radius: 6px; padding: 7px 10px;
+    }
+
+    /* After .day-suggestion, not before it, and scoped to both classes so the
+       order cannot matter again: same specificity means source order decides,
+       and a warning rendered in the calm green of the ordinary hint is not a
+       warning. */
+    .day-suggestion.day-suggestion-warn {
+      background: var(--warn-bg); color: var(--warn); font-weight: 700;
+      padding: 8px 10px;
     }
 
 
