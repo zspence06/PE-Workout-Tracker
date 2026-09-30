@@ -3500,6 +3500,7 @@
       return;
     }
 
+    rollDateIfNewDay();
     let dateVal = document.getElementById('workoutDate').value;
     // The input carries max=today, but that only constrains the picker widget --
     // it does not stop a value arriving any other way, and a future-dated row
@@ -4925,6 +4926,27 @@
     el.innerText = (picked < today ? "\u26a0 You are logging for " : "\u26a0 This date is in the future: ")
       + formatDateShort(picked) + ", not today. Tap the date to change it back.";
   }
+
+  // The date box is only ever set at page load, login and logout. A tab left open
+  // past midnight (phone tab restore, Chromebook lid) kept yesterday's date, so the
+  // student saw yesterday's finished workout and every exercise was refused as
+  // "already in your history". Roll the box forward -- but only if it still holds
+  // the day the app last set; a date the student deliberately picked stands.
+  let lastToday = todayLocal();
+  function rollDateIfNewDay() {
+    let today = todayLocal();
+    if(today === lastToday) return;
+    let el = document.getElementById('workoutDate');
+    let followed = el.value === lastToday;
+    lastToday = today;
+    el.max = today;
+    if(!followed) { renderDateWarning(); return; }
+    el.value = today;
+    onDateChange();
+    if(currentUser) toast("New day — the date is now today.", "good");
+  }
+  setInterval(rollDateIfNewDay, 60000);
+  document.addEventListener('visibilitychange', rollDateIfNewDay);
 
   async function assignClass(classId) {
     // Joining for the first time is not a move, so it is not stamped.
