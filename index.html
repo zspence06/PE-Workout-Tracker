@@ -447,6 +447,17 @@
 
     .ab-grid > div { min-width: 0; }
 
+    /* The numbers are the whole job on this screen. Big, centred, and with the
+       browser's spinner arrows removed -- they ate the right edge of a narrow box
+       and turned "12" into "1". */
+    .ab-grid td .sheet-input {
+      min-width: 84px; text-align: center; font-size: 1.25rem; font-weight: 600;
+      padding: 12px 6px; -moz-appearance: textfield; appearance: textfield;
+    }
+    .ab-grid td .sheet-input::-webkit-inner-spin-button,
+    .ab-grid td .sheet-input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .ab-grid td[data-label="Last time"] { white-space: nowrap; }
+
     /* Was line-through at 70% opacity, which is the vocabulary for "removed"
        or "disabled", not for "you did this". The green and the ticked box
        already say done; dimming the exercise a student just finished was the
@@ -976,7 +987,7 @@
 
       .ab-grid td .sheet-input {
         width: 100%; min-width: 0; text-align: center;
-        font-size: 1.05rem; padding: 10px 4px;
+        font-size: 1.35rem; padding: 14px 4px;
       }
 
       /* Deliberately the far corner from both the tick box and the number
@@ -1284,12 +1295,17 @@
 
         <div id="submitStatusBar" class="submit-status pending">⏳ Not submitted yet.</div>
 
+        <div class="day-switch-bar">
+          <button type="button" class="btn off-day-switch hidden" id="switchToA"
+                  onclick="setTodayDay('A')">Doing Workout A today instead? Tap to switch</button>
+          <button type="button" class="btn off-day-switch hidden" id="switchToB"
+                  onclick="setTodayDay('B')">Doing Workout B today instead? Tap to switch</button>
+        </div>
+
         <div class="ab-grid">
           <!-- A DAY COLUMN -->
           <div id="dayColA">
             <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅰️ Workout A <span class="today-badge hidden" id="todayBadgeA">TODAY</span></h4>
-            <button type="button" class="btn off-day-switch hidden" id="switchToA"
-                    onclick="setTodayDay('A')">Not today's workout &mdash; tap to switch to Workout A</button>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Lower Body + 2 Core</span>
             <div style="overflow-x: auto; margin-top: 5px;">
               <table>
@@ -1317,8 +1333,6 @@
           <!-- B DAY COLUMN -->
           <div id="dayColB">
             <h4 style="color: var(--primary); border-bottom: 2px solid var(--primary); padding-bottom: 4px; margin-bottom: 5px;">🅱️ Workout B <span class="today-badge hidden" id="todayBadgeB">TODAY</span></h4>
-            <button type="button" class="btn off-day-switch hidden" id="switchToB"
-                    onclick="setTodayDay('B')">Not today's workout &mdash; tap to switch to Workout B</button>
             <span style="font-size:0.8rem; color:var(--subtle);">Requires 4 Upper Body + 2 Core</span>
             <div style="overflow-x: auto; margin-top: 5px;">
               <table>
@@ -1483,7 +1497,8 @@
           <p>Look at the red &#10007; list right above the Submit button &mdash; it shows
           <strong>everything</strong> in your way at once, not one thing at a time. The usual three:</p>
           <ul>
-            <li><strong>Not enough ticked.</strong> You need 4 + 2 checked off.</li>
+            <li><strong>Nothing ticked.</strong> Check off at least one exercise you did. (Not finishing
+            everything is fine &mdash; you get a reminder, then you can submit anyway.)</li>
             <li><strong>Already in your history.</strong> You logged that exercise earlier today on the
             Quick&nbsp;Log tab. Press <strong>Skip it and submit the rest</strong> &mdash; it already counts.</li>
             <li><strong>Workout is empty.</strong> Nothing added to that day yet. Go build it.</li>
@@ -2546,28 +2561,12 @@
     let score = composedScore(credited.map(r => ({ ...r, done: true, doneDate: date })), day, date);
     let prime = day === "A" ? "lower" : "upper";
     let primeLabel = day === "A" ? "lower body" : "upper body";
-    if(score < DAILY_TARGET && credited.length < items.length) {
-      // A routine that cannot reach 6 however hard they try must not be told to
-      // check off more of it -- that is an instruction it is impossible to obey.
-      let ceiling = composedScore(items.map(r => ({ ...r, done: true, doneDate: date })), day, date);
-      if(ceiling < DAILY_TARGET) {
-        blockers.push({ code: "short-routine", text: "Workout " + day + " is short of the "
-          + "requirement (4 " + primeLabel + " + 2 core), so it cannot reach 6 of 6. Check off "
-          + "everything in the list to submit it as it is, or add more exercises." });
-      } else {
-        let primeDone = credited.filter(r => r.targetArea === prime).length;
-        let coreDone = credited.filter(r => r.targetArea === "core").length;
-        if(primeDone < 4) {
-          blockers.push({ code: "need-prime", text: (4 - primeDone) + " more " + primeLabel
-            + " exercise" + ((4 - primeDone) === 1 ? "" : "s") + " checked off \u2014 you have "
-            + primeDone + " of 4." });
-        }
-        if(coreDone < 2) {
-          blockers.push({ code: "need-core", text: (2 - coreDone) + " more core exercise"
-            + ((2 - coreDone) === 1 ? "" : "s") + " checked off \u2014 you have "
-            + coreDone + " of 2." });
-        }
-      }
+    // Falling short of 4 + 2 is a reminder, not a wall (Zach, 2026-09-29): a student
+    // who did not finish must still be able to send what they did. The one thing
+    // worth refusing is a submit with nothing in it.
+    if(credited.length === 0) {
+      blockers.push({ code: "nothing-done", text: "Check off at least one exercise you did "
+        + "before you submit." });
     }
     let rows = ticked.map(r => ({ exercise: r.name, date: date, id: r.id }));
     rowConflicts(rows, history).forEach(c => blockers.push(c));
@@ -2575,6 +2574,11 @@
     // otherwise go through -- nagging about unticked rows on an already-blocked
     // submit just buries the thing they actually have to fix.
     if(blockers.length === 0 && credited.length < items.length) {
+      if(score < DAILY_TARGET) {
+        warnings.push({ code: "short-of-requirement", score: score,
+          text: "You have " + score + " of " + DAILY_TARGET + " \u2014 the workout asks for 4 "
+            + primeLabel + " + 2 core. You can still submit; Mr. Spencer will see what you finished." });
+      }
       let skipped = items.filter(r => !doneToday(r, date) && !loggedToday(r, date, history))
         .map(r => cleanName(r.name));
       warnings.push({ code: "not-ticked", exercises: skipped,
@@ -3529,6 +3533,13 @@
       return;
     }
 
+    // Not finished is allowed -- but say so before it is sent, not after.
+    let unfinished = res.warnings.filter(w => w.code === "short-of-requirement" || w.code === "not-ticked");
+    if(unfinished.length && !confirm("Not everything is finished:\n\n"
+      + unfinished.map(w => "\u2022 " + w.text).join("\n\n") + "\n\nSubmit anyway?")) {
+      return;
+    }
+
     // Only what was actually ticked gets logged; a skipped exercise is no longer
     // written as a 0x0 @ 0lbs row.
     let items = savedRoutines.filter(r => r.day === day);
@@ -3986,7 +3997,9 @@
       let b = document.getElementById('todayBadge' + d);
       if(b) b.classList.toggle('hidden', todayDay !== d);
       let col = document.getElementById('dayCol' + d);
-      if(col) col.classList.toggle('off-day', !!currentUser && todayDay !== d);
+      // The other workout is hidden, not dimmed: it took half a laptop screen and
+      // squeezed today's numbers into unreadable boxes. Logged out, show both.
+      if(col) col.classList.toggle('hidden', !!currentUser && todayDay !== d);
       let sw = document.getElementById('switchTo' + d);
       if(sw) sw.classList.toggle('hidden', !currentUser || todayDay === d);
       // Undo is a recovery path. Showing it on a day nothing was ever submitted
@@ -4042,7 +4055,8 @@
       hint = "Requirement met \u2014 now press Submit to send it"
         + (extra > 0 ? " (" + extra + " extra will be logged too)." : ".");
     } else {
-      hint = (DAILY_TARGET - score) + " more to meet the requirement.";
+      hint = (DAILY_TARGET - score) + " more to meet the requirement. You can still submit "
+        + "if you run out of time \u2014 you will get a reminder first.";
     }
     renderDaySuggestion();
     let hintEl = document.getElementById('todayHint');

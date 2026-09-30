@@ -210,24 +210,33 @@ eval([
     assert.deepStrictEqual(codes(workoutBlockers(full, "A", D, [])), [],
       'a complete, conflict-free Workout A has no blockers');
 
-    // Two ticked (both lower): short on BOTH halves, and both are reported --
-    // the whole point is that one press shows every blocker at once.
+    // Two ticked (both lower): short of the requirement. Zach, 2026-09-29: a student
+    // who did not finish must still be able to submit -- it is a reminder, not a wall.
     const partial = full.map((r, i) => i < 2 ? r : { ...r, done:false, doneDate:"" });
-    assert.deepStrictEqual(codes(workoutBlockers(partial, "A", D, [])),
-      ["need-prime", "need-core"], 'both halves reported together, not one at a time');
+    const pr = workoutBlockers(partial, "A", D, []);
+    assert.deepStrictEqual(codes(pr), [], 'an unfinished workout is not blocked');
+    assert.deepStrictEqual(pr.warnings.map(w => w.code).sort(), ["not-ticked", "short-of-requirement"],
+      'but the student is reminded, on both counts');
+    assert.strictEqual(pr.warnings.find(w => w.code === "short-of-requirement").score, 2,
+      'and told the real score');
 
-    // A routine that CANNOT reach 6 must not be told to check off more; its only
-    // route is ticking everything, so it gets its own message.
+    // The one thing still refused: a submit with nothing in it.
+    const none = full.map(r => ({ ...r, done:false, doneDate:"" }));
+    assert.deepStrictEqual(codes(workoutBlockers(none, "A", D, [])), ["nothing-done"],
+      'nothing ticked and nothing logged has nothing to send');
+
+    // A routine that CANNOT reach 6 is never nagged for it once everything it has is ticked.
     const short = [
       { id:1, name:"Squat", day:"A", targetArea:"lower", done:false, doneDate:"" },
       { id:2, name:"Lunge", day:"A", targetArea:"lower", done:false, doneDate:"" },
       { id:3, name:"Plank", day:"A", targetArea:"core",  done:false, doneDate:"" }
     ];
-    assert.deepStrictEqual(codes(workoutBlockers(short, "A", D, [])), ["short-routine"],
-      'a routine too short to reach 6 gets a reachable instruction');
-    assert.deepStrictEqual(
-      codes(workoutBlockers(short.map(r => ({ ...r, done:true, doneDate:D })), "A", D, [])), [],
-      'that same short routine submits once everything is ticked');
+    assert.deepStrictEqual(codes(workoutBlockers(short, "A", D, [])), ["nothing-done"],
+      'a short routine with nothing ticked has nothing to send');
+    const shortDone = workoutBlockers(short.map(r => ({ ...r, done:true, doneDate:D })), "A", D, []);
+    assert.deepStrictEqual(codes(shortDone), [], 'that same short routine submits once everything is ticked');
+    assert.deepStrictEqual(shortDone.warnings.map(w => w.code), [],
+      'and is not nagged about a requirement it cannot reach');
 
     // The dead end: already in history, and the blocker carries the routine id
     // so "Skip it" can act without interpolating a student-typed name into HTML.
@@ -260,7 +269,7 @@ eval([
     assert.deepStrictEqual(warned.warnings[0].exercises, ["Calf", "Twist"], 'and named');
     assert.ok(!workoutBlockers(full, "A", D, []).warnings.some(w => w.code === "not-ticked"),
       'nothing unticked, nothing to warn about');
-    assert.ok(!workoutBlockers(partial, "A", D, []).warnings.some(w => w.code === "not-ticked"),
+    assert.ok(!workoutBlockers(none, "A", D, []).warnings.some(w => w.code === "not-ticked"),
       'a blocked submit does not also nag about unticked rows');
 
     // The spreadsheet commit shares the conflict half and adds its own empty case.
@@ -293,8 +302,12 @@ eval([
         'skipping it clears the way instead of bouncing into a requirement blocker');
 
       // ...and it is credited, not silently dropped: without history it IS short.
-      assert.deepStrictEqual(codes(workoutBlockers(skipped, "A", D, [])),
-        ["need-prime"], 'the same untick with no history row is genuinely short');
+      const noHist = workoutBlockers(skipped, "A", D, []);
+      assert.deepStrictEqual(codes(noHist), [], 'the same untick with no history row still submits');
+      assert.ok(noHist.warnings.some(w => w.code === "short-of-requirement"),
+        'but it is genuinely short, so it is reminded');
+      assert.ok(!workoutBlockers(skipped, "A", D, hist).warnings.some(w => w.code === "short-of-requirement"),
+        'whereas the logged exercise credits the requirement');
 
       assert.ok(loggedToday({ name:"  squat " }, D, hist), 'match ignores case and padding');
       assert.ok(!loggedToday({ name:"Squat" }, "2026-09-19", hist), 'and is scoped to the date');
@@ -470,7 +483,7 @@ eval([
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
   console.log('routineid-check OK - no collision when several exercises are added in the same millisecond');
   console.log('target-check   OK - once per hour per device, and always on a changed target');
-  console.log('blocker-check  OK - every blocker reported at once, short routines reachable, warnings never block');
+  console.log('blocker-check  OK - unfinished workouts submit with a reminder, only an empty submit is refused, warnings never block');
   console.log('weight-check   OK - 0 lbs warns on ticked rows only, and never blocks');
   console.log('daily-check    OK - composition enforced, extras capped, stale and legacy ticks ignored');
   console.log('clamp-check    OK - negatives, garbage, Infinity and overflow all bounded; local date matches calendar day');
