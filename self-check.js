@@ -238,19 +238,16 @@ eval([
     assert.deepStrictEqual(shortDone.warnings.map(w => w.code), [],
       'and is not nagged about a requirement it cannot reach');
 
-    // The dead end: already in history, and the blocker carries the routine id
-    // so "Skip it" can act without interpolating a student-typed name into HTML.
-    const clash = workoutBlockers(full, "A", D, [{ date:D, exercise:"Plank" }]);
-    assert.deepStrictEqual(codes(clash), ["already-logged"], 'an existing history row blocks');
-    assert.strictEqual(clash.blockers[0].id, 5, 'the blocker carries the routine id, not just a name');
-    assert.ok(/Plank/.test(clash.blockers[0].text), 'and names the exercise');
-
-    // Case and padding must not let a duplicate through.
-    assert.deepStrictEqual(
-      codes(workoutBlockers(full, "A", D, [{ date:D, exercise:"  plank  " }])),
-      ["already-logged"], 'the history match ignores case and padding');
+    // Already in today's history is already sent: not re-written, not a clash.
+    // Pressing Submit twice used to list every exercise as "already in your history".
+    const again = workoutBlockers(full, "A", D, [{ date:D, exercise:"Plank" }]);
+    assert.deepStrictEqual(codes(again), [], 'one exercise already logged does not block the rest');
+    const allIn = full.map(r => ({ date:D, exercise:"  " + r.name.toLowerCase() + " " }));
+    const repeat = workoutBlockers(full, "A", D, allIn);
+    assert.deepStrictEqual(codes(repeat), ["nothing-new"],
+      'a second press on a finished workout says it is already in -- case and padding ignored');
     assert.deepStrictEqual(codes(workoutBlockers(full, "A", D, [{ date:"2026-09-19", exercise:"Plank" }])),
-      [], 'yesterday\'s history row does not block today');
+      [], 'yesterday\'s history row does not count as today');
 
     // Same exercise twice in one day's routine.
     const dup = full.concat([{ id:7, name:"plank", day:"A", targetArea:"core", done:true, doneDate:D }]);
@@ -294,8 +291,8 @@ eval([
     // that is blocked. Two blockers, each cleared only by causing the other.
     {
       const hist = [{ date: D, exercise: "Squat" }];
-      const blocked = workoutBlockers(full, "A", D, hist);
-      assert.deepStrictEqual(codes(blocked), ["already-logged"], 'ticked + in history blocks');
+      assert.deepStrictEqual(codes(workoutBlockers(full, "A", D, hist)), [],
+        'ticked + in history no longer blocks');
 
       const skipped = full.map(r => r.name === "Squat" ? { ...r, done:false, doneDate:"" } : r);
       assert.deepStrictEqual(codes(workoutBlockers(skipped, "A", D, hist)), [],

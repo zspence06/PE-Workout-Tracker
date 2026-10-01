@@ -615,6 +615,11 @@
 
     .btn-undo:hover, .btn-quiet-danger:hover { background: var(--danger-bg); }
     .btn-quiet-danger { padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
+    .note-btn { display: block; margin-top: 6px; background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; color: var(--subtle); cursor: pointer; }
+    /* 16px or iOS zooms the page on focus. */
+    .note-input { display: block; width: 100%; box-sizing: border-box; margin-top: 6px;
+      font-size: 1rem; padding: 8px; border: 1px solid var(--border); border-radius: 6px; }
 
 
 
@@ -1419,6 +1424,7 @@
                 <th>Sets</th>
                 <th>Reps</th>
                 <th>Weight</th>
+                <th>Notes</th>
               </tr>
             </thead>
             <tbody id="historyTable"></tbody>
@@ -1500,7 +1506,7 @@
             <li><strong>Nothing ticked.</strong> Check off at least one exercise you did. (Not finishing
             everything is fine &mdash; you get a reminder, then you can submit anyway.)</li>
             <li><strong>Already in your history.</strong> You logged that exercise earlier today on the
-            Quick&nbsp;Log tab. Press <strong>Skip it and submit the rest</strong> &mdash; it already counts.</li>
+            Quick&nbsp;Log tab. Nothing to fix &mdash; it already counts and is not sent twice.</li>
             <li><strong>Workout is empty.</strong> Nothing added to that day yet. Go build it.</li>
           </ul>
         </details>
@@ -2485,6 +2491,12 @@
     return r.done === true && r.doneDate === date;
   }
 
+  // A note belongs to the day it was written, same trick as doneDate: Monday's
+  // "knee hurt" is not still sitting on the exercise on Wednesday.
+  function noteToday(r, date) {
+    return r.noteDate === date ? cleanName(r.note) : "";
+  }
+
   // Scored against the program minimum rather than the length of the student's
   // own list, so one student's 67% means what another's does. Composed the way
   // the requirement is -- six core exercises are not a Workout A -- using the
@@ -2568,7 +2580,17 @@
       blockers.push({ code: "nothing-done", text: "Check off at least one exercise you did "
         + "before you submit." });
     }
-    let rows = ticked.map(r => ({ exercise: r.name, date: date, id: r.id }));
+    // A tick already sitting in today's history is done and sent -- not a clash.
+    // Pressing Submit a second time (Zach's photo, 2026-09-30) used to list every
+    // exercise of a finished workout as "already in your history". Only new
+    // ticks get written; with none left there is simply nothing to send.
+    let fresh = ticked.filter(r => !loggedToday(r, date, history));
+    if(ticked.length && !fresh.length) {
+      blockers.push({ code: "nothing-new", text: "Workout " + day + " is already in for "
+        + date + " \u2014 there is nothing new to send. To change it, use Undo Submit, "
+        + "fix it, and submit again." });
+    }
+    let rows = fresh.map(r => ({ exercise: r.name, date: date, id: r.id }));
     rowConflicts(rows, history).forEach(c => blockers.push(c));
     // A warning is not a blocker, and only worth raising on a submit that would
     // otherwise go through -- nagging about unticked rows on an already-blocked
@@ -2625,6 +2647,22 @@
     let r = savedRoutines.find(x => x.id === id);
     if(!r) return;
     r[field] = (field in FIELD_MAX) ? cleanNumber(value, FIELD_MAX[field]) : value;
+  }
+
+  let openNotes = new Set();
+  function openNote(id) {
+    openNotes.add(id);
+    renderMasterWorkoutPlan();
+    let el = document.getElementById('note-' + id);
+    if(el) el.focus();
+  }
+
+  function setRoutineNote(id, value) {
+    let r = savedRoutines.find(x => x.id === id);
+    if(!r) return;
+    r.note = cleanName(value).slice(0, 300);
+    r.noteDate = selectedDate();
+    saveUserData();
   }
 
   // Ticking stamps the date beside the flag and unticking clears both, so a box
@@ -3227,7 +3265,11 @@
         <td class="done-cell" data-label="Done"><input type="checkbox" class="done-check" ${doneToday(r, date) ? 'checked' : ''}
             aria-label="Mark ${esc(r.name)} done today"
             onchange="setRoutineDone(${r.id}, this.checked)"></td>
-        <td class="ex-cell" data-label="Exercise"><strong>${esc(r.name)}</strong><span class="ex-comp">${esc(r.component)}</span></td>
+        <td class="ex-cell" data-label="Exercise"><strong>${esc(r.name)}</strong><span class="ex-comp">${esc(r.component)}</span>
+          <button type="button" class="note-btn" onclick="openNote(${r.id})">💬 ${noteToday(r, date) ? "Edit note" : "Add note"}</button>
+          ${noteToday(r, date) || openNotes.has(r.id) ? `<input type="text" class="note-input" id="note-${r.id}" maxlength="300"
+            placeholder="Note for Mr. Spencer (how it felt, a swap, pain…)" value="${esc(noteToday(r, date))}"
+            aria-label="Note for ${esc(r.name)}" onchange="setRoutineNote(${r.id}, this.value)">` : ""}</td>
         <td data-label="Last time">${lastCell}</td>
         <td data-label="Sets"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="99" value="${r.sets}" aria-label="Sets for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
         <td data-label="Reps"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="999" value="${r.reps}" aria-label="Reps for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'reps', this.value); saveUserData();"></td>
@@ -3527,6 +3569,15 @@
     // which the live checklist also reads -- so the button and the panel can
     // never disagree, and a student sees ALL of it rather than the first one.
     let res = workoutBlockers(savedRoutines, day, dateVal, historyLogs);
+    // A repeat press is not a mistake. Re-save the summary -- that is the retry the
+    // "saved, but not sent yet" notice asks for -- and confirm instead of refusing.
+    if(res.blockers.length === 1 && res.blockers[0].code === "nothing-new") {
+      await saveUserData();
+      renderSubmitStatus();
+      toast("Workout " + day + " is already submitted for " + formatDateShort(dateVal)
+        + " \u2705 Nothing new to send.", "good");
+      return;
+    }
     if(res.blockers.length) {
       flashBlockers(day);
       notice(blockerAlert("Workout " + day, res));
@@ -3543,7 +3594,7 @@
     // Only what was actually ticked gets logged; a skipped exercise is no longer
     // written as a 0x0 @ 0lbs row.
     let items = savedRoutines.filter(r => r.day === day);
-    let logged = items.filter(r => doneToday(r, dateVal));
+    let logged = items.filter(r => doneToday(r, dateVal) && !loggedToday(r, dateVal, historyLogs));
 
     // Tag every row with the submission that created it, so an undo removes
     // exactly these rows and not an identically-named row logged by hand on the
@@ -3551,7 +3602,8 @@
     let subId = "s" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
     let rows = logged.map(r => ({
       date: dateVal, exercise: r.name, component: r.component,
-      sets: r.sets, reps: r.reps, lbs: r.lbs, day: day, subId: subId
+      sets: r.sets, reps: r.reps, lbs: r.lbs, day: day, subId: subId,
+      note: noteToday(r, dateVal)
     }));
 
     if(!await commitRowsToHistory(rows)) return;
@@ -3660,16 +3712,14 @@
     }
   }
 
-  let highlightExercise = "";
 
   function renderHistoryTable() {
     let tbody = document.getElementById('historyTable');
     tbody.innerHTML = "";
-    let today = selectedDate();
     if(historyLogs.length === 0) {
       let tr = document.createElement('tr');
       tr.className = "empty-row";
-      tr.innerHTML = '<td colspan="7">' + (currentUser
+      tr.innerHTML = '<td colspan="8">' + (currentUser
         ? "Nothing logged yet. Every workout you submit shows up here \u2014 including how many "
           + "sets, reps and pounds, so you can see yourself getting stronger."
         : "Log in above to see your workout history.") + '</td>';
@@ -3678,12 +3728,6 @@
     }
     historyLogs.forEach(h => {
       let tr = document.createElement('tr');
-      // Flag the row a blocked submit is colliding with, so "Show me" lands on
-      // something the student can actually point at.
-      if(highlightExercise && h.date === today
-         && cleanName(h.exercise).toLowerCase() === highlightExercise) {
-        tr.className = "row-flag";
-      }
       tr.innerHTML = `
         <td>${h.date}</td>
         <td>${h.day || "—"}</td>
@@ -3692,6 +3736,7 @@
         <td>${h.sets}</td>
         <td>${h.reps}</td>
         <td>${h.lbs} lbs</td>
+        <td>${esc(h.note || "")}</td>
       `;
       tbody.appendChild(tr);
     });
@@ -3852,7 +3897,6 @@
         + esc(label) + ':</p><ul>';
       res.blockers.forEach(b => {
         html += '<li class="bad"><span class="mark">\u2717</span><span>' + esc(b.text)
-          + (b.code === "already-logged" && b.id != null ? blockerActionsHtml(b) : "")
           + '</span></li>';
       });
       html += '</ul>';
@@ -3861,17 +3905,6 @@
       html += '<p class="blockers-warn">\u26a0 ' + esc(w.text) + '</p>';
     });
     return html;
-  }
-
-  // Actions go out keyed by routine id, never by name: an exercise name is free
-  // text a student typed, and interpolating it into an onclick is how you get a
-  // quote break or worse.
-  function blockerActionsHtml(b) {
-    return '<div class="blocker-actions">'
-      + '<button type="button" class="btn-mini" onclick="showHistoryFor(' + Number(b.id) + ')">Show me</button>'
-      + '<button type="button" class="btn-mini" onclick="skipBlockedExercise(' + Number(b.id) + ')">'
-      + 'Skip it and submit the rest</button>'
-      + '</div>';
   }
 
   // A submission is a finished state, not a blocked one. Every row it wrote is
@@ -3947,12 +3980,6 @@
       + res.blockers.map((b, i) => (i + 1) + ". " + b.text).join("\n\n");
   }
 
-  // History has no delete in the student UI, so an exercise already logged today
-  // cannot be cleared -- skipping it is the only way out, and it is one tick.
-  function skipBlockedExercise(id) {
-    setRoutineDone(id, false);
-  }
-
   // The Today card answers "how am I doing"; this is the button that answers
   // "so where do I actually do it". Lands on the column the day toggle picked,
   // not just on the tab.
@@ -3964,14 +3991,6 @@
     if(target) target.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function showHistoryFor(id) {
-    let r = savedRoutines.find(x => x.id === id);
-    highlightExercise = r ? cleanName(r.name).toLowerCase() : "";
-    switchStudentTab('tab4');
-    renderHistoryTable();
-    let row = document.querySelector('#historyTable .row-flag');
-    if(row) row.scrollIntoView({ behavior: "smooth", block: "center" });
-  }
 
   function renderTodayCard() {
     renderAllBlockers();
@@ -4474,10 +4493,11 @@
             + rows.length + '</strong> exercise row' + (rows.length === 1 ? "" : "s") + '</p>'
           + '<div class="table-scroll"><table><thead><tr>'
           + '<th>Date</th><th>Workout</th><th>Exercise</th><th>Component</th>'
-          + '<th>Sets</th><th>Reps</th><th>Weight</th></tr></thead><tbody>'
+          + '<th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
           + sorted.map(h => '<tr><td class="nowrap">' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
               + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
-              + '</td><td>' + esc(h.reps) + '</td><td class="nowrap">' + esc(h.lbs) + ' lbs</td></tr>').join("")
+              + '</td><td>' + esc(h.reps) + '</td><td class="nowrap">' + esc(h.lbs) + ' lbs</td><td>'
+              + esc(h.note || "") + '</td></tr>').join("")
           + '</tbody></table></div>'
           + '<p class="scroll-hint">Swipe the table sideways to see every column.</p>';
       }
@@ -5283,10 +5303,11 @@
           let table = rows.length === 0
             ? '<p class="rep-none">No workouts logged in this period.</p>'
             : '<table class="rep-table"><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th>'
-              + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th></tr></thead><tbody>'
+              + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
               + rows.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
                   + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
-                  + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td></tr>').join("")
+                  + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td><td>'
+                  + esc(h.note || "") + '</td></tr>').join("")
               + '</tbody></table>';
           return '<div class="rep-student"><h3 class="rep-name">' + esc(stu.name) + '</h3>'
             + '<p class="rep-meta">' + rows.length + ' workout row'
