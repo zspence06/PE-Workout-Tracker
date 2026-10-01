@@ -615,6 +615,7 @@
 
     .btn-undo:hover, .btn-quiet-danger:hover { background: var(--danger-bg); }
     .btn-quiet-danger { padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
+    .last-note { display: block; margin-top: 4px; font-size: 0.8rem; color: var(--text); font-style: italic; }
     .note-btn { display: block; margin-top: 6px; background: none; border: 1px solid var(--border);
       border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; color: var(--subtle); cursor: pointer; }
     /* 16px or iOS zooms the page on focus. */
@@ -1536,6 +1537,16 @@
         </details>
 
         <details class="help-q">
+          <summary>How do notes work?</summary>
+          <p>Tap <strong>&#128172; Add note</strong> under any exercise and type how it went &mdash; too easy,
+          too heavy, a sore spot, a swap you made. It is sent with that exercise when you submit, and
+          Mr. Spencer can read it.</p>
+          <p>Next time you do that exercise, your most recent note shows up under <strong>Last Time</strong>,
+          so you can decide whether to add weight. Every note you have written is also on the
+          <strong>History</strong> tab.</p>
+        </details>
+
+        <details class="help-q">
           <summary>I forgot my PIN.</summary>
           <p>Nobody can look it up &mdash; it is not stored anywhere, which is what stops other students getting
           into your account. Ask Mr.&nbsp;Spencer to <strong>Reset PIN</strong> for you. Your workouts all come
@@ -1946,6 +1957,12 @@
           they pressed the button that actually sends it to you.</p>
           <p>A student sitting at 6/6 and <em>not</em> submitted did the work and forgot the last step.
           Worth a shout across the gym before the bell &mdash; use the <strong>In progress</strong> chip.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Where do I see students&rsquo; notes?</summary>
+          <p>Open a student&rsquo;s row &mdash; their workouts have a <strong>Notes</strong> column. Notes
+          are on the class printout too. A note belongs to the exercise and day it was written.</p>
         </details>
 
         <details class="help-q">
@@ -3258,6 +3275,10 @@
       let lastCell = last
         ? `${last.sets}×${last.reps} @ ${last.lbs}lbs<br><span style="font-size:0.7rem; color:var(--subtle);">${formatDateShort(last.date)}</span>`
         : `<span style="color:var(--subtle);">—</span>`;
+      // Zach, 2026-10-01: the point of a note is reading it back next time, at the
+      // moment of deciding whether to change the weight -- so it sits under Last Time.
+      let prevNote = lastNoteBefore(r.name, date);
+      if(prevNote) lastCell += `<span class="last-note">💬 ${formatDateShort(prevNote.date)}: ${esc(prevNote.note)}</span>`;
 
       let tr = document.createElement('tr');
       if(doneToday(r, date)) tr.classList.add('completed-row');
@@ -3334,6 +3355,14 @@
     if(matches.length === 0) return null;
     matches.sort((a, b) => b.date.localeCompare(a.date));
     return matches[0];
+  }
+
+  function lastNoteBefore(exerciseName, date) {
+    let name = cleanName(exerciseName).toLowerCase();
+    let hits = historyLogs.filter(h => h.note && String(h.date) < String(date)
+      && cleanName(h.exercise).toLowerCase() === name);
+    hits.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    return hits[0] || null;
   }
 
   function getLastLogForDay(exerciseName, date) {
