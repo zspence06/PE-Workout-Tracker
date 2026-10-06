@@ -602,6 +602,11 @@
       accent-color: var(--success); cursor: pointer;
     }
 
+    /* One box per set (Zach, 2026-10-06), each numbered underneath. */
+    .done-cell { white-space: nowrap; }
+    .set-tick { display: inline-flex; flex-direction: column; align-items: center; margin: 0 2px; cursor: pointer; }
+    .set-tick span { font-size: 0.7rem; color: var(--subtle); line-height: 1; }
+
     .submit-row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; align-items: stretch; }
 
     .btn-submit { flex: 1 1 auto; font-size: 1rem; padding: 14px 18px; }
@@ -976,16 +981,17 @@
       /* Name and tick share the top line; the tick is the target, so it is the
          thing sitting under a thumb on the right. */
       .ab-grid td.ex-cell {
-        flex: 1 1 100%; padding-right: 56px; font-size: 1.02rem; line-height: 1.35;
+        flex: 1 1 100%; font-size: 1.02rem; line-height: 1.35;
       }
 
       .ab-grid td.ex-cell::before { display: none; }
 
+      /* A row of set boxes is wider than the name's corner, so it gets its own
+         line under the numbers it is ticking off. */
       .ab-grid td.done-cell {
-        position: absolute; top: 10px; right: 10px; width: auto; padding: 0;
+        flex: 1 1 100%; order: 1; white-space: normal; text-align: left;
       }
-
-      .ab-grid td.done-cell::before { display: none; }
+      .ab-grid td.done-cell .set-tick { margin: 0 6px 0 0; }
 
       /* Last Time is the number to beat, so it stays on its own line and reads
          as a heading rather than as a fourth input. */
@@ -1007,7 +1013,7 @@
          fields: the most destructive control on the card must not be eight
          pixels under the box a student is typing a weight into. */
       .ab-grid td.act-cell {
-        flex: 1 1 100%; display: flex; justify-content: flex-end;
+        flex: 1 1 100%; order: 2; display: flex; justify-content: flex-end;
         margin-top: 6px; padding-top: 8px; border-top: 1px dashed var(--border);
       }
       .ab-grid td.act-cell::before { display: none; }
@@ -1111,7 +1117,7 @@
       <ol class="welcome-steps">
         <li><strong>Log in above.</strong> Type your name and make up a 4-digit PIN. Use the same two every time.</li>
         <li><strong>Build your routine once.</strong> Workout A needs 4 lower body + 2 core. Workout B needs 4 upper body + 2 core.</li>
-        <li><strong>Every class after that:</strong> open <em>Do My Workout</em>, tick each exercise as you finish it, then hit Submit.</li>
+        <li><strong>Every class after that:</strong> open <em>Do My Workout</em>, tick a box for each set as you finish it, then hit Submit.</li>
       </ol>
       <p style="margin:12px 0 0; font-size:0.9rem; color:var(--subtle);">
         Stuck at any point? The <strong>&#10067; Help</strong> tab answers it, in plain English.
@@ -1324,7 +1330,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Done</th>
+                    <th>Sets done</th>
                     <th>Exercise</th>
                     <th>Last Time</th>
                     <th>Sets</th>
@@ -1351,7 +1357,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Done</th>
+                    <th>Sets done</th>
                     <th>Exercise</th>
                     <th>Last Time</th>
                     <th>Sets</th>
@@ -1470,7 +1476,7 @@
             <div class="help-step-n">3</div>
             <div>
               <strong>Every class after that</strong>
-              <p>Pick <em>Workout A</em> or <em>Workout B</em> at the top. Open <em>Do My Workout</em>. Tick each exercise as you finish it. Hit <strong>Submit</strong> before you leave.</p>
+              <p>Pick <em>Workout A</em> or <em>Workout B</em> at the top. Open <em>Do My Workout</em>. Tick a box for each set as you finish it. Hit <strong>Submit</strong> before you leave.</p>
               <p>Most days the tracker already knows which one it is &mdash; if Mr.&nbsp;Spencer has
               set the day, it picks it for you and says so under the buttons. You can still switch
               to the other one if you are catching up a day you missed; it will just check that is
@@ -1511,7 +1517,7 @@
           <p>Look at the red &#10007; list right above the Submit button &mdash; it shows
           <strong>everything</strong> in your way at once, not one thing at a time. The usual three:</p>
           <ul>
-            <li><strong>Nothing ticked.</strong> Check off at least one exercise you did. (Not finishing
+            <li><strong>Nothing ticked.</strong> Check off at least one set you did. (Not finishing
             everything is fine &mdash; you get a reminder, then you can submit anyway.)</li>
             <li><strong>Already in your history.</strong> You logged that exercise earlier today on the
             Quick&nbsp;Log tab. Nothing to fix &mdash; it already counts and is not sent twice.</li>
@@ -1551,6 +1557,16 @@
           <p>Next time you do that exercise, your most recent note shows up under <strong>Last Time</strong>,
           so you can decide whether to add weight. Every note you have written is also on the
           <strong>History</strong> tab.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Why is there a box for every set?</summary>
+          <p>Tick box 1 when you finish your first set, box 2 after the second, and so on. An exercise
+          counts as done when <strong>every</strong> set is ticked.</p>
+          <p>If you run out of time partway through, submit anyway: it is logged as, say,
+          <strong>2/3</strong> sets so Mr. Spencer sees what you did, but it does not count toward your
+          4&nbsp;+&nbsp;2 yet. Finish the last set later the same day, tick it and press Submit again &mdash;
+          the same entry is updated, not added twice.</p>
         </details>
 
         <details class="help-q">
@@ -1966,6 +1982,13 @@
           of them than you used to.</p>
           <p>One-off <em>Quick Log</em> entries are ignored by that calculation; only real A/B
           submissions count as "the last workout".</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What does &ldquo;2/3&rdquo; in the Sets column mean?</summary>
+          <p>Students tick a box for each set. <strong>2/3</strong> means they finished 2 of the 3 sets
+          they planned. An exercise only counts toward the 4&nbsp;+&nbsp;2 when every set is ticked.
+          Workouts logged before October 6, 2026 show only the planned number of sets, as before.</p>
         </details>
 
         <details class="help-q">
@@ -2541,6 +2564,37 @@
     return r.done === true && r.doneDate === date;
   }
 
+  // Zach, 2026-10-06: a box per set rather than one per exercise. The ticks are
+  // day-scoped exactly like doneDate, and `done` stays -- derived as "every set
+  // ticked" -- so the scores, the dashboard summaries and a tab still running
+  // the old build all keep reading the field they always read. An exercise
+  // ticked done before this shipped, with no set ticks for today, reads as
+  // every set done.
+  function setTicksToday(r, date) {
+    let n = Math.max(1, Number(r.sets) || 0);
+    if(r.setTicksDate !== date) return Array(n).fill(doneToday(r, date));
+    let t = Array.isArray(r.setTicks) ? r.setTicks : [];
+    return Array.from({ length: n }, (_, i) => t[i] === true);
+  }
+
+  function setsDoneToday(r, date) {
+    return setTicksToday(r, date).filter(Boolean).length;
+  }
+
+  function syncDone(r, date) {
+    r.done = setTicksToday(r, date).every(Boolean);
+    r.doneDate = r.done ? date : "";
+  }
+
+  // History rows from before per-set ticks carry no setsDone and were whole.
+  function partialRow(h) {
+    return h.setsDone != null && Number(h.setsDone) < Number(h.sets);
+  }
+
+  function setsCell(h) {
+    return h.setsDone == null ? String(h.sets) : h.setsDone + "/" + h.sets;
+  }
+
   // A note belongs to the day it was written, same trick as doneDate: Monday's
   // "knee hurt" is not still sitting on the exercise on Wednesday.
   function noteToday(r, date) {
@@ -2573,10 +2627,31 @@
   // just cannot be written twice. Treating it as work done is what stops "Skip
   // it and submit the rest" from bouncing a student into a requirement blocker
   // whose only remedy is ticking the very exercise that is blocked.
+  // A row logged with only some of its sets is in history but not finished, so
+  // it is not credited -- finishing the sets and submitting again grows it.
   function loggedToday(r, date, history) {
+    let h = rowToday(r, date, history);
+    return !!h && !partialRow(h);
+  }
+
+  function rowToday(r, date, history) {
     let name = cleanName(r.name).toLowerCase();
-    return history.some(h => String(h.date) === String(date)
+    return history.find(h => String(h.date) === String(date)
       && cleanName(h.exercise).toLowerCase() === name);
+  }
+
+  // What a submit would send: `fresh` exercises have no row today and get one;
+  // `grown` ones were sent part-done and have had more sets ticked since.
+  function pendingSets(items, date, history) {
+    let fresh = [], grown = [];
+    items.forEach(r => {
+      let n = setsDoneToday(r, date);
+      if(!n) return;
+      let h = rowToday(r, date, history);
+      if(!h) fresh.push(r);
+      else if(partialRow(h) && n > Number(h.setsDone)) grown.push(r);
+    });
+    return { fresh: fresh, grown: grown };
   }
 
   // Everything that would stop a set of rows reaching history, computed the same
@@ -2616,7 +2691,7 @@
         + "yet. Add some on the \u201c1. Build My Routine\u201d tab." }], warnings: [] };
     }
     let blockers = [], warnings = [];
-    let ticked = items.filter(r => doneToday(r, date));
+    let started = items.filter(r => setsDoneToday(r, date) > 0);
     // Credited = done today, whether that shows as a tick or as a row already in
     // history. Only ticked rows get WRITTEN, but both count as work done.
     let credited = items.filter(r => doneToday(r, date) || loggedToday(r, date, history));
@@ -2626,16 +2701,16 @@
     // Falling short of 4 + 2 is a reminder, not a wall (Zach, 2026-09-29): a student
     // who did not finish must still be able to send what they did. The one thing
     // worth refusing is a submit with nothing in it.
-    if(credited.length === 0) {
-      blockers.push({ code: "nothing-done", text: "Check off at least one exercise you did "
+    if(credited.length === 0 && started.length === 0) {
+      blockers.push({ code: "nothing-done", text: "Check off at least one set you did "
         + "before you submit." });
     }
     // A tick already sitting in today's history is done and sent -- not a clash.
     // Pressing Submit a second time (Zach's photo, 2026-09-30) used to list every
     // exercise of a finished workout as "already in your history". Only new
     // ticks get written; with none left there is simply nothing to send.
-    let fresh = ticked.filter(r => !loggedToday(r, date, history));
-    if(ticked.length && !fresh.length) {
+    let pend = pendingSets(items, date, history), fresh = pend.fresh;
+    if(started.length && !fresh.length && !pend.grown.length) {
       blockers.push({ code: "nothing-new", text: "Workout " + day + " is already in for "
         + date + " \u2014 there is nothing new to send. To change it, use Undo Submit, "
         + "fix it, and submit again." });
@@ -2651,19 +2726,31 @@
           text: "You have " + score + " of " + DAILY_TARGET + " \u2014 the workout asks for 4 "
             + primeLabel + " + 2 core. You can still submit; Mr. Spencer will see what you finished." });
       }
-      let skipped = items.filter(r => !doneToday(r, date) && !loggedToday(r, date, history))
+      // Zach, 2026-10-06: an exercise is done when every set is. Part of one is
+      // still logged ("2/3 sets") so he can see it, but it is not credited.
+      let partial = items.filter(r => !doneToday(r, date) && !loggedToday(r, date, history)
+        && setsDoneToday(r, date) > 0)
+        .map(r => cleanName(r.name) + " (" + setsDoneToday(r, date) + " of " + setTicksToday(r, date).length + " sets)");
+      if(partial.length) {
+        warnings.push({ code: "partial-sets", exercises: partial,
+          text: "Not every set is checked: " + partial.join(", ") + ". "
+            + (partial.length === 1 ? "It" : "They") + " will be logged as partly done and won't "
+            + "count toward the workout until every set is checked." });
+      }
+      let skipped = items.filter(r => setsDoneToday(r, date) === 0 && !rowToday(r, date, history))
         .map(r => cleanName(r.name));
-      warnings.push({ code: "not-ticked", exercises: skipped,
-        text: skipped.length + (skipped.length === 1 ? " exercise won't" : " exercises won't")
-          + " be logged because " + (skipped.length === 1 ? "it isn't" : "they aren't")
-          + " checked off: " + skipped.join(", ") + "." });
+      if(skipped.length) {
+        warnings.push({ code: "not-ticked", exercises: skipped,
+          text: skipped.length + (skipped.length === 1 ? " exercise won't" : " exercises won't")
+            + " be logged because no sets are checked: " + skipped.join(", ") + "." });
+      }
     }
     // 0 lbs is correct for a plank and wrong for a back squat, and the app has
     // no way to tell which. So it asks rather than guessing -- a warning, never
     // a blocker. Logging a loaded lift as 0 lbs destroys the Last Time number
     // the whole progressive-overload idea runs on.
     if(blockers.length === 0) {
-      let zero = ticked.filter(r => Number(r.lbs) === 0).map(r => cleanName(r.name));
+      let zero = started.filter(r => Number(r.lbs) === 0).map(r => cleanName(r.name));
       if(zero.length) {
         warnings.push({ code: "zero-lbs", exercises: zero,
           text: zero.length + (zero.length === 1 ? " exercise is" : " exercises are")
@@ -2697,6 +2784,25 @@
     let r = savedRoutines.find(x => x.id === id);
     if(!r) return;
     r[field] = (field in FIELD_MAX) ? cleanNumber(value, FIELD_MAX[field]) : value;
+    // One box per set, so the boxes follow the Sets number -- redrawn in place
+    // rather than redrawing the table under a student mid-tab.
+    if(field === "sets") {
+      let date = selectedDate();
+      if(r.setTicksDate === date) syncDone(r, date);
+      let tr = document.querySelector('tr[data-id="' + id + '"]');
+      if(tr) {
+        tr.querySelector('.done-cell').innerHTML = setBoxesHtml(r, date);
+        tr.classList.toggle('completed-row', doneToday(r, date));
+      }
+      renderTodayCard();
+    }
+  }
+
+  function setBoxesHtml(r, date) {
+    return setTicksToday(r, date).map((on, i) =>
+      `<label class="set-tick"><input type="checkbox" class="done-check" ${on ? 'checked' : ''}
+        aria-label="Set ${i + 1} of ${esc(r.name)} done"
+        onchange="setRoutineSet(${r.id}, ${i}, this.checked)"><span>${i + 1}</span></label>`).join("");
   }
 
   // Raising a box is exactly what the stall alert asks for, so it goes the
@@ -2723,13 +2829,16 @@
     saveUserData();
   }
 
-  // Ticking stamps the date beside the flag and unticking clears both, so a box
-  // can never be left checked with a stale date behind it.
-  function setRoutineDone(id, checked) {
+  // Ticking a set stamps today beside the ticks; `done` follows from them, so a
+  // box can never be left checked with a stale date behind it.
+  function setRoutineSet(id, i, checked) {
     let r = savedRoutines.find(x => x.id === id);
     if(!r) return;
-    r.done = checked;
-    r.doneDate = checked ? selectedDate() : "";
+    let date = selectedDate(), ticks = setTicksToday(r, date);
+    ticks[i] = checked;
+    r.setTicks = ticks;
+    r.setTicksDate = date;
+    syncDone(r, date);
     renderMasterWorkoutPlan();
     renderTodayCard();
     saveUserData();
@@ -3321,7 +3430,7 @@
     savedRoutines.forEach(r => {
       let last = getLastPerformance(r.name);
       let lastCell = last
-        ? `${last.sets}×${last.reps} @ ${last.lbs}lbs<br><span style="font-size:0.7rem; color:var(--subtle);">${formatDateShort(last.date)}</span>`
+        ? `${last.sets}×${last.reps} @ ${last.lbs}lbs${partialRow(last) ? ` <span class="ex-comp">(did ${last.setsDone} of ${last.sets} sets)</span>` : ""}<br><span style="font-size:0.7rem; color:var(--subtle);">${formatDateShort(last.date)}</span>`
         : `<span style="color:var(--subtle);">—</span>`;
       // Zach, 2026-10-01: the point of a note is reading it back next time, at the
       // moment of deciding whether to change the weight -- so it sits under Last Time.
@@ -3331,11 +3440,10 @@
       if(stalled) lastCell += `<span class="stall-alert">⚠️ Same for ${stalled} weeks — raise the weight, reps or sets</span>`;
 
       let tr = document.createElement('tr');
+      tr.dataset.id = r.id;
       if(doneToday(r, date)) tr.classList.add('completed-row');
       tr.innerHTML = `
-        <td class="done-cell" data-label="Done"><input type="checkbox" class="done-check" ${doneToday(r, date) ? 'checked' : ''}
-            aria-label="Mark ${esc(r.name)} done today"
-            onchange="setRoutineDone(${r.id}, this.checked)"></td>
+        <td class="done-cell" data-label="Sets done">${setBoxesHtml(r, date)}</td>
         <td class="ex-cell" data-label="Exercise"><strong>${esc(r.name)}</strong><span class="ex-comp">${esc(r.component)}</span>
           <button type="button" class="note-btn" onclick="openNote(${r.id})">💬 ${noteToday(r, date) ? "Edit note" : "Add note"}</button>
           ${noteToday(r, date) || openNotes.has(r.id) ? `<input type="text" class="note-input" id="note-${r.id}" maxlength="300"
@@ -3463,7 +3571,9 @@
     let mine = new Map(local.map(r => [r.id, r]));
     return server.map(r => {
       let out = { ...r }, l = mine.get(r.id);
-      if(l) ["done", "doneDate", "note", "noteDate"].forEach(k => { if(l[k] !== undefined) out[k] = l[k]; });
+      if(l) ["done", "doneDate", "setTicks", "setTicksDate", "note", "noteDate"].forEach(k => { if(l[k] !== undefined) out[k] = l[k]; });
+      // The teacher may have changed the number of sets under today's ticks.
+      if(out.setTicksDate) syncDone(out, out.setTicksDate);
       return out;
     });
   }
@@ -3491,7 +3601,9 @@
     let rows = savedRoutines.filter(r => r.day === day);
     let rowsHtml = rows.map(r => {
       let last = getLastPerformance(r.name);
-      let lastText = last ? `${last.sets} x ${last.reps} @ ${last.lbs} lbs (${formatDateShort(last.date)})` : "First time";
+      let lastText = last ? `${last.sets} x ${last.reps} @ ${last.lbs} lbs`
+        + (partialRow(last) ? `, did ${last.setsDone} of ${last.sets} sets` : "")
+        + ` (${formatDateShort(last.date)})` : "First time";
       return `
         <tr>
           <td>${esc(r.name)}</td>
@@ -3599,6 +3711,25 @@
   function deleteSpreadsheetRow(idx) {
     spreadsheetRows.splice(idx, 1);
     renderSpreadsheet();
+  }
+
+  async function growPartialRows(list, date) {
+    if(!list.length) return true;
+    let patches = list.map(r => [rowToday(r, date, historyLogs), { setsDone: setsDoneToday(r, date) }]);
+    let batch = fbWriteBatch(db);
+    patches.forEach(([h, p]) => batch.update(fbDoc(db, "students", currentDocId, "history", h.logId), p));
+    setSaveStatus("saving");
+    try {
+      await batch.commit();
+    } catch(err) {
+      console.error("History update failed:", err);
+      setSaveStatus("error", err && err.code ? err.code : "");
+      notice("Your workout could NOT be saved \u2014 check your connection and try again.");
+      return false;
+    }
+    setSaveStatus("saved");
+    patches.forEach(([h, p]) => Object.assign(h, p));
+    return true;
   }
 
   async function commitRowsToHistory(rows) {
@@ -3717,16 +3848,18 @@
     }
 
     // Not finished is allowed -- but say so before it is sent, not after.
-    let unfinished = res.warnings.filter(w => w.code === "short-of-requirement" || w.code === "not-ticked");
+    let unfinished = res.warnings.filter(w => w.code === "short-of-requirement" || w.code === "partial-sets" || w.code === "not-ticked");
     if(unfinished.length && !confirm("Not everything is finished:\n\n"
       + unfinished.map(w => "\u2022 " + w.text).join("\n\n") + "\n\nSubmit anyway?")) {
       return;
     }
 
     // Only what was actually ticked gets logged; a skipped exercise is no longer
-    // written as a 0x0 @ 0lbs row.
+    // written as a 0x0 @ 0lbs row. Part of one is logged with its setsDone, and
+    // a part-done row already sent today is grown in place, not written twice.
     let items = savedRoutines.filter(r => r.day === day);
-    let logged = items.filter(r => doneToday(r, dateVal) && !loggedToday(r, dateVal, historyLogs));
+    let pend = pendingSets(items, dateVal, historyLogs), logged = pend.fresh;
+    if(!await growPartialRows(pend.grown, dateVal)) return;
 
     // Tag every row with the submission that created it, so an undo removes
     // exactly these rows and not an identically-named row logged by hand on the
@@ -3735,12 +3868,17 @@
     let rows = logged.map(r => ({
       date: dateVal, exercise: r.name, component: r.component,
       sets: r.sets, reps: r.reps, lbs: r.lbs, day: day, subId: subId,
-      note: noteToday(r, dateVal)
+      note: noteToday(r, dateVal), setsDone: setsDoneToday(r, dateVal)
     }));
 
-    if(!await commitRowsToHistory(rows)) return;
-
-    todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: logged.map(r => r.name) };
+    if(rows.length) {
+      if(!await commitRowsToHistory(rows)) return;
+      todaysSubmission = { date: dateVal, day: day, subId: subId, exercises: logged.map(r => r.name) };
+    } else {
+      renderHistoryTable();
+      renderMasterWorkoutPlan();
+    }
+    rows = rows.concat(pend.grown);
     let summarySaved = await saveUserData();
     renderSubmitStatus();
     renderTodayCard();
@@ -3865,7 +4003,7 @@
         <td>${h.day || "—"}</td>
         <td><strong>${esc(h.exercise)}</strong></td>
         <td>${esc(h.component)}</td>
-        <td>${h.sets}</td>
+        <td>${esc(setsCell(h))}</td>
         <td>${h.reps}</td>
         <td>${h.lbs} lbs</td>
         <td>${esc(h.note || "")}</td>
@@ -4787,7 +4925,7 @@
           + '<th>Date</th><th>Workout</th><th>Exercise</th><th>Component</th>'
           + '<th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
           + sorted.map(h => '<tr><td class="nowrap">' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
-              + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
+              + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
               + '</td><td>' + esc(h.reps) + '</td><td class="nowrap">' + esc(h.lbs) + ' lbs</td><td>'
               + esc(h.note || "") + '</td></tr>').join("")
           + '</tbody></table></div>'
@@ -5599,7 +5737,7 @@
             : '<table class="rep-table"><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th>'
               + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
               + rows.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
-                  + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(h.sets)
+                  + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
                   + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td><td>'
                   + esc(h.note || "") + '</td></tr>').join("")
               + '</tbody></table>';

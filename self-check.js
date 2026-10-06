@@ -30,6 +30,13 @@ eval([
   grab('function composedScore(routines, day, date) {'),
   grab('function cleanName(v) {'),
   grab('function loggedToday(r, date, history) {'),
+  grab('function rowToday(r, date, history) {'),
+  grab('function pendingSets(items, date, history) {'),
+  grab('function setTicksToday(r, date) {'),
+  grab('function setsDoneToday(r, date) {'),
+  grab('function syncDone(r, date) {'),
+  grab('function partialRow(h) {'),
+  grab('function setsCell(h) {'),
   grab('function rowConflicts(rows, history) {'),
   grab('function workoutBlockers(routines, day, date, history) {'),
   grab('function spreadsheetBlockers(rows, history) {'),
@@ -535,5 +542,50 @@ eval([
   console.log('video-check   OK - ' + globalThis.__videoCount + ' exercises, every one a cued full-length video or a name search, zero Shorts');
   console.log('stall-check    OK - 3 full calendar weeks, gaps skipped, change week excluded, 0 lbs left out, raised box clears');
   console.log('adopt-check    OK - teacher program wins, today\'s ticks and notes survive, no undefined fields');
+  {
+    // Per-set ticks (Zach, 2026-10-06): done means every set; part of one is
+    // logged with setsDone, not credited, and grown in place on a re-submit.
+    const D = '2026-10-06';
+    const ex = (id, name, sets, ticks) => ({ id, name, day: 'A', targetArea: 'lower', sets, reps: 10, lbs: 50,
+      setTicks: ticks, setTicksDate: D });
+    let r = ex(1, 'Squat', 3, [true, true, false]);
+    syncDone(r, D);
+    assert.strictEqual(r.done, false, 'two of three sets is not done');
+    assert.strictEqual(setsDoneToday(r, D), 2);
+    r.setTicks = [true, true, true]; syncDone(r, D);
+    assert.ok(r.done && r.doneDate === D, 'every set ticked is done');
+    r.sets = 4; syncDone(r, D);
+    assert.strictEqual(r.done, false, 'adding a set un-finishes it');
+    assert.strictEqual(setTicksToday(r, D).length, 4, 'one box per set');
+    assert.deepStrictEqual(setTicksToday({ sets: 3, setTicks: [true, true, true], setTicksDate: '2026-10-05' }, D),
+      [false, false, false], 'yesterday\'s ticks do not carry over');
+    assert.deepStrictEqual(setTicksToday({ sets: 2, done: true, doneDate: D }, D), [true, true],
+      'a whole-exercise tick from before this change reads as every set');
+    assert.strictEqual(setTicksToday({ sets: 0 }, D).length, 1, 'zero sets still gets one box');
+
+    // Partial-only submit goes through with a warning, not a block.
+    const part = [ex(1, 'Squat', 3, [true, false, false]), ex(2, 'Lunge', 3, [])];
+    part.forEach(x => syncDone(x, D));
+    let res = workoutBlockers(part, 'A', D, []);
+    assert.deepStrictEqual(res.blockers, [], 'part of a set list may be submitted');
+    assert.ok(res.warnings.some(w => w.code === 'partial-sets' && w.exercises[0].includes('1 of 3')), 'partial warned');
+    assert.deepStrictEqual(res.warnings.find(w => w.code === 'not-ticked').exercises, ['Lunge']);
+    assert.strictEqual(pendingSets(part, D, []).fresh.length, 1);
+
+    // Once logged at 1/3: same ticks again => nothing new; more ticks => grown, no clash.
+    const hist = [{ date: D, exercise: 'Squat', sets: 3, setsDone: 1, logId: 'L1' }];
+    assert.ok(partialRow(hist[0]) && !loggedToday(part[0], D, hist), 'a partial row is not credited');
+    assert.deepStrictEqual(workoutBlockers(part, 'A', D, hist).blockers.map(b => b.code), ['nothing-new']);
+    part[0].setTicks = [true, true, true]; syncDone(part[0], D);
+    let p2 = pendingSets(part, D, hist);
+    assert.ok(p2.grown.length === 1 && p2.fresh.length === 0, 'finishing the sets grows the row');
+    assert.deepStrictEqual(workoutBlockers(part, 'A', D, hist).blockers, [], 'growing is not an already-logged clash');
+    assert.ok(loggedToday(part[0], D, [{ ...hist[0], setsDone: 3 }]), 'a grown-to-full row is credited');
+    assert.ok(loggedToday(part[0], D, [{ date: D, exercise: 'Squat', sets: 3 }]), 'old rows without setsDone are whole');
+
+    assert.strictEqual(setsCell({ sets: 3, setsDone: 2 }), '2/3');
+    assert.strictEqual(setsCell({ sets: 3 }), '3', 'old rows show as they were');
+  }
+  console.log('sets-check     OK - a box per set, done = every set, partial logged but uncredited, grown in place, old rows untouched');
   console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });
