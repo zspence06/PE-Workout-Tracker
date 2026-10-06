@@ -16,7 +16,7 @@ function grab(sig) {
   if (j < 0) throw new Error('could not find end of ' + sig);
   return src.slice(i, j + 4);
 }
-const constLines = ['const PIN_ITERATIONS', 'const TARGET_MODAL_INTERVAL_MS', 'const DAILY_TARGET'].map(k => {
+const constLines = ['const PIN_ITERATIONS', 'const TARGET_MODAL_INTERVAL_MS', 'const DAILY_TARGET', 'const STALL_WEEKS'].map(k => {
   const line = src.split('\n').find(l => l.includes(k));
   if (!line) throw new Error(k + ' not found');
   return line.trim().replace('const ', 'globalThis.');
@@ -44,6 +44,10 @@ eval([
   grab('function submissionIdFor(day, date, history) {'),
   grab('function pickDay(rec, dayKey, dateKey, today) {'),
   grab('function effectiveDay(student, cls, school, today) {'),
+  grab('function weekOf(iso) {'),
+  grab('function stallWeeks(r, history) {'),
+  grab('function stalledList(routines, history) {'),
+  grab('function adoptTeacherRoutines(server, local) {'),
 ].join('\n'));
 
 (async () => {
@@ -475,6 +479,48 @@ eval([
   const ms = Date.now() - t0;
   assert.ok(ms < 2000, 'single derivation too slow: ' + ms + 'ms');
 
+
+  // ---- stall alert (Zach, 2026-10-06)
+  assert.strictEqual(weekOf('2026-10-05'), '2026-10-05', 'Monday is its own week');
+  assert.strictEqual(weekOf('2026-10-11'), '2026-10-05', 'Sunday belongs to the Monday before');
+  assert.strictEqual(weekOf('2026-11-02'), '2026-11-02', 'no DST slip across the November change');
+  assert.strictEqual(weekOf('2026-11-08'), '2026-11-02');
+  const row = (date, lbs, reps = 10, sets = 3, exercise = 'Goblet Squat') => ({ date, exercise, sets, reps, lbs });
+  const sq = { name: 'Goblet Squat', day: 'A', sets: 3, reps: 10, lbs: 25 };
+  // Twice a week for three calendar weeks, never changed -> alert.
+  const flat = ['2026-09-14','2026-09-16','2026-09-21','2026-09-23','2026-09-28','2026-09-30'].map(d => row(d, 25));
+  assert.strictEqual(stallWeeks(sq, flat), 3, 'three flat weeks alert');
+  assert.strictEqual(stallWeeks(sq, flat.slice(2)), 0, 'two flat weeks do not');
+  // A skipped week is neither counted nor a reset.
+  assert.strictEqual(stallWeeks(sq, [row('2026-09-07', 25), row('2026-09-21', 25), row('2026-10-05', 25)]), 3, 'gaps are skipped over');
+  // The week a change was made does not count, even if later rows that week match.
+  const changed = [row('2026-09-14', 20), row('2026-09-17', 25), row('2026-09-21', 25), row('2026-09-28', 25)];
+  assert.strictEqual(stallWeeks(sq, changed), 0, 'change week excluded -> only two full weeks');
+  assert.strictEqual(stallWeeks(sq, changed.concat(row('2026-10-05', 25))), 3, 'third full week after the change alerts');
+  // Reps or sets moving is an adjustment too.
+  assert.strictEqual(stallWeeks(sq, flat.concat(row('2026-10-05', 25, 12))), 0, 'a reps change resets');
+  // Already raised in the boxes -> student has acted, no alert.
+  assert.strictEqual(stallWeeks({ ...sq, lbs: 30 }, flat), 0, 'a raised box clears the alert');
+  // Bodyweight / timed (0 lbs) never alert.
+  const bw = { name: 'Plank', day: 'A', sets: 3, reps: 30, lbs: 0 };
+  assert.strictEqual(stallWeeks(bw, flat.map(r => ({ ...r, exercise: 'Plank', reps: 30, lbs: 0 }))), 0, '0 lbs is left out');
+  // Matched by name, so a switched exercise starts fresh; other exercises do not leak in.
+  assert.strictEqual(stallWeeks({ ...sq, name: 'Front Squat' }, flat), 0, 'a different exercise starts fresh');
+  assert.strictEqual(stallWeeks({ ...sq, name: '  goblet squat ' }, flat), 3, 'name match ignores case and edge spaces, same as Last Time');
+  assert.deepStrictEqual(stalledList([sq, bw], flat), [{ name: 'Goblet Squat', day: 'A', weeks: 3 }]);
+
+  // ---- teacher edit adoption: his program, the student's day-state
+  const server = [{ id: 1, name: 'Goblet Squat', day: 'A', sets: 4, reps: 8, lbs: 30, done: false },
+                  { id: 3, name: 'Plank', day: 'A', sets: 3, reps: 30, lbs: 0 }];
+  const local  = [{ id: 1, name: 'Goblet Squat', day: 'A', sets: 3, reps: 10, lbs: 25, done: true, doneDate: '2026-10-06', note: 'easy', noteDate: '2026-10-06' },
+                  { id: 2, name: 'Removed One', day: 'A', sets: 3, reps: 10, lbs: 0, done: true, doneDate: '2026-10-06' }];
+  const merged = adoptTeacherRoutines(server, local);
+  assert.deepStrictEqual(merged.map(r => r.id), [1, 3], 'teacher removals and additions win');
+  assert.strictEqual(merged[0].lbs, 30, 'teacher numbers win');
+  assert.strictEqual(merged[0].done, true, "today's tick survives");
+  assert.strictEqual(merged[0].note, 'easy', "today's note survives");
+  assert.ok(!('note' in merged[1]) && !('doneDate' in merged[1]), 'no undefined fields invented (Firestore rejects them)');
+  assert.strictEqual(server[0].done, false, 'server copy not mutated');
   console.log('derivation: ' + ms + 'ms/login, ' + PIN_ITERATIONS + ' iterations');
   console.log('identity-check OK - 9 distinct addresses, normalization stable, no name or PIN recoverable from an address');
   console.log('escaping-check OK - script payloads, attribute breakouts and null/0 all handled');
@@ -487,5 +533,7 @@ eval([
   console.log('alternate-check OK - A/B alternates off the last real workout, ignoring Quick Log rows and today\'s own');
   console.log('submitted-check OK - A and B resolve independently from the rows; hand-logged rows are not a submission');
   console.log('video-check   OK - ' + globalThis.__videoCount + ' exercises, every one a cued full-length video or a name search, zero Shorts');
+  console.log('stall-check    OK - 3 full calendar weeks, gaps skipped, change week excluded, 0 lbs left out, raised box clears');
+  console.log('adopt-check    OK - teacher program wins, today\'s ticks and notes survive, no undefined fields');
   console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

@@ -615,6 +615,13 @@
 
     .btn-undo:hover, .btn-quiet-danger:hover { background: var(--danger-bg); }
     .btn-quiet-danger { padding: 8px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; }
+    .stall-alert { display: block; margin-top: 4px; font-size: 0.8rem; font-weight: 700; color: var(--warn);
+      background: var(--warn-bg); border-radius: 4px; padding: 2px 6px; }
+    .stall-tag { font-size: .72rem; color: var(--warn); font-weight: 700; }
+    .program-box input.sheet-input.prog-edit { width: 4.2em; min-width: 0; padding: 6px 4px; font-size: 1rem; }
+    .program-box th, .program-box td { padding: 6px 5px; }
+    /* Five narrow columns fit a phone; the 620px floor the history tables need does not apply. */
+    .program-box .table-scroll table { min-width: 0; }
     .last-note { display: block; margin-top: 4px; font-size: 0.8rem; color: var(--text); font-style: italic; }
     .note-btn { display: block; margin-top: 6px; background: none; border: 1px solid var(--border);
       border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; color: var(--subtle); cursor: pointer; }
@@ -1547,6 +1554,16 @@
         </details>
 
         <details class="help-q">
+          <summary>What does &ldquo;Same for 3 weeks&rdquo; mean?</summary>
+          <p>If you have done an exercise with the same weight, reps and sets for three weeks in a row, a
+          yellow alert shows under <strong>Last Time</strong>. Raise at least one of them. The alert goes
+          away as soon as you change a number. Weeks you did not do that exercise do not count, and
+          bodyweight or timed exercises (0 lbs) never get the alert.</p>
+          <p>Mr. Spencer can also change your workout program. If he does while you have the page open,
+          you will see a message and the new program.</p>
+        </details>
+
+        <details class="help-q">
           <summary>I forgot my PIN.</summary>
           <p>Nobody can look it up &mdash; it is not stored anywhere, which is what stops other students getting
           into your account. Ask Mr.&nbsp;Spencer to <strong>Reset PIN</strong> for you. Your workouts all come
@@ -1957,6 +1974,18 @@
           they pressed the button that actually sends it to you.</p>
           <p>A student sitting at 6/6 and <em>not</em> submitted did the work and forgot the last step.
           Worth a shout across the gym before the bell &mdash; use the <strong>In progress</strong> chip.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>How do I see or change a student&rsquo;s program?</summary>
+          <p>Click the student&rsquo;s name. Above their workouts is <strong>Workout program (A and B)</strong>:
+          change sets, reps or lbs in place, remove an exercise with &#10005;, or pick one from the list and
+          press <strong>+ Add</strong>. Each change saves on its own. The student sees it on their next save or
+          login, and keeps whatever they had ticked today.</p>
+          <p>A yellow <strong>&#9888; unchanged 3+ weeks</strong> tag on a row means the student has done an
+          exercise at the same weight, reps and sets for three calendar weeks. Weeks they skipped it are
+          ignored, the week they changed it does not count, and 0-lb (bodyweight or timed) exercises are left out.
+          The student sees the same alert on their workout.</p>
         </details>
 
         <details class="help-q">
@@ -2471,6 +2500,10 @@
   let currentDocId = null;
   let currentClassId = null;
   let savesInFlight = 0;
+  // routinesRev is bumped only by the teacher's program editor. A student save
+  // that finds it higher than this adopts the teacher's program first, so an
+  // open tab cannot write an old copy back over Zach's edit.
+  let myRoutinesRev = 0;
   let sizeWarned = false;
   const DEFAULT_LEARNING_TARGET = "Focus on explosive power and full range of motion.";
   let currentLearningTarget = DEFAULT_LEARNING_TARGET;
@@ -2664,6 +2697,14 @@
     let r = savedRoutines.find(x => x.id === id);
     if(!r) return;
     r[field] = (field in FIELD_MAX) ? cleanNumber(value, FIELD_MAX[field]) : value;
+  }
+
+  // Raising a box is exactly what the stall alert asks for, so it goes the
+  // moment they do -- without redrawing the table under a student mid-tab.
+  function refreshStall(id, el) {
+    let r = savedRoutines.find(x => x.id === id);
+    let tag = el.closest('tr').querySelector('.stall-alert');
+    if(r && tag) tag.classList.toggle('hidden', !stallWeeks(r, historyLogs));
   }
 
   let openNotes = new Set();
@@ -2954,13 +2995,15 @@
       currentDocId = docId;
       currentClassId = data.classId || null;
       savedRoutines = data.routines || [];
+      myRoutinesRev = data.routinesRev || 0;
       todaysSubmission = data.submission || null;
       let sameDay = data.todayDate === todayLocal();
       myDayOverride = { abDay: data.abDay, abDayDate: data.abDayDate };
       try {
         historyLogs = await fetchHistory(docId);
         // Self-heal: if the stored summary disagrees with the real rows, fix it.
-        if((data.logCount || 0) !== historyLogs.length) saveUserData();
+        if((data.logCount || 0) !== historyLogs.length
+           || JSON.stringify(data.stalled || []) !== JSON.stringify(stalledList(savedRoutines, historyLogs))) saveUserData();
         // A choice they already made today stands. Otherwise alternate off the
         // last workout they actually logged -- which needs history, so it has
         // to happen after the fetch, not before it.
@@ -2988,6 +3031,7 @@
       currentDocId = docId;
       currentClassId = null;
       savedRoutines = [];
+      myRoutinesRev = 0;
       historyLogs = [];
       todaysSubmission = null;
       try {
@@ -3279,6 +3323,8 @@
       // moment of deciding whether to change the weight -- so it sits under Last Time.
       let prevNote = lastNoteBefore(r.name, date);
       if(prevNote) lastCell += `<span class="last-note">💬 ${formatDateShort(prevNote.date)}: ${esc(prevNote.note)}</span>`;
+      let stalled = stallWeeks(r, historyLogs);
+      if(stalled) lastCell += `<span class="stall-alert">⚠️ Same for ${stalled} weeks — raise the weight, reps or sets</span>`;
 
       let tr = document.createElement('tr');
       if(doneToday(r, date)) tr.classList.add('completed-row');
@@ -3292,9 +3338,9 @@
             placeholder="Note for Mr. Spencer (how it felt, a swap, pain…)" value="${esc(noteToday(r, date))}"
             aria-label="Note for ${esc(r.name)}" onchange="setRoutineNote(${r.id}, this.value)">` : ""}</td>
         <td data-label="Last time">${lastCell}</td>
-        <td data-label="Sets"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="99" value="${r.sets}" aria-label="Sets for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'sets', this.value); saveUserData();"></td>
-        <td data-label="Reps"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="999" value="${r.reps}" aria-label="Reps for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'reps', this.value); saveUserData();"></td>
-        <td data-label="Lbs"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="2000" value="${r.lbs}" aria-label="Lbs for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'lbs', this.value); saveUserData();"></td>
+        <td data-label="Sets"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="99" value="${r.sets}" aria-label="Sets for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'sets', this.value); refreshStall(${r.id}, this); saveUserData();"></td>
+        <td data-label="Reps"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="999" value="${r.reps}" aria-label="Reps for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'reps', this.value); refreshStall(${r.id}, this); saveUserData();"></td>
+        <td data-label="Lbs"><input type="number" class="sheet-input" inputmode="numeric" min="0" max="2000" value="${r.lbs}" aria-label="Lbs for ${esc(r.name)}" onchange="updateRoutineField(${r.id}, 'lbs', this.value); refreshStall(${r.id}, this); saveUserData();"></td>
         <td data-label="" class="act-cell"><button class="btn btn-quiet-danger" aria-label="Remove ${esc(r.name)} from this workout" title="Remove from routine" onclick="deleteRoutineItem(${r.id})">✕</button></td>
       `;
 
@@ -3363,6 +3409,59 @@
       && cleanName(h.exercise).toLowerCase() === name);
     hits.sort((a, b) => String(b.date).localeCompare(String(a.date)));
     return hits[0] || null;
+  }
+
+  // Zach, 2026-10-06: an exercise whose weight, reps and sets have not moved
+  // for three calendar weeks gets an alert, for him and the student. Weeks the
+  // exercise was not done are skipped, not counted and not a reset. The week a
+  // change was made does not count -- "three weeks without an adjustment" means
+  // three full weeks after it. Matched by name like Last Time, so switching to a
+  // different exercise starts fresh.
+  const STALL_WEEKS = 3;
+
+  // Monday of the calendar week, in UTC so a DST change cannot shift the day.
+  function weekOf(iso) {
+    let p = String(iso || "").split("-").map(Number);
+    if(p.length !== 3 || p.some(n => !isFinite(n))) return "";
+    let t = Date.UTC(p[0], p[1] - 1, p[2]);
+    let back = (new Date(t).getUTCDay() + 6) % 7;
+    return new Date(t - back * 86400000).toISOString().slice(0, 10);
+  }
+
+  function stallWeeks(r, history) {
+    let name = cleanName(r.name).toLowerCase();
+    let rows = history.filter(h => h.date && cleanName(h.exercise).toLowerCase() === name)
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+    if(!rows.length) return 0;
+    let sig = x => [x.sets, x.reps, x.lbs].map(Number).join("/");
+    let now = sig(rows[0]);
+    // Bodyweight and timed exercises log 0 lbs; Zach left those out.
+    if(Number(rows[0].lbs) === 0) return 0;
+    // The boxes already hold a change for next time, which is what the alert asks for.
+    if(sig(r) !== now) return 0;
+    let weeks = new Set();
+    for(let h of rows) {
+      if(sig(h) !== now) { weeks.delete(weekOf(h.date)); break; }
+      weeks.add(weekOf(h.date));
+    }
+    return weeks.size >= STALL_WEEKS ? weeks.size : 0;
+  }
+
+  function stalledList(routines, history) {
+    return routines.map(r => ({ name: cleanName(r.name), day: r.day, weeks: stallWeeks(r, history) }))
+      .filter(x => x.weeks > 0);
+  }
+
+  // The teacher's copy of the program wins; what the student did TODAY (ticks,
+  // notes) is theirs and comes across by id. Only defined keys are copied,
+  // because Firestore refuses an undefined field value.
+  function adoptTeacherRoutines(server, local) {
+    let mine = new Map(local.map(r => [r.id, r]));
+    return server.map(r => {
+      let out = { ...r }, l = mine.get(r.id);
+      if(l) ["done", "doneDate", "note", "noteDate"].forEach(k => { if(l[k] !== undefined) out[k] = l[k]; });
+      return out;
+    });
   }
 
   function getLastLogForDay(exerciseName, date) {
@@ -4185,8 +4284,56 @@
   // there is still room rather than after the wall.
   const DOC_WARN_BYTES = 800000;
 
+  // Zach can edit a program from the dashboard while the student has the page
+  // open. Every save therefore reads the record first: if his edit landed since
+  // this tab last looked, adopt it before writing, or the save would put the old
+  // program straight back. One extra read per save.
+  // ponytail: read-then-write, not a transaction -- an edit landing in the
+  // few-ms gap between the two still loses. runTransaction if that ever bites.
+  async function pullTeacherEdits(docId) {
+    let snap = await fbGetDoc(fbDoc(db, "students", docId));
+    let d = snap.exists() ? snap.data() : null;
+    if(!d || currentDocId !== docId || (d.routinesRev || 0) <= myRoutinesRev) return;
+    savedRoutines = adoptTeacherRoutines(d.routines || [], savedRoutines);
+    myRoutinesRev = d.routinesRev;
+    renderStillNeeds();
+    renderSavedTags();
+    renderMasterWorkoutPlan();
+    updateProgressUI();
+    renderTodayCard();
+    notice("Mr. Spencer just updated your workout program. Check Workout A and Workout B "
+      + "\u2014 if a change you made in the last few seconds is missing, make it again.",
+      "Program updated");
+  }
+
   function saveUserData() {
     if(!currentUser || !currentDocId) return Promise.resolve(false);
+    let docId = currentDocId;
+
+    savesInFlight++;
+    setSaveStatus("saving");
+    // Returns a promise resolving true/false rather than being fire-and-forget,
+    // so a caller that is about to promise the student something ("sent to your
+    // teacher") can wait and find out whether that is true. The dashboard reads
+    // THIS document, not the history rows, so a silent failure here is exactly
+    // the "I swear I submitted it" case.
+    return pullTeacherEdits(docId)
+      .then(() => {
+        // Logged out while the read was in flight: the state below now belongs
+        // to nobody, and writing it would blank the record we started from.
+        if(currentDocId !== docId) return false;
+        return fbUpdateDoc(fbDoc(db, "students", docId), buildSavePayload()).then(() => true);
+      })
+      .then(ok => { savesInFlight--; if(savesInFlight === 0) setSaveStatus("saved"); return ok; })
+      .catch(err => {
+        savesInFlight--;
+        console.error("Save failed:", err);
+        setSaveStatus("error", err && err.code ? err.code : "");
+        return false;
+      });
+  }
+
+  function buildSavePayload() {
     // logCount and lastLogDate are a summary of the history subcollection, kept
     // on the record so the teacher dashboard can list a whole class without
     // downloading anyone's workouts. They are derived, never authoritative:
@@ -4207,7 +4354,10 @@
       todayDate: dateVal,
       todayDay: todayDay,
       todayScore: composedScore(savedRoutines, todayDay, dateVal),
-      todayDone: savedRoutines.filter(r => r.day === todayDay && doneToday(r, dateVal)).length
+      todayDone: savedRoutines.filter(r => r.day === todayDay && doneToday(r, dateVal)).length,
+      // Same contract again: the dashboard flags a stalled student from this
+      // without reading their history. Opening the student recomputes it live.
+      stalled: stalledList(savedRoutines, historyLogs)
     };
 
     let approx = 0;
@@ -4218,23 +4368,9 @@
         + "where saving stops working.\n\nLet your teacher know so older logs can be "
         + "cleared out.");
     }
-
-    savesInFlight++;
-    setSaveStatus("saving");
-    // Returns a promise resolving true/false rather than being fire-and-forget,
-    // so a caller that is about to promise the student something ("sent to your
-    // teacher") can wait and find out whether that is true. The dashboard reads
-    // THIS document, not the history rows, so a silent failure here is exactly
-    // the "I swear I submitted it" case.
-    return fbUpdateDoc(fbDoc(db, "students", currentDocId), payload)
-      .then(() => { savesInFlight--; if(savesInFlight === 0) setSaveStatus("saved"); return true; })
-      .catch(err => {
-        savesInFlight--;
-        console.error("Save failed:", err);
-        setSaveStatus("error", err && err.code ? err.code : "");
-        return false;
-      });
+    return payload;
   }
+
 
   // Shared devices: without this the next student inherits the previous one's
   // session, and one of them ends up writing into the other's record.
@@ -4242,6 +4378,7 @@
     if(savesInFlight > 0 && !confirm("A save is still in progress. Log out anyway?")) return;
     currentUser = null; currentDocId = null; currentClassId = null;
     savedRoutines = []; historyLogs = []; todaysSubmission = null;
+    myRoutinesRev = 0;
     myDayOverride = null;
     sizeWarned = false;
     document.getElementById('studentName').value = "";
@@ -4429,6 +4566,119 @@
     }
   }
 
+  // ------------------------------------------- teacher: view / edit a program
+  // Zach, 2026-10-06: open a student and see their Workout A and B, with editing.
+  let exerciseOptionsCache = "";
+  function exerciseOptions() {
+    if(exerciseOptionsCache) return exerciseOptionsCache;
+    let label = { upper: "Upper", lower: "Lower", core: "Core" };
+    exerciseOptionsCache = '<option value="">-- Pick an exercise --</option>'
+      + Object.keys(exerciseDB).map(area => Object.keys(exerciseDB[area]).map(mg =>
+          '<optgroup label="' + esc(label[area] || area) + ' — ' + esc(exerciseDB[area][mg].name) + '">'
+          + Object.keys(exerciseDB[area][mg].exercises).map(ex =>
+              '<option value="' + esc(area + "|" + mg + "|" + ex) + '">' + esc(ex) + '</option>').join("")
+          + '</optgroup>').join("")).join("");
+    return exerciseOptionsCache;
+  }
+
+  function programHtml(stu, rows) {
+    let sid = esc(stu.id);
+    let day = d => {
+      let items = stu.routines.filter(r => r.day === d);
+      let body = items.length ? items.map(r => {
+        let w = stallWeeks(r, rows);
+        let num = (f, max) => '<input type="number" class="sheet-input prog-edit" inputmode="numeric" min="0" max="'
+          + max + '" value="' + esc(r[f]) + '" aria-label="' + f + ' for ' + esc(r.name) + '" onchange="teacherSetField(\''
+          + sid + '\', ' + Number(r.id) + ', \'' + f + '\', this.value)">';
+        return '<tr><td><strong>' + esc(r.name) + '</strong><br><span style="font-size:.74rem; color:var(--subtle);">'
+          + esc(r.targetArea || "") + (r.component ? ' &middot; ' + esc(r.component) : "") + '</span>'
+          + (w ? '<span class="stall-alert">&#9888; Same for ' + w + ' weeks</span>' : "") + '</td>'
+          + '<td>' + num("sets", 99) + '</td><td>' + num("reps", 999) + '</td><td>' + num("lbs", 2000) + '</td>'
+          + '<td><button class="btn btn-quiet-danger" aria-label="Remove ' + esc(r.name) + ' from Workout ' + d
+          + '" onclick="teacherRemoveExercise(\'' + sid + '\', ' + Number(r.id) + ')">&#10005;</button></td></tr>';
+      }).join("") : '<tr class="empty-row"><td colspan="5">Nothing in Workout ' + d + ' yet.</td></tr>';
+      return '<h4 style="margin:10px 4px 4px;">Workout ' + d + '</h4><div class="table-scroll"><table><thead><tr>'
+        + '<th>Exercise</th><th>Sets</th><th>Reps</th><th>Lbs</th><th></th></tr></thead><tbody>'
+        + body + '</tbody></table></div>';
+    };
+    return '<details class="program-box" open style="margin:4px 4px 10px;"><summary style="cursor:pointer; font-weight:700;">'
+      + 'Workout program (A and B) &mdash; edit</summary>'
+      + '<p class="rep-meta" style="margin:6px 4px;">Changes save as you leave each box and reach the student '
+      + 'on their next save or login.</p>'
+      + day("A") + day("B")
+      + '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:8px 4px;">'
+      + '<select class="sheet-select" id="tAddEx-' + sid + '" aria-label="Exercise to add for ' + esc(stu.name) + '">'
+      + exerciseOptions() + '</select>'
+      + '<select class="sheet-select" id="tAddDay-' + sid + '" aria-label="Which workout"><option value="A">Workout A</option>'
+      + '<option value="B">Workout B</option></select>'
+      + '<select class="sheet-select" id="tAddComp-' + sid + '" aria-label="Fitness component">'
+      + ["Muscular Strength", "Muscular Endurance", "Cardiovascular Endurance", "Flexibility"]
+          .map(c => '<option>' + c + '</option>').join("") + '</select>'
+      + '<button class="btn btn-secondary" onclick="teacherAddExercise(\'' + sid + '\')">+ Add</button>'
+      + '</div></details>';
+  }
+
+  // Every edit re-reads the record and applies ONE change to the fresh copy, so
+  // a tick the student made since the dashboard loaded is not written over.
+  // routinesRev tells the student's open tab to adopt the result on its next save.
+  // ponytail: read-then-write, same few-ms ceiling as pullTeacherEdits.
+  async function teacherEditRoutine(studentId, change, rerender) {
+    let stu = teacherCache.find(x => x.id === studentId);
+    let ref = fbDoc(db, "students", studentId);
+    try {
+      let snap = await fbGetDoc(ref);
+      if(!snap.exists()) { notice("That student's record is gone. Reload the dashboard."); return; }
+      let d = snap.data();
+      let routines = (d.routines || []).map(r => ({ ...r }));
+      if(change(routines) === false) { notice("That exercise is no longer in their program. Reload the dashboard."); return; }
+      let patch = { routines, routinesRev: (d.routinesRev || 0) + 1 };
+      let rows = historyByStudent[studentId];
+      if(rows) patch.stalled = stalledList(routines, rows);
+      await fbUpdateDoc(ref, patch);
+      if(stu) { stu.routines = routines; if(patch.stalled) stu.stalled = patch.stalled; }
+    } catch(err) {
+      notice("Couldn't save that change: " + (err && err.code ? err.code : err.message));
+      rerender = true;
+    }
+    // A number edit does not redraw: that would yank focus out of the next box
+    // while Zach is tabbing along the row.
+    if(rerender) renderDashboardBody();
+    else toast("Saved.", "good");
+  }
+
+  function teacherSetField(studentId, rid, field, value) {
+    if(!(field in FIELD_MAX)) return;
+    teacherEditRoutine(studentId, rs => {
+      let r = rs.find(x => x.id === rid);
+      if(!r) return false;
+      r[field] = cleanNumber(value, FIELD_MAX[field]);
+    }, false);
+  }
+
+  function teacherRemoveExercise(studentId, rid) {
+    let stu = teacherCache.find(x => x.id === studentId);
+    let r = stu && stu.routines.find(x => x.id === rid);
+    if(r && !confirm('Remove "' + cleanName(r.name) + '" from ' + stu.name + "'s Workout " + r.day
+      + '?\n\nWorkouts they already logged keep it.')) return;
+    teacherEditRoutine(studentId, rs => {
+      let i = rs.findIndex(x => x.id === rid);
+      if(i < 0) return false;
+      rs.splice(i, 1);
+    }, true);
+  }
+
+  function teacherAddExercise(studentId) {
+    let pick = document.getElementById('tAddEx-' + studentId).value;
+    if(!pick) { toast("Pick an exercise first.", "warn"); return; }
+    let [area, mg, ...rest] = pick.split("|");
+    let day = document.getElementById('tAddDay-' + studentId).value;
+    let comp = document.getElementById('tAddComp-' + studentId).value;
+    teacherEditRoutine(studentId, rs => {
+      rs.push({ id: nextFreeId(Date.now(), rs), name: rest.join("|"), targetArea: area, muscleGroup: mg,
+                day: day, component: comp, sets: 3, reps: 10, lbs: 0, done: false });
+    }, true);
+  }
+
   async function reassignStudent(studentId, classId) {
     let stu = teacherCache.find(x => x.id === studentId);
     if(!stu) return;
@@ -4464,6 +4714,12 @@
     let flag = movedRecently(stu)
       ? ' <span style="font-size:.72rem; color:var(--danger); font-weight:700;" '
         + 'title="This student changed their own class in the last week">MOVED THEMSELVES</span>' : "";
+    // Live from the real rows once they are loaded, the stored summary until then.
+    let stalled = rows ? stalledList(stu.routines, rows) : stu.stalled;
+    if(stalled.length) flag += ' <span class="stall-tag" title="'
+      + esc(stalled.map(x => x.name + " (" + x.weeks + " wks)").join(", ")) + '">&#9888; '
+      + stalled.length + ' exercise' + (stalled.length === 1 ? "" : "s") + ' unchanged '
+      + STALL_WEEKS + '+ weeks</span>';
     let t = todayStats(stu, todayLocal());
     let pct = Math.round((t.score / DAILY_TARGET) * 100);
     let extra = t.done - t.score;
@@ -4558,7 +4814,7 @@
       + '<button class="btn btn-danger btn-row-danger" aria-label="Delete ' + esc(stu.name) + ' and all their data" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
       + '</div></div>'
       + (open ? '<div id="logs-' + esc(stu.id) + '" style="border-top:1px solid var(--border); padding:6px;">'
-          + mismatch + detail + '</div>' : "")
+          + mismatch + (rows ? programHtml(stu, rows) : "") + detail + '</div>' : "")
       + '</div>';
   }
 
@@ -4919,7 +5175,9 @@
         todayDone: d.todayDone || 0,
         submittedDate: (d.submission && d.submission.date) || "",
         abDay: d.abDay || "",
-        abDayDate: d.abDayDate || ""
+        abDayDate: d.abDayDate || "",
+        routines: d.routines || [],
+        stalled: d.stalled || []
       });
     });
     teacherCache.sort(byName);
