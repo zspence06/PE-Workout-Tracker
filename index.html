@@ -3002,8 +3002,12 @@
       try {
         historyLogs = await fetchHistory(docId);
         // Self-heal: if the stored summary disagrees with the real rows, fix it.
-        if((data.logCount || 0) !== historyLogs.length
-           || JSON.stringify(data.stalled || []) !== JSON.stringify(stalledList(savedRoutines, historyLogs))) saveUserData();
+        if((data.logCount || 0) !== historyLogs.length) saveUserData();
+        // The stall summary is new (2026-10-06), so every existing record lacks
+        // it. Heal just that field: opening the page must not rewrite anything else.
+        let stalledNow = stalledList(savedRoutines, historyLogs);
+        if(JSON.stringify(data.stalled || []) !== JSON.stringify(stalledNow))
+          fbUpdateDoc(ref, { stalled: stalledNow }).catch(err => console.warn("Stall summary not saved:", err));
         // A choice they already made today stands. Otherwise alternate off the
         // last workout they actually logged -- which needs history, so it has
         // to happen after the fetch, not before it.
@@ -4317,7 +4321,10 @@
     // teacher") can wait and find out whether that is true. The dashboard reads
     // THIS document, not the history rows, so a silent failure here is exactly
     // the "I swear I submitted it" case.
+    // A failed read (gym wifi) must not cost the save: write exactly as before
+    // and let the next save pick up any teacher edit.
     return pullTeacherEdits(docId)
+      .catch(err => console.warn("Teacher-edit check skipped:", err))
       .then(() => {
         // Logged out while the read was in flight: the state below now belongs
         // to nobody, and writing it would blank the record we started from.
