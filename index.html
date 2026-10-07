@@ -623,6 +623,8 @@
     .stall-alert { display: block; margin-top: 4px; font-size: 0.8rem; font-weight: 700; color: var(--warn);
       background: var(--warn-bg); border-radius: 4px; padding: 2px 6px; }
     .stall-tag { font-size: .72rem; color: var(--warn); font-weight: 700; }
+    .teacher-tag { display: inline-block; font-size: .7rem; font-weight: 700; color: var(--primary);
+      border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; margin-left: 4px; white-space: nowrap; }
     .program-box input.sheet-input.prog-edit { width: 4.2em; min-width: 0; padding: 6px 4px; font-size: 1rem; }
     .program-box th, .program-box td { padding: 6px 5px; }
     /* Five narrow columns fit a phone; the 620px floor the history tables need does not apply. */
@@ -1611,6 +1613,13 @@
         </details>
 
         <details class="help-q">
+          <summary>I forgot my phone or Chromebook. What now?</summary>
+          <p>Tell Mr.&nbsp;Spencer what you did. He can log it for you from his dashboard, and it counts the same.
+          It shows in your <em>History</em> marked <strong>logged by teacher</strong>, and your Last&nbsp;Time numbers
+          come from it. Only he can change or undo it.</p>
+        </details>
+
+        <details class="help-q">
           <summary>I submitted by accident.</summary>
           <p><strong>&#8617;&#65039; Undo Submit</strong> under the same workout, same day. It pulls those rows back
           out of your history so you can fix them and submit again.</p>
@@ -1989,6 +1998,20 @@
           <p>Students tick a box for each set. <strong>2/3</strong> means they finished 2 of the 3 sets
           they planned. An exercise only counts toward the 4&nbsp;+&nbsp;2 when every set is ticked.
           Workouts logged before October 6, 2026 show only the planned number of sets, as before.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>A student forgot their device. Can I log their workout?</summary>
+          <p>Yes. Open the student on your dashboard and use <strong>Log a workout for &hellip;
+          (forgot their device)</strong>. Pick the date (today or any earlier day) and Workout A or B, check a
+          box for each set they did, and change any sets, reps or pounds that were different. Then press
+          <strong>Save</strong>.</p>
+          <p>It counts exactly like a workout they submitted: toward the 4&nbsp;+&nbsp;2, their Last&nbsp;Time
+          numbers and the 3-week alert. Those rows show <span class="teacher-tag">logged by teacher</span> here,
+          on the printout and in the student's own history.</p>
+          <p>If they already logged an exercise that day, it is pre-filled with their numbers and saving
+          <strong>updates that row</strong> &mdash; it never logs it twice. Exercises with no sets checked are left
+          alone. Students cannot undo a workout you logged.</p>
         </details>
 
         <details class="help-q">
@@ -2652,6 +2675,39 @@
       else if(partialRow(h) && n > Number(h.setsDone)) grown.push(r);
     });
     return { fresh: fresh, grown: grown };
+  }
+
+  // Done today, whether ticked on this device or already a whole row in history
+  // -- the same "credited" workoutBlockers uses. A workout Mr. Spencer logged for
+  // a student without a device is in history with nothing ticked, and still counts.
+  function creditedToday(routines, day, date, history) {
+    return routines.filter(r => r.day === day && (doneToday(r, date) || loggedToday(r, date, history)));
+  }
+
+  function creditedScore(hit, day, date) {
+    return composedScore(hit.map(r => ({ ...r, done: true, doneDate: date })), day, date);
+  }
+
+  // Zach, 2026-10-07: logging a workout for a student who forgot their device.
+  // `entries` are { name, component, sets, reps, lbs, ticks }. An exercise with
+  // no sets ticked is left alone; one already in history for that date gets his
+  // numbers written over it in place -- never a second row.
+  function teacherLogPlan(entries, date, day, history, subId) {
+    let updates = [], creates = [];
+    entries.forEach(e => {
+      let done = e.ticks.filter(Boolean).length;
+      if(!done) return;
+      let nums = { sets: e.sets, reps: e.reps, lbs: e.lbs, setsDone: done, loggedBy: "teacher" };
+      let h = rowToday(e, date, history);
+      if(h) updates.push({ logId: h.logId, patch: nums });
+      else creates.push({ date: date, exercise: e.name, component: e.component || "", day: day,
+                          subId: subId, note: "", ...nums });
+    });
+    return { updates: updates, creates: creates };
+  }
+
+  function teacherTag(h) {
+    return h.loggedBy === "teacher" ? ' <span class="teacher-tag">logged by teacher</span>' : "";
   }
 
   // Everything that would stop a set of rows reaching history, computed the same
@@ -3897,14 +3953,22 @@
 
   async function undoSubmitWorkout(day) {
     let dateVal = document.getElementById('workoutDate').value;
+    // A row Mr. Spencer logged or corrected is his record, not the student's to
+    // undo, so his rows are invisible to everything below.
+    let mine = h => h.loggedBy !== "teacher";
     // Resolved from the rows, so BOTH days can be undone independently on a day
     // a student did two sessions -- and so the button under Workout B can never
     // reach into Workout A's submission.
-    let subId = submissionIdFor(day, dateVal, historyLogs);
+    let subId = submissionIdFor(day, dateVal, historyLogs.filter(mine));
     let legacy = (!subId && todaysSubmission && todaysSubmission.day === day
-      && todaysSubmission.date === dateVal) ? todaysSubmission : null;
+      && todaysSubmission.date === dateVal && !String(todaysSubmission.subId || "").startsWith("t")) ? todaysSubmission : null;
 
     if(!subId && !legacy) {
+      if(submittedFor(day, dateVal)) {
+        notice("Mr. Spencer logged this workout for you, so it can't be undone here. "
+          + "If something in it is wrong, ask him to fix it.", "Logged by your teacher");
+        return;
+      }
       toast("Nothing to undo \u2014 you haven't submitted Workout " + day
         + " for " + formatDateShort(dateVal) + ".", "warn");
       return;
@@ -3913,20 +3977,19 @@
       return;
     }
 
-    let before = historyLogs.length;
-    let doomed;
+    let hit;
     if(subId) {
-      doomed = historyLogs.filter(h => h.subId === subId);
-      historyLogs = historyLogs.filter(h => h.subId !== subId);
+      hit = h => h.subId === subId && mine(h);
     } else {
       // Submission predates subId tagging: fall back to the old match, but keep
       // it to the same workout day so hand-logged rows are less likely to go.
       let names = new Set(legacy.exercises.map(n => n.trim().toLowerCase()));
-      let hit = h => h.date === legacy.date && h.day === legacy.day
+      hit = h => h.date === legacy.date && h.day === legacy.day && mine(h)
         && names.has((h.exercise || "").trim().toLowerCase());
-      doomed = historyLogs.filter(hit);
-      historyLogs = historyLogs.filter(h => !hit(h));
     }
+    let before = historyLogs.length;
+    let doomed = historyLogs.filter(hit);
+    historyLogs = historyLogs.filter(h => !hit(h));
     let removed = before - historyLogs.length;
 
     // Remove the stored rows too, or they reappear on the next login.
@@ -4001,7 +4064,7 @@
       tr.innerHTML = `
         <td>${h.date}</td>
         <td>${h.day || "—"}</td>
-        <td><strong>${esc(h.exercise)}</strong></td>
+        <td><strong>${esc(h.exercise)}</strong>${teacherTag(h)}</td>
         <td>${esc(h.component)}</td>
         <td>${esc(setsCell(h))}</td>
         <td>${h.reps}</td>
@@ -4310,8 +4373,8 @@
     let date = selectedDate();
     let prime = todayDay === "A" ? "lower" : "upper";
     let primeLabel = todayDay === "A" ? "Lower body" : "Upper body";
-    let hit = savedRoutines.filter(r => r.day === todayDay && doneToday(r, date));
-    let score = composedScore(savedRoutines, todayDay, date);
+    let hit = creditedToday(savedRoutines, todayDay, date, historyLogs);
+    let score = creditedScore(hit, todayDay, date);
     let pct = Math.round((score / DAILY_TARGET) * 100);
 
     document.getElementById('todayLabel').innerText = score + " of " + DAILY_TARGET;
@@ -4498,8 +4561,8 @@
       // being downloaded -- the whole point of moving history out in phase 1.
       todayDate: dateVal,
       todayDay: todayDay,
-      todayScore: composedScore(savedRoutines, todayDay, dateVal),
-      todayDone: savedRoutines.filter(r => r.day === todayDay && doneToday(r, dateVal)).length,
+      todayScore: creditedScore(creditedToday(savedRoutines, todayDay, dateVal, historyLogs), todayDay, dateVal),
+      todayDone: creditedToday(savedRoutines, todayDay, dateVal, historyLogs).length,
       // Same contract again: the dashboard flags a stalled student from this
       // without reading their history. Opening the student recomputes it live.
       stalled: stalledList(savedRoutines, historyLogs)
@@ -4824,6 +4887,201 @@
     }, true);
   }
 
+  // ------------------------------------------ teacher: log for a student
+  // Zach, 2026-10-07: a student who forgot their device. He ticks their sets
+  // from the dashboard, for any date up to today, with every number editable.
+  // The draft lives here, not in the DOM, so a dashboard redraw cannot lose it.
+  let teacherLogs = {};   // studentId -> { date, day, open, rows: { routineId: entry } }
+
+  function teacherLogState(stu) {
+    let today = todayLocal();
+    return teacherLogs[stu.id] || (teacherLogs[stu.id] = { date: today, open: false, rows: {},
+      day: pickDay(stu, "abDay", "abDayDate", today) || todayStats(stu, today).day || "A" });
+  }
+
+  // Pre-filled from what is already logged for that date, so opening a day the
+  // student did log shows their numbers -- and saving corrects that row.
+  function teacherLogEntry(s, r, history) {
+    if(!s.rows[r.id]) {
+      let h = rowToday(r, s.date, history), src = h || r;
+      let sets = cleanNumber(src.sets, FIELD_MAX.sets);
+      let done = h ? (h.setsDone == null ? sets : Number(h.setsDone)) : 0;
+      s.rows[r.id] = { sets: sets, reps: cleanNumber(src.reps, FIELD_MAX.reps), lbs: cleanNumber(src.lbs, FIELD_MAX.lbs),
+        ticks: Array.from({ length: Math.max(1, sets) }, (_, i) => i < done), logged: !!h };
+    }
+    return s.rows[r.id];
+  }
+
+  function teacherLogHtml(stu, history) {
+    let s = teacherLogState(stu), sid = esc(stu.id);
+    let items = stu.routines.filter(r => r.day === s.day);
+    let body = items.length ? items.map(r => {
+      let e = teacherLogEntry(s, r, history), rid = Number(r.id);
+      let num = (f, max) => '<input type="number" class="sheet-input prog-edit" inputmode="numeric" min="0" max="'
+        + max + '" value="' + e[f] + '" aria-label="' + f + ' for ' + esc(r.name) + '" onchange="teacherLogField(\''
+        + sid + '\', ' + rid + ', \'' + f + '\', this.value)">';
+      return '<tr data-tlog="' + rid + '"><td><strong>' + esc(r.name) + '</strong>'
+        + (e.logged ? '<br><span style="font-size:.74rem; color:var(--subtle);">Already logged this day &mdash; saving updates it</span>' : "")
+        + '</td><td class="done-cell">' + teacherLogBoxes(sid, r, e.ticks) + '</td><td>' + num("sets", FIELD_MAX.sets) + '</td><td>'
+        + num("reps", FIELD_MAX.reps) + '</td><td>' + num("lbs", FIELD_MAX.lbs) + '</td></tr>';
+    }).join("") : '<tr class="empty-row"><td colspan="5">Nothing in Workout ' + esc(s.day) + ' yet.</td></tr>';
+    return '<details class="program-box" id="tlog-' + sid + '"' + (s.open ? " open" : "")
+      + ' ontoggle="teacherLogOpen(\'' + sid + '\', this.open)" style="margin:4px 4px 10px;">'
+      + '<summary style="cursor:pointer; font-weight:700;">Log a workout for ' + esc(stu.name)
+      + ' (forgot their device)</summary>'
+      + '<div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center; margin:8px 4px;">'
+      + '<input type="date" class="sheet-input" style="width:auto;" max="' + todayLocal() + '" value="' + esc(s.date)
+      + '" aria-label="Workout date for ' + esc(stu.name) + '" onchange="teacherLogPick(\'' + sid + '\', \'date\', this.value)">'
+      + '<select class="sheet-select" style="width:auto;" aria-label="Which workout" onchange="teacherLogPick(\'' + sid + '\', \'day\', this.value)">'
+      + ["A", "B"].map(d => '<option value="' + d + '"' + (s.day === d ? " selected" : "") + '>Workout ' + d + '</option>').join("")
+      + '</select></div>'
+      + '<p class="rep-meta" style="margin:6px 4px;">Check a box for each set they did. Exercises with no sets '
+      + 'checked are left alone. Saved rows show <span class="teacher-tag">logged by teacher</span>.</p>'
+      + '<div class="table-scroll"><table><thead><tr><th>Exercise</th><th>Sets done</th><th>Sets</th><th>Reps</th>'
+      + '<th>Lbs</th></tr></thead><tbody>' + body + '</tbody></table></div>'
+      + '<div style="margin:8px 4px;"><button class="btn btn-primary" id="tlogSave-' + sid + '" onclick="teacherLogSave(\''
+      + sid + '\')">Save to ' + esc(stu.name) + '\'s log</button></div></details>';
+  }
+
+  function teacherLogBoxes(sid, r, ticks) {
+    return ticks.map((on, i) => '<label class="set-tick"><input type="checkbox" class="done-check"'
+      + (on ? ' checked' : '') + ' aria-label="Set ' + (i + 1) + ' of ' + esc(r.name) + ' done" onchange="teacherLogTick(\''
+      + sid + '\', ' + Number(r.id) + ', ' + i + ', this.checked)"><span>' + (i + 1) + '</span></label>').join("");
+  }
+
+  function redrawTeacherLog(studentId) {
+    let stu = teacherCache.find(x => x.id === studentId);
+    let el = document.getElementById('tlog-' + studentId);
+    if(!stu || !el || !historyByStudent[studentId]) return;
+    // The toggle event is queued, so read the box itself rather than trust it has landed.
+    if(teacherLogs[studentId]) teacherLogs[studentId].open = el.open;
+    el.outerHTML = teacherLogHtml(stu, historyByStudent[studentId]);
+  }
+
+  function teacherLogOpen(studentId, open) {
+    if(teacherLogs[studentId]) teacherLogs[studentId].open = open;
+  }
+
+  function teacherLogTick(studentId, rid, i, checked) {
+    let e = teacherLogs[studentId] && teacherLogs[studentId].rows[rid];
+    if(e) e.ticks[i] = checked;
+  }
+
+  function teacherLogField(studentId, rid, field, value) {
+    let e = teacherLogs[studentId] && teacherLogs[studentId].rows[rid];
+    if(!e || !(field in FIELD_MAX)) return;
+    e[field] = cleanNumber(value, FIELD_MAX[field]);
+    if(field !== "sets") return;
+    e.ticks = Array.from({ length: Math.max(1, e.sets) }, (_, i) => e.ticks[i] === true);
+    // Just this row's boxes: redrawing the panel would swallow the click that
+    // blurred the Sets box, and fire a second change from inside the redraw.
+    let stu = teacherCache.find(x => x.id === studentId), r = stu && stu.routines.find(x => x.id === rid);
+    let cell = document.querySelector('#tlog-' + studentId + ' tr[data-tlog="' + rid + '"] .done-cell');
+    if(r && cell) cell.innerHTML = teacherLogBoxes(esc(studentId), r, e.ticks);
+  }
+
+  function teacherLogPick(studentId, key, value) {
+    let s = teacherLogs[studentId];
+    if(!s) return;
+    if(key === "date") {
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(value)) return;
+      s.date = value;
+      s.rows = {};   // what is pre-filled depends on the date
+    } else if(value === "A" || value === "B") {
+      s.day = value;
+    }
+    redrawTeacherLog(studentId);
+  }
+
+  // History is re-read at save time rather than trusted from when the row was
+  // opened: the student may have logged on another device since.
+  // ponytail: a student tab open at the same moment still holds its old history
+  // and can add a second row for the same exercise -- the "forgot their device"
+  // case rules that out in practice. Pre-read in commitRowsToHistory if it bites.
+  async function teacherLogSave(studentId) {
+    let stu = teacherCache.find(x => x.id === studentId), s = teacherLogs[studentId];
+    if(!stu || !s) return;
+    let today = todayLocal();
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(s.date) || s.date > today) {
+      notice("Pick a date that is today or earlier.", "That date is in the future");
+      return;
+    }
+    let entries = stu.routines.filter(r => r.day === s.day && s.rows[r.id])
+      .map(r => ({ name: r.name, component: r.component, ...s.rows[r.id] }));
+    if(!entries.some(e => e.ticks.some(Boolean))) {
+      toast("Check off at least one set first.", "warn");
+      return;
+    }
+    let btn = document.getElementById('tlogSave-' + studentId);
+    if(btn) btn.disabled = true;
+    let history, plan, routines, prev;
+    let subId = "t" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+    try {
+      let ref = fbDoc(db, "students", studentId);
+      let got = await Promise.all([fbGetDoc(ref), fetchHistory(studentId)]);
+      if(!got[0].exists()) {
+        notice("That student's record is gone. Reload the dashboard.");
+        if(btn) btn.disabled = false;
+        return;
+      }
+      prev = got[0].data();
+      routines = prev.routines || [];
+      history = got[1];
+      plan = teacherLogPlan(entries, s.date, s.day, history, subId);
+      let batch = fbWriteBatch(db);
+      plan.updates.forEach(u => batch.update(fbDoc(db, "students", studentId, "history", u.logId), u.patch));
+      let made = plan.creates.map(row => {
+        let logId = newLogId();
+        batch.set(fbDoc(db, "students", studentId, "history", logId), row);
+        return { ...row, logId: logId };
+      });
+      await batch.commit();
+      plan.updates.forEach(u => Object.assign(history.find(h => h.logId === u.logId), u.patch));
+      history.push(...made);
+      history.sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")));
+    } catch(err) {
+      notice("Couldn't save that workout — nothing was changed. "
+        + (err && err.code ? err.code : (err && err.message) || ""));
+      if(btn) btn.disabled = false;
+      return;
+    }
+
+    // The rows are in. The roster summary is derived from them, same contract
+    // as the student's own save; if it fails, opening the row corrects it.
+    let patch = {
+      logCount: history.length,
+      lastLogDate: history.reduce((m, h) => String(h.date || "") > m ? String(h.date) : m, ""),
+      stalled: stalledList(routines, history)
+    };
+    if(s.date === today) {
+      let hit = creditedToday(routines, s.day, today, history);
+      Object.assign(patch, { todayDate: today, todayDay: s.day, todayScore: creditedScore(hit, s.day, today),
+        todayDone: hit.length });
+      if(!(prev.submission && prev.submission.date === today)) {
+        patch.submission = { date: today, day: s.day, subId: subId,
+          exercises: entries.filter(e => e.ticks.some(Boolean)).map(e => e.name) };
+      }
+    }
+    try {
+      await fbUpdateDoc(fbDoc(db, "students", studentId), patch);
+      stu.count = patch.logCount;
+      stu.lastLogDate = patch.lastLogDate;
+      stu.stalled = patch.stalled;
+      if(patch.todayDate) Object.assign(stu, { todayDate: patch.todayDate, todayDay: patch.todayDay,
+        todayScore: patch.todayScore, todayDone: patch.todayDone });
+      if(patch.submission) stu.submittedDate = today;
+    } catch(err) {
+      console.error("Summary update failed:", err);
+    }
+    historyByStudent[studentId] = history;
+    teacherLogs[studentId] = { date: s.date, day: s.day, open: true, rows: {} };
+    renderKPIs();
+    renderDashboardBody();
+    let n = plan.creates.length + plan.updates.length;
+    toast("Saved " + n + " exercise" + (n === 1 ? "" : "s") + " to " + stu.name + "'s log for "
+      + formatDateShort(s.date) + (plan.updates.length ? " (" + plan.updates.length + " updated)" : "") + ".", "good");
+  }
+
   async function reassignStudent(studentId, classId) {
     let stu = teacherCache.find(x => x.id === studentId);
     if(!stu) return;
@@ -4925,7 +5183,7 @@
           + '<th>Date</th><th>Workout</th><th>Exercise</th><th>Component</th>'
           + '<th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
           + sorted.map(h => '<tr><td class="nowrap">' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
-              + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
+              + esc(h.exercise) + teacherTag(h) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
               + '</td><td>' + esc(h.reps) + '</td><td class="nowrap">' + esc(h.lbs) + ' lbs</td><td>'
               + esc(h.note || "") + '</td></tr>').join("")
           + '</tbody></table></div>'
@@ -4959,7 +5217,7 @@
       + '<button class="btn btn-danger btn-row-danger" aria-label="Delete ' + esc(stu.name) + ' and all their data" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
       + '</div></div>'
       + (open ? '<div id="logs-' + esc(stu.id) + '" style="border-top:1px solid var(--border); padding:6px;">'
-          + mismatch + (rows ? programHtml(stu, rows) : "") + detail + '</div>' : "")
+          + mismatch + (rows ? teacherLogHtml(stu, rows) + programHtml(stu, rows) : "") + detail + '</div>' : "")
       + '</div>';
   }
 
@@ -5737,7 +5995,7 @@
             : '<table class="rep-table"><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th>'
               + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
               + rows.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
-                  + esc(h.exercise) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
+                  + esc(h.exercise) + teacherTag(h) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
                   + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td><td>'
                   + esc(h.note || "") + '</td></tr>').join("")
               + '</tbody></table>';

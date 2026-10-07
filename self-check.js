@@ -55,6 +55,10 @@ eval([
   grab('function stallWeeks(r, history) {'),
   grab('function stalledList(routines, history) {'),
   grab('function adoptTeacherRoutines(server, local) {'),
+  grab('function creditedToday(routines, day, date, history) {'),
+  grab('function creditedScore(hit, day, date) {'),
+  grab('function teacherLogPlan(entries, date, day, history, subId) {'),
+  grab('function teacherTag(h) {'),
 ].join('\n'));
 
 (async () => {
@@ -587,5 +591,39 @@ eval([
     assert.strictEqual(setsCell({ sets: 3 }), '3', 'old rows show as they were');
   }
   console.log('sets-check     OK - a box per set, done = every set, partial logged but uncredited, grown in place, old rows untouched');
+  {
+    // Zach, 2026-10-07: teacher logs for a student who forgot their device.
+    const D = '2026-10-07';
+    const e = (name, sets, ticks, lbs) => ({ name, component: 'Muscular Strength', sets, reps: 10, lbs: lbs || 95, ticks });
+    const hist = [{ date: D, exercise: 'Squat', sets: 3, reps: 8, lbs: 135, setsDone: 2, subId: 's1', logId: 'L1' },
+                  { date: '2026-10-06', exercise: 'Lunge', sets: 3, reps: 10, lbs: 0, logId: 'L2' }];
+    const plan = teacherLogPlan([e('squat ', 3, [true, true, true], 140), e('Lunge', 3, [true, false, false]), e('Plank', 2, [false, false])],
+      D, 'A', hist, 't9');
+    assert.deepStrictEqual(plan.updates, [{ logId: 'L1', patch: { sets: 3, reps: 10, lbs: 140, setsDone: 3, loggedBy: 'teacher' } }],
+      'same exercise same day updates that row in place, name-matched like Last Time');
+    assert.strictEqual(plan.creates.length, 1, 'no ticks = left alone; another day\'s row is not a clash');
+    assert.deepStrictEqual(plan.creates[0], { date: D, exercise: 'Lunge', component: 'Muscular Strength', day: 'A', subId: 't9',
+      note: '', sets: 3, reps: 10, lbs: 95, setsDone: 1, loggedBy: 'teacher' });
+    assert.ok(teacherTag({ loggedBy: 'teacher' }).includes('logged by teacher') && teacherTag({}) === '');
+
+    // A teacher-logged whole row credits the student with nothing ticked on their device.
+    const rs = [{ id: 1, name: 'Squat', day: 'A', targetArea: 'lower', sets: 3 },
+                { id: 2, name: 'Crunch', day: 'A', targetArea: 'core', sets: 3 },
+                { id: 3, name: 'Lunge', day: 'A', targetArea: 'lower', sets: 3 }];
+    const th = [{ date: D, exercise: 'Squat', sets: 3, setsDone: 3, loggedBy: 'teacher' },
+                { date: D, exercise: 'Crunch', sets: 3, setsDone: 3, loggedBy: 'teacher' },
+                { date: D, exercise: 'Lunge', sets: 3, setsDone: 1, loggedBy: 'teacher' }];
+    const hit = creditedToday(rs, 'A', D, th);
+    assert.deepStrictEqual(hit.map(r => r.name), ['Squat', 'Crunch'], 'a partial row is still not credited');
+    assert.strictEqual(creditedScore(hit, 'A', D), 2);
+    assert.strictEqual(creditedToday(rs, 'A', D, []).length, 0, 'nothing logged, nothing ticked = nothing');
+    rs[2].done = true; rs[2].doneDate = D;
+    assert.strictEqual(creditedScore(creditedToday(rs, 'A', D, []), 'A', D), composedScore(rs, 'A', D),
+      'with no history the score is exactly the ticks, as before');
+    // Undo sees only the student's own rows.
+    assert.strictEqual(submissionIdFor('A', D, [{ date: D, day: 'A', subId: 't9', loggedBy: 'teacher' }]
+      .filter(h => h.loggedBy !== 'teacher')), null);
+  }
+  console.log('tlog-check     OK - teacher log updates the same-day row in place, unticked left alone, tagged, credited like a submit');
   console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });
