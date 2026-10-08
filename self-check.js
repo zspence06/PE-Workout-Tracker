@@ -58,6 +58,9 @@ eval([
   grab('function creditedToday(routines, day, date, history) {'),
   grab('function creditedScore(hit, day, date) {'),
   grab('function teacherLogPlan(entries, date, day, history, subId) {'),
+  grab('function setsProgress(routines, day, date, history) {'),
+  grab('function setsColor(done, total) {'),
+  grab('function daySetsText(rows) {'),
   grab('function teacherTag(h) {'),
 ].join('\n'));
 
@@ -624,6 +627,30 @@ eval([
     assert.strictEqual(submissionIdFor('A', D, [{ date: D, day: 'A', subId: 't9', loggedBy: 'teacher' }]
       .filter(h => h.loggedBy !== 'teacher')), null);
   }
+  {
+    // Zach, 2026-10-08: the dashboard bar counts sets against the day's whole program.
+    const D = '2026-10-08';
+    const rs = [{ name: 'Squat', day: 'A', sets: 3, setTicks: [true, true, false], setTicksDate: D },
+                { name: 'Lunge', day: 'A', sets: 3 },
+                { name: 'Crunch', day: 'A', sets: 2, setTicks: [true, true], setTicksDate: '2026-10-07' },
+                { name: 'Bench', day: 'B', sets: 4, setTicks: [true, true, true, true], setTicksDate: D }];
+    assert.deepStrictEqual(setsProgress(rs, 'A', D, []), { done: 2, total: 8 }, 'ticks today only, B and yesterday ignored');
+    const th = [{ date: D, exercise: 'lunge', sets: 3, setsDone: 3, loggedBy: 'teacher' },
+                { date: D, exercise: 'Squat', sets: 3, setsDone: 1 }];
+    assert.deepStrictEqual(setsProgress(rs, 'A', D, th), { done: 5, total: 8 },
+      'a teacher log fills the bar; ticks beat a smaller history row');
+    assert.deepStrictEqual(setsProgress(rs, 'A', D, [{ date: D, exercise: 'Crunch', sets: 2 }]), { done: 4, total: 8 },
+      'an old whole row (no setsDone) counts as every set');
+    assert.deepStrictEqual(setsProgress(rs, 'A', D, [{ date: D, exercise: 'Lunge', sets: 5, setsDone: 5 }]).done, 5,
+      'never more than the program\'s sets per exercise');
+    assert.strictEqual(setsColor(0, 8), 'hsl(0, 70%, 42%)');
+    assert.strictEqual(setsColor(8, 8), 'hsl(120, 70%, 42%)');
+    assert.strictEqual(setsColor(4, 8), 'hsl(60, 70%, 42%)');
+    assert.strictEqual(setsColor(0, 0), 'hsl(0, 70%, 42%)');
+    assert.strictEqual(daySetsText([{ sets: 3, setsDone: 2 }, { sets: '3', setsDone: 3 }]), '5/6 sets');
+    assert.strictEqual(daySetsText([{ sets: 3, setsDone: 2 }, { sets: 3 }]), '\u2014 (before per-set tracking)', 'a pre-10-06 row means no guess');
+  }
+  console.log('setbar-check   OK - bar = sets done of the day\'s program, teacher logs count, capped, red to green, old days "-"');
   console.log('tlog-check     OK - teacher log updates the same-day row in place, unticked left alone, tagged, credited like a submit');
   console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');
 })().catch(e => { console.error('FAIL:', e.message); process.exit(1); });

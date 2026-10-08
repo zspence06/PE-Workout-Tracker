@@ -568,6 +568,9 @@
     .mini-fill.is-complete { background-color: var(--success); }
     .mini-label { font-size: 0.8rem; color: var(--subtle); margin-left: 8px; }
     .mini-label.muted { font-style: italic; }
+    .req-badge { font-size: 0.72rem; padding: 1px 6px; border-radius: 8px; background: #E2E8F0; color: var(--text); white-space: nowrap; }
+    .req-badge.is-met { background: var(--success-bg); color: #166534; }
+    tr.day-total td { background: #F1F5F9; font-weight: 700; font-size: 0.8rem; color: var(--subtle); }
 
 
     /* A disagreement between the roster summary and the real rows. Rare enough
@@ -2710,6 +2713,47 @@
     return h.loggedBy === "teacher" ? ' <span class="teacher-tag">logged by teacher</span>' : "";
   }
 
+  // Zach, 2026-10-08: the dashboard bar counts sets, not exercises -- a student
+  // two sets into every exercise had read "0 of 6". Total is every set in that
+  // day's program (one box per set, same count the student sees); done is the
+  // ticks or the history row, whichever is more, so a teacher log fills it too.
+  function setsProgress(routines, day, date, history) {
+    let done = 0, total = 0;
+    (routines || []).filter(r => r.day === day).forEach(r => {
+      let n = Math.max(1, Number(r.sets) || 0), h = rowToday(r, date, history);
+      let logged = h ? Number(h.setsDone != null ? h.setsDone : h.sets) || 0 : 0;
+      total += n;
+      done += Math.min(n, Math.max(setsDoneToday(r, date), logged));
+    });
+    return { done: done, total: total };
+  }
+
+  // Red at none, green at all, a smooth blend between.
+  function setsColor(done, total) {
+    let p = total ? Math.min(done / total, 1) : 0;
+    return "hsl(" + Math.round(p * 120) + ", 70%, 42%)";
+  }
+
+  // One day's sets for the history and the printout. Rows from before per-set
+  // ticks (2026-10-06) have no setsDone, so that day reads "-" rather than a
+  // guess. History only knows what was logged, so the total is the logged sets.
+  function daySetsText(rows) {
+    if(!rows.length || rows.some(h => h.setsDone == null)) return "\u2014 (before per-set tracking)";
+    let sum = k => rows.reduce((n, h) => n + (Number(h[k]) || 0), 0);
+    return sum("setsDone") + "/" + sum("sets") + " sets";
+  }
+
+  // A sets subtotal above each day's rows; `sorted` is already in date order.
+  function withDayTotals(sorted, rowHtml) {
+    return sorted.map((h, i) => {
+      let d = String(h.date || "");
+      let head = i && String(sorted[i - 1].date || "") === d ? ""
+        : '<tr class="day-total"><td colspan="8">' + esc(d) + ' &middot; '
+          + esc(daySetsText(sorted.filter(x => String(x.date || "") === d))) + '</td></tr>';
+      return head + rowHtml(h);
+    }).join("");
+  }
+
   // Everything that would stop a set of rows reaching history, computed the same
   // way for the A/B submit and the spreadsheet commit so a clash is explained
   // identically wherever a student meets it. Pure -- rows and history in,
@@ -4563,6 +4607,7 @@
       todayDay: todayDay,
       todayScore: creditedScore(creditedToday(savedRoutines, todayDay, dateVal, historyLogs), todayDay, dateVal),
       todayDone: creditedToday(savedRoutines, todayDay, dateVal, historyLogs).length,
+      todaySets: setsProgress(savedRoutines, todayDay, dateVal, historyLogs),
       // Same contract again: the dashboard flags a stalled student from this
       // without reading their history. Opening the student recomputes it live.
       stalled: stalledList(savedRoutines, historyLogs)
@@ -5056,7 +5101,7 @@
     if(s.date === today) {
       let hit = creditedToday(routines, s.day, today, history);
       Object.assign(patch, { todayDate: today, todayDay: s.day, todayScore: creditedScore(hit, s.day, today),
-        todayDone: hit.length });
+        todayDone: hit.length, todaySets: setsProgress(routines, s.day, today, history) });
       if(!(prev.submission && prev.submission.date === today)) {
         patch.submission = { date: today, day: s.day, subId: subId,
           exercises: entries.filter(e => e.ticks.some(Boolean)).map(e => e.name) };
@@ -5068,7 +5113,7 @@
       stu.lastLogDate = patch.lastLogDate;
       stu.stalled = patch.stalled;
       if(patch.todayDate) Object.assign(stu, { todayDate: patch.todayDate, todayDay: patch.todayDay,
-        todayScore: patch.todayScore, todayDone: patch.todayDone });
+        todayScore: patch.todayScore, todayDone: patch.todayDone, todaySets: patch.todaySets });
       if(patch.submission) stu.submittedDate = today;
     } catch(err) {
       console.error("Summary update failed:", err);
@@ -5105,7 +5150,8 @@
       score: fresh ? stu.todayScore : 0,
       done: fresh ? stu.todayDone : 0,
       day: fresh ? stu.todayDay : "",
-      started: fresh && stu.todayDone > 0,
+      sets: fresh && stu.todaySets ? stu.todaySets : null,
+      started: fresh && (stu.todayDone > 0 || !!(stu.todaySets && stu.todaySets.done)),
       complete: fresh && stu.todayScore >= DAILY_TARGET,
       submitted: stu.submittedDate === today
     };
@@ -5123,14 +5169,23 @@
       + esc(stalled.map(x => x.name + " (" + x.weeks + " wks)").join(", ")) + '">&#9888; '
       + stalled.length + ' exercise' + (stalled.length === 1 ? "" : "s") + ' unchanged '
       + STALL_WEEKS + '+ weeks</span>';
-    let t = todayStats(stu, todayLocal());
-    let pct = Math.round((t.score / DAILY_TARGET) * 100);
+    let today = todayLocal(), t = todayStats(stu, today);
+    // Live from the real rows once they are loaded; the stored summary until
+    // then; a record not saved since this shipped falls back to its own ticks.
+    let sp = rows && t.day ? setsProgress(stu.routines, t.day, today, rows)
+      : t.sets || setsProgress(stu.routines, t.day, today, []);
+    let pct = sp.total ? Math.round(Math.min(sp.done / sp.total, 1) * 100) : 0;
     let extra = t.done - t.score;
-    let progress = t.started
-      ? '<div class="mini-bar"><div class="mini-fill' + (t.complete ? " is-complete" : "")
-        + '" style="width:' + pct + '%;"></div></div>'
-        + '<span class="mini-label">' + t.score + ' of ' + DAILY_TARGET
+    let progress = t.started && !sp.total
+      ? '<span class="mini-label">' + t.score + ' of ' + DAILY_TARGET + ' &middot; no workout program set</span>'
+      : t.started
+      ? '<div class="mini-bar" title="' + sp.done + ' of ' + sp.total + ' sets done"><div class="mini-fill" style="width:'
+        + pct + '%; background-color:' + setsColor(sp.done, sp.total) + ';"></div></div>'
+        + '<span class="mini-label"><strong>' + sp.done + '/' + sp.total + ' sets</strong>'
+        + (sp.total > sp.done ? ' &middot; ' + (sp.total - sp.done) + ' left' : "")
         + (t.day ? ' &middot; ' + esc(t.day) : "")
+        + ' <span class="req-badge' + (t.complete ? " is-met" : "") + '" title="Exercises counting toward the 4 + 2">4+2: '
+        + (t.complete ? "&#10003;" : t.score + ' of ' + DAILY_TARGET) + '</span>'
         + (extra > 0 ? ' &middot; +' + extra : "")
         + (t.submitted ? (t.complete ? ' &middot; submitted &#9989;'
             : ' &middot; submitted <span style="color:var(--warn); font-weight:700;">below 6 &#9888;</span>') : "")
@@ -5182,10 +5237,10 @@
           + '<div class="table-scroll"><table><thead><tr>'
           + '<th>Date</th><th>Workout</th><th>Exercise</th><th>Component</th>'
           + '<th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
-          + sorted.map(h => '<tr><td class="nowrap">' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
+          + withDayTotals(sorted, h => '<tr><td class="nowrap">' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
               + esc(h.exercise) + teacherTag(h) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
               + '</td><td>' + esc(h.reps) + '</td><td class="nowrap">' + esc(h.lbs) + ' lbs</td><td>'
-              + esc(h.note || "") + '</td></tr>').join("")
+              + esc(h.note || "") + '</td></tr>')
           + '</tbody></table></div>'
           + '<p class="scroll-hint">Swipe the table sideways to see every column.</p>';
       }
@@ -5576,6 +5631,7 @@
         todayDay: d.todayDay || "",
         todayScore: d.todayScore || 0,
         todayDone: d.todayDone || 0,
+        todaySets: d.todaySets || null,
         submittedDate: (d.submission && d.submission.date) || "",
         abDay: d.abDay || "",
         abDayDate: d.abDayDate || "",
@@ -5994,10 +6050,10 @@
             ? '<p class="rep-none">No workouts logged in this period.</p>'
             : '<table class="rep-table"><thead><tr><th>Date</th><th>Workout</th><th>Exercise</th>'
               + '<th>Component</th><th>Sets</th><th>Reps</th><th>Weight</th><th>Notes</th></tr></thead><tbody>'
-              + rows.map(h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
+              + withDayTotals(rows, h => '<tr><td>' + esc(h.date) + '</td><td>' + esc(h.day || "-") + '</td><td>'
                   + esc(h.exercise) + teacherTag(h) + '</td><td>' + esc(h.component) + '</td><td>' + esc(setsCell(h))
                   + '</td><td>' + esc(h.reps) + '</td><td>' + esc(h.lbs) + ' lbs</td><td>'
-                  + esc(h.note || "") + '</td></tr>').join("")
+                  + esc(h.note || "") + '</td></tr>')
               + '</tbody></table>';
           return '<div class="rep-student"><h3 class="rep-name">' + esc(stu.name) + '</h3>'
             + '<p class="rep-meta">' + rows.length + ' workout row'
