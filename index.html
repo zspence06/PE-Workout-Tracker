@@ -570,6 +570,17 @@
     .mini-label.muted { font-style: italic; }
     .req-badge { font-size: 0.72rem; padding: 1px 6px; border-radius: 8px; background: #E2E8F0; color: var(--text); white-space: nowrap; }
     .req-badge.is-met { background: var(--success-bg); color: #166534; }
+    .rate-set { border: 0; padding: 0; margin: 0 0 12px; }
+    .rate-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+    .rate-pill { position: relative; }
+    .rate-pill input { position: absolute; opacity: 0; }
+    .rate-pill span { display: inline-block; min-width: 34px; padding: 8px 0; text-align: center; border: 2px solid var(--border);
+      border-radius: 6px; font-weight: 700; cursor: pointer; }
+    .rate-pill input:checked + span { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .rate-pill input:focus-visible + span { outline: 3px solid var(--primary); outline-offset: 2px; }
+    .rate-anchors { display: flex; flex-direction: column; gap: 2px; font-size: 0.8rem; color: var(--subtle); margin: 0; }
+    .rating-pill { display: inline-block; padding: 1px 8px; border-radius: 8px; color: #fff; font-weight: 700; font-size: 0.8rem; }
+    .refl-q { font-size: 0.75rem; color: var(--subtle); font-style: italic; margin-top: 2px; }
     tr.day-total td { background: #F1F5F9; font-weight: 700; font-size: 0.8rem; color: var(--subtle); }
 
 
@@ -1153,6 +1164,7 @@
       </div>
       <p id="todayHint" style="margin:10px 0 0; font-size:0.85rem; color:var(--subtle);"></p>
       <p id="todaySubmitNote" style="margin:8px 0 0; font-size:0.85rem; font-weight:600;"></p>
+      <button class="btn btn-secondary hidden" id="reflectNowBtn" onclick="reflectNow()" style="margin-top:8px;"></button>
       <button class="btn btn-primary go-to-workout" id="goToWorkoutBtn" onclick="goToWorkout()">
         Open Workout <span id="goToWorkoutDay">A</span> &rarr;
       </button>
@@ -1432,6 +1444,7 @@
           Everything you have submitted, all term. The <strong>Last Time</strong> numbers on your
           workout come from here.
         </p>
+        <div id="myReflections"></div>
         <div class="table-scroll">
           <table>
             <thead>
@@ -1623,6 +1636,17 @@
         </details>
 
         <details class="help-q">
+          <summary>What is the reflection when I press Submit?</summary>
+          <p>Before your workout is sent, you rate how it went from <strong>1</strong> (very minimal effort,
+          didn't finish, too easy) to <strong>10</strong> (full effort, on task the whole time) and answer
+          Mr.&nbsp;Spencer's question. Both are needed &mdash; Cancel means nothing is sent.</p>
+          <p>Submit again later the same day and it comes back with your answers filled in, so you can change
+          them or just press Send. If Mr.&nbsp;Spencer logged your workout for you, use
+          <strong>Reflect on today's workout</strong> on your Today card. Your answers are on the
+          <em>My History</em> tab.</p>
+        </details>
+
+        <details class="help-q">
           <summary>Does Mr.&nbsp;Spencer see each set I check?</summary>
           <p>Yes. His dashboard shows how many of today's sets you have done and how many are left, so every
           box counts, even on an exercise you have not finished.</p>
@@ -1671,6 +1695,7 @@
     <div class="sub-tabs">
       <button class="sub-tab-btn active" onclick="switchTeacherTab('teacherTab1', event)">Today &amp; Roster</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab2', event)">Learning Target</button>
+      <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab5', event)">Reflections</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab4', event)">A / B Day</button>
       <button class="sub-tab-btn" onclick="switchTeacherTab('teacherTab3', event)">Class Periods</button>
       <button class="sub-tab-btn help-tab-btn" onclick="switchTeacherTab('teacherTabHelp', event)">&#10067; Help</button>
@@ -1793,6 +1818,32 @@
         </div>
         <button class="btn btn-primary" id="updateTargetBtn" onclick="updateLearningTarget()">Update Target for Class</button>
         <p id="targetUpdatedAt" style="color: var(--subtle); font-size: 0.9rem; margin-top: 10px;"></p>
+      </div>
+    </div>
+
+    <!-- TEACHER TAB 5: REFLECTIONS (Zach, 2026-10-08) -->
+    <div id="teacherTab5" class="teacher-tab hidden">
+      <div class="card">
+        <h3>Reflection Question</h3>
+        <p style="color:var(--subtle); font-size:0.9rem; margin:0 0 10px;">Students answer this, plus a 1&ndash;10
+          rating of their workout, every time they submit. It stays until you change it.</p>
+        <div class="form-group">
+          <label for="newReflectionPrompt">Question:</label>
+          <input type="text" id="newReflectionPrompt" maxlength="480">
+        </div>
+        <button class="btn btn-primary" id="updateReflectBtn" onclick="updateReflectionPrompt()">Update Question</button>
+      </div>
+      <div class="card">
+        <h3>Student Reflections</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px;">
+          <select id="reflClass" class="sheet-select" style="width:auto;" aria-label="Class" onchange="renderReflections()"></select>
+          <select id="reflSince" class="sheet-select" style="width:auto;" aria-label="Date range" onchange="renderReflections()">
+            <option value="0">Today</option><option value="7" selected>Last 7 days</option>
+            <option value="30">Last 30 days</option><option value="">All term</option>
+          </select>
+          <button class="btn btn-secondary" onclick="renderTeacherLogs().then(renderReflections)">&#8635; Refresh</button>
+        </div>
+        <div id="reflList"></div>
       </div>
     </div>
 
@@ -2021,6 +2072,18 @@
           <p>If they already logged an exercise that day, it is pre-filled with their numbers and saving
           <strong>updates that row</strong> &mdash; it never logs it twice. Exercises with no sets checked are left
           alone. Students cannot undo a workout you logged.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>How do student reflections work?</summary>
+          <p>Every time a student presses Submit, they rate their workout 1&ndash;10 and answer your question
+          before anything is sent. They see your descriptions of 1 and 10 while they rate.</p>
+          <p>Change the question on the <strong>Reflections</strong> tab; it stays until you change it again.
+          Each answer keeps the question it was answering, so older answers still make sense.</p>
+          <p>The same tab lists every student's reflections, newest first, by class and date range. A student
+          who submits again the same day, or after Undo Submit, gets their answers back to change; Undo does
+          not delete a reflection. Workouts you log for a student don't ask for one, but the student can add
+          it later that day from their Today card.</p>
         </details>
 
         <details class="help-q">
@@ -2565,6 +2628,12 @@
   let historyLogs = [];
   let todaysSubmission = null;
   let currentDocId = null;
+  // Zach, 2026-10-08: date -> { rating, text, prompt, day, at }. Kept on the
+  // student record, so the teacher's Reflections tab reads it from the roster
+  // he already loads -- no extra reads, no rules publish.
+  // ponytail: grows ~one small entry per school day (a few KB a semester); move
+  // to its own collection (needs a rules publish) if records near DOC_WARN_BYTES.
+  let reflections = {};
   let currentClassId = null;
   let savesInFlight = 0;
   // routinesRev is bumped only by the teacher's program editor. A student save
@@ -2573,6 +2642,7 @@
   let myRoutinesRev = 0;
   let sizeWarned = false;
   const DEFAULT_LEARNING_TARGET = "Focus on explosive power and full range of motion.";
+  const DEFAULT_REFLECTION_PROMPT = "What is one thing you want to focus on for your next workout?";
   let currentLearningTarget = DEFAULT_LEARNING_TARGET;
 
   // Students see the target pop up once an hour per device: often enough to be a
@@ -2759,6 +2829,31 @@
     if(!rows.length || rows.some(h => h.setsDone == null)) return "\u2014 (before per-set tracking)";
     let sum = k => rows.reduce((n, h) => n + (Number(h[k]) || 0), 0);
     return sum("setsDone") + "/" + sum("sets") + " sets";
+  }
+
+  function reflectionProblem(rating, text) {
+    if(!(Number.isInteger(rating) && rating >= 1 && rating <= 10)) return "Pick a number from 1 to 10.";
+    if(!cleanName(text)) return "Write an answer to the question.";
+    return "";
+  }
+
+  // Every student's reflections as one list, newest first, for the teacher's
+  // tab. classId "" = everyone, "__none" = unassigned (the dashboard's keys).
+  function reflectionList(students, classId, since) {
+    let out = [];
+    students.forEach(s => {
+      if(classId === "__none" ? !!s.classId : (classId && s.classId !== classId)) return;
+      Object.keys(s.reflections || {}).forEach(date => {
+        if(since && date < since) return;
+        out.push({ date: date, name: s.name, classId: s.classId || null, ...s.reflections[date] });
+      });
+    });
+    return out.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
+  }
+
+  function ratingPill(r) {
+    return '<span class="rating-pill" style="background:' + setsColor(Number(r) - 1, 9) + ';">'
+      + esc(r) + '/10</span>';
   }
 
   // A sets subtotal above each day's rows; `sorted` is already in date order.
@@ -3224,6 +3319,7 @@
       savedRoutines = data.routines || [];
       myRoutinesRev = data.routinesRev || 0;
       todaysSubmission = data.submission || null;
+      reflections = data.reflections || {};
       let sameDay = data.todayDate === todayLocal();
       myDayOverride = { abDay: data.abDay, abDayDate: data.abDayDate };
       try {
@@ -3265,6 +3361,7 @@
       myRoutinesRev = 0;
       historyLogs = [];
       todaysSubmission = null;
+      reflections = {};
       try {
         await fbSetDoc(ref, { name: currentUser, classId: null, routines: [],
                               submission: null, logCount: 0, lastLogDate: "",
@@ -3972,6 +4069,15 @@
       return;
     }
 
+    // Zach, 2026-10-08: the reflection is part of submitting -- nothing is sent
+    // until it is answered. A second submit that day re-opens it filled in.
+    let refl = await askReflection(dateVal, day);
+    if(!refl) {
+      toast("Not sent \u2014 answer the reflection to submit your workout.", "warn");
+      return;
+    }
+    reflections[dateVal] = refl;
+
     // Only what was actually ticked gets logged; a skipped exercise is no longer
     // written as a 0x0 @ 0lbs row. Part of one is logged with its setsDone, and
     // a part-done row already sent today is grown in place, not written twice.
@@ -4109,6 +4215,16 @@
 
 
   function renderHistoryTable() {
+    let mine = document.getElementById('myReflections');
+    if(mine) {
+      let dates = Object.keys(reflections).sort().reverse();
+      mine.innerHTML = !dates.length ? "" : '<h4 style="margin:0 0 6px;">My reflections</h4>'
+        + '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Rating</th><th>Answer</th></tr></thead><tbody>'
+        + dates.map(d => { let r = reflections[d];
+            return '<tr><td class="nowrap">' + esc(d) + '</td><td>' + ratingPill(r.rating) + '</td><td>' + esc(r.text)
+              + '<div class="refl-q">' + esc(r.prompt || "") + '</div></td></tr>'; }).join("")
+        + '</tbody></table></div><h4 style="margin:16px 0 6px;">Workouts</h4>';
+    }
     let tbody = document.getElementById('historyTable');
     tbody.innerHTML = "";
     if(historyLogs.length === 0) {
@@ -4473,6 +4589,16 @@
         + "if you run out of time \u2014 you will get a reminder first.";
     }
     renderDaySuggestion();
+    // Any workout on the books for the day can be reflected on -- including one
+    // Mr. Spencer logged, where no Submit was ever pressed.
+    let rb = document.getElementById('reflectNowBtn');
+    if(rb) {
+      let worked = historyLogs.some(h => String(h.date) === date);
+      rb.classList.toggle('hidden', !worked);
+      rb.classList.toggle('btn-primary', worked && !reflections[date]);
+      rb.classList.toggle('btn-secondary', !!reflections[date]);
+      rb.innerHTML = reflections[date] ? "&#9999;&#65039; Change today's reflection" : "&#128221; Reflect on today's workout";
+    }
     let hintEl = document.getElementById('todayHint');
     hintEl.innerText = hint;
     hintEl.style.color = sent ? "#166534" : "var(--subtle)";
@@ -4626,6 +4752,7 @@
       todayScore: creditedScore(creditedToday(savedRoutines, todayDay, dateVal, historyLogs), todayDay, dateVal),
       todayDone: creditedToday(savedRoutines, todayDay, dateVal, historyLogs).length,
       todaySets: setsProgress(savedRoutines, todayDay, dateVal, historyLogs),
+      reflections: reflections,
       // Same contract again: the dashboard flags a stalled student from this
       // without reading their history. Opening the student recomputes it live.
       stalled: stalledList(savedRoutines, historyLogs)
@@ -4648,7 +4775,7 @@
   function logoutStudent() {
     if(savesInFlight > 0 && !confirm("A save is still in progress. Log out anyway?")) return;
     currentUser = null; currentDocId = null; currentClassId = null;
-    savedRoutines = []; historyLogs = []; todaysSubmission = null;
+    savedRoutines = []; historyLogs = []; todaysSubmission = null; reflections = {};
     myRoutinesRev = 0;
     myDayOverride = null;
     sizeWarned = false;
@@ -4705,11 +4832,51 @@
     document.querySelectorAll('.teacher-tab').forEach(t => t.classList.add('hidden'));
     document.getElementById(tabId).classList.remove('hidden');
     if(tabId === 'teacherTab3') renderClasses();
+    if(tabId === 'teacherTab5') {
+      loadReflectionPrompt().then(t => { document.getElementById('newReflectionPrompt').value = t; });
+      renderReflections();
+    }
 
     if(evt) {
       document.querySelectorAll('#teacherView .sub-tab-btn').forEach(b => b.classList.remove('active'));
       evt.target.classList.add('active');
     }
+  }
+
+  async function updateReflectionPrompt() {
+    let val = document.getElementById('newReflectionPrompt').value.trim();
+    if(!val) { toast("Type a question first.", "warn"); return; }
+    let btn = document.getElementById('updateReflectBtn');
+    if(btn) btn.disabled = true;
+    try {
+      await fbSetDoc(fbDoc(db, "settings", "reflectionPrompt"),
+        { text: val.slice(0, 480), updatedAt: new Date().toISOString() });
+      toast("Reflection question updated. Students get it on their next submit.", "good");
+    } catch(err) {
+      notice("Couldn't save the question: " + (err && err.code ? err.code : err.message)
+        + "\n\nStudents are still getting the old one.");
+    } finally {
+      if(btn) btn.disabled = false;
+    }
+  }
+
+  function renderReflections() {
+    let sel = document.getElementById('reflClass'), host = document.getElementById('reflList');
+    if(!sel || !host) return;
+    let keep = sel.value;
+    sel.innerHTML = '<option value="">All classes</option>' + classCache.filter(c => !c.frozen).map(c =>
+      '<option value="' + esc(c.id) + '">' + esc(c.name) + '</option>').join("") + '<option value="__none">Unassigned</option>';
+    sel.value = keep;
+    let days = document.getElementById('reflSince').value, since = "";
+    if(days !== "") { let d = new Date(); d.setDate(d.getDate() - Number(days));
+      since = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }
+    let list = reflectionList(teacherCache, sel.value, since);
+    let cls = id => (classCache.find(c => c.id === id) || {}).name || "Unassigned";
+    host.innerHTML = !list.length ? '<p style="color:var(--subtle);">No reflections in this range yet.</p>'
+      : '<div class="table-scroll"><table><thead><tr><th>Date</th><th>Student</th><th>Class</th><th>Rating</th><th>Answer</th></tr></thead><tbody>'
+        + list.map(r => '<tr><td class="nowrap">' + esc(r.date) + '</td><td>' + esc(r.name) + '</td><td>' + esc(cls(r.classId))
+          + '</td><td>' + ratingPill(r.rating) + '</td><td>' + esc(r.text) + '<div class="refl-q">' + esc(r.prompt || "")
+          + '</div></td></tr>').join("") + '</tbody></table></div>';
   }
 
   async function updateLearningTarget() {
@@ -5650,6 +5817,7 @@
         todayScore: d.todayScore || 0,
         todayDone: d.todayDone || 0,
         todaySets: d.todaySets || null,
+        reflections: d.reflections || {},
         submittedDate: (d.submission && d.submission.date) || "",
         abDay: d.abDay || "",
         abDayDate: d.abDayDate || "",
@@ -6614,6 +6782,73 @@
     });
   }
 
+  // The teacher's question, read fresh each time so a change reaches students
+  // straight away. Offline falls back to the default rather than blocking.
+  async function loadReflectionPrompt() {
+    try {
+      let snap = await fbGetDoc(fbDoc(db, "settings", "reflectionPrompt"));
+      let t = snap.exists() ? snap.data().text : "";
+      return typeof t === "string" && t.trim() ? t.trim() : DEFAULT_REFLECTION_PROMPT;
+    } catch(err) {
+      console.error("Reflection prompt unavailable:", err);
+      return DEFAULT_REFLECTION_PROMPT;
+    }
+  }
+
+  // Resolves to the answered reflection, or null if cancelled. An answer
+  // already given for that date is filled in and keeps the question it answered.
+  async function askReflection(date, day) {
+    let prev = reflections[date];
+    let question = prev && prev.prompt ? prev.prompt : await loadReflectionPrompt();
+    return new Promise(resolve => {
+      let modal = document.getElementById('reflectModal');
+      let text = document.getElementById('reflectText');
+      let err = document.getElementById('reflectError');
+      let ok = document.getElementById('reflectOk');
+      let cancel = document.getElementById('reflectCancel');
+      document.getElementById('reflectTitle').innerText = prev
+        ? "You already reflected on " + formatDateShort(date) + " \u2014 change anything?"
+        : "Reflect on today's workout";
+      document.getElementById('reflectIntro').innerText = prev
+        ? "Here is what you said. Change it if your workout changed, or just press Send."
+        : "Answer both before your workout is sent to Mr. Spencer.";
+      document.getElementById('reflectQuestion').innerText = question;
+      document.getElementById('reflectRates').innerHTML = Array.from({ length: 10 }, (_, i) =>
+        '<label class="rate-pill"><input type="radio" name="reflRating" value="' + (i + 1) + '"'
+        + (prev && Number(prev.rating) === i + 1 ? " checked" : "") + '><span>' + (i + 1) + '</span></label>').join("");
+      text.value = prev ? prev.text || "" : "";
+      err.style.display = "none";
+      function done(val) {
+        modal.classList.add('hidden');
+        ok.onclick = null; cancel.onclick = null;
+        resolve(val);
+      }
+      ok.onclick = () => {
+        let pick = modal.querySelector('input[name="reflRating"]:checked');
+        let rating = pick ? Number(pick.value) : 0, answer = text.value.trim().slice(0, 300);
+        let problem = reflectionProblem(rating, answer);
+        if(problem) { err.innerText = problem; err.style.display = "block"; return; }
+        done({ rating: rating, text: answer, prompt: question, day: day, at: new Date().toISOString() });
+      };
+      cancel.onclick = () => done(null);
+      modal.classList.remove('hidden');
+    });
+  }
+
+  // For a day Mr. Spencer logged (no Submit was pressed), or to change an answer.
+  async function reflectNow() {
+    if(!currentUser) return;
+    let date = selectedDate();
+    let refl = await askReflection(date, todayDay);
+    if(!refl) return;
+    reflections[date] = refl;
+    renderTodayCard();
+    renderHistoryTable();
+    if(await saveUserData()) toast("Reflection sent to Mr. Spencer.", "good");
+    else notice("Your reflection is saved on this page but didn't reach Mr. Spencer. "
+      + "Check your wifi and press the reflection button again.", "Not sent yet");
+  }
+
   function closeNotice() {
     document.getElementById('noticeModal').classList.add('hidden');
     // Anything that arrived while this one was up gets its turn now.
@@ -6666,6 +6901,29 @@
     <div style="text-align:right;">
       <button class="btn btn-secondary" id="inputCancel">Cancel</button>
       <button class="btn btn-primary" id="inputOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- REFLECTION: answered before a workout is sent (Zach, 2026-10-08). -->
+<div id="reflectModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reflectTitle">
+  <div class="modal-content">
+    <h3 id="reflectTitle" style="margin-top:0; color:var(--primary);">Reflect on today's workout</h3>
+    <p id="reflectIntro" style="color:var(--subtle); font-size:0.9rem; margin:0 0 12px;"></p>
+    <fieldset class="rate-set">
+      <legend><strong>How did your workout go today?</strong></legend>
+      <div class="rate-row" id="reflectRates"></div>
+      <p class="rate-anchors"><span><strong>1</strong> = very minimal effort, didn't complete everything, exercises too easy</span>
+        <span><strong>10</strong> = great workout, full effort, fully on task, no wasted time</span></p>
+    </fieldset>
+    <div class="form-group">
+      <label for="reflectText" id="reflectQuestion" style="font-weight:700;"></label>
+      <textarea id="reflectText" rows="3" maxlength="300" style="width:100%; box-sizing:border-box;"></textarea>
+    </div>
+    <p id="reflectError" style="color:var(--danger); font-weight:600; display:none; margin:0 0 10px;"></p>
+    <div style="text-align:right;">
+      <button class="btn btn-secondary" id="reflectCancel">Cancel</button>
+      <button class="btn btn-primary" id="reflectOk">Send</button>
     </div>
   </div>
 </div>

@@ -61,6 +61,8 @@ eval([
   grab('function setsProgress(routines, day, date, history) {'),
   grab('function setsColor(done, total) {'),
   grab('function daySetsText(rows) {'),
+  grab('function reflectionProblem(rating, text) {'),
+  grab('function reflectionList(students, classId, since) {'),
   grab('function teacherTag(h) {'),
 ].join('\n'));
 
@@ -650,6 +652,24 @@ eval([
     assert.strictEqual(daySetsText([{ sets: 3, setsDone: 2 }, { sets: '3', setsDone: 3 }]), '5/6 sets');
     assert.strictEqual(daySetsText([{ sets: 3, setsDone: 2 }, { sets: 3 }]), '\u2014 (before per-set tracking)', 'a pre-10-06 row means no guess');
   }
+  {
+    // Zach, 2026-10-08: reflection before submit.
+    assert.strictEqual(reflectionProblem(7, 'Go heavier on squats'), '');
+    assert.ok(reflectionProblem(0, 'x'), 'no rating picked');
+    assert.ok(reflectionProblem(11, 'x'));
+    assert.ok(reflectionProblem(7.5, 'x'));
+    assert.ok(reflectionProblem(7, '   '), 'blank answer refused');
+    const st = [
+      { name: 'Bo', classId: 'c1', reflections: { '2026-10-07': { rating: 6, text: 'a' }, '2026-10-08': { rating: 9, text: 'b' } } },
+      { name: 'Al', classId: 'c3', reflections: { '2026-10-08': { rating: 4, text: 'c' } } },
+      { name: 'Cy', classId: null, reflections: { '2026-10-01': { rating: 2, text: 'd' } } },
+      { name: 'Di', classId: 'c1' }];
+    assert.deepStrictEqual(reflectionList(st, '', '').map(r => r.name + r.date.slice(8)), ['Al08', 'Bo08', 'Bo07', 'Cy01'],
+      'newest first, then by name; a student with none is fine');
+    assert.deepStrictEqual(reflectionList(st, 'c1', '2026-10-08').map(r => r.text), ['b'], 'class + since both filter');
+    assert.deepStrictEqual(reflectionList(st, '__none', '').map(r => r.name), ['Cy'], 'unassigned uses the dashboard key');
+  }
+  console.log('reflect-check  OK - rating 1-10 + an answer required; teacher list filters by class/date, newest first');
   console.log('setbar-check   OK - bar = sets done of the day\'s program, teacher logs count, capped, red to green, old days "-"');
   console.log('tlog-check     OK - teacher log updates the same-day row in place, unticked left alone, tagged, credited like a submit');
   console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');
