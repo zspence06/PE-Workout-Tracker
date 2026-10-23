@@ -65,6 +65,7 @@ eval([
   grab('function reflectionProblem(rating, text) {'),
   grab('function reflectionList(students, classId, since) {'),
   grab('function teacherTag(h) {'),
+  grab('function readRemembered() {'),
 ].join('\n'));
 
 (async () => {
@@ -688,6 +689,22 @@ eval([
     assert.deepStrictEqual(reflectionList(st, '__none', '').map(r => r.name), ['Cy'], 'unassigned uses the dashboard key');
   }
   console.log('reflect-check  OK - rating 1-10 + an answer required; teacher list filters by class/date, newest first');
+  {
+    // Zach, 2026-10-23: a remembered login is only ever an address + name; junk reads as none.
+    const mem = {};
+    global.localStorage = { getItem: k => (k in mem ? mem[k] : null) };
+    globalThis.REMEMBER_KEY = 'peRememberedLogin';
+    assert.strictEqual(readRemembered(), null, 'nothing saved');
+    mem.peRememberedLogin = JSON.stringify({ id: a, name: 'Alex Smith' });
+    assert.deepStrictEqual(readRemembered(), { id: a, name: 'Alex Smith' });
+    for (const junk of ['{', 'null', '"x"', JSON.stringify({ id: 5, name: 'A' }), JSON.stringify({ id: a })]) {
+      mem.peRememberedLogin = junk;
+      assert.strictEqual(readRemembered(), null, 'junk is ignored: ' + junk);
+    }
+    global.localStorage = { getItem: () => { throw new Error('blocked'); } };
+    assert.strictEqual(readRemembered(), null, 'storage that throws reads as none');
+  }
+  console.log('remember-check OK - a saved login is an address + name only; junk or blocked storage reads as none');
   console.log('sofar-check    OK - per-exercise set boxes for today, teacher logs fill + tag, sums match the bar');
   console.log('setbar-check   OK - bar = sets done of the day\'s program, teacher logs count, capped, red to green, old days "-"');
   console.log('tlog-check     OK - teacher log updates the same-day row in place, unticked left alone, tagged, credited like a submit');

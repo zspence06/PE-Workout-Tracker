@@ -1093,6 +1093,11 @@
     <div class="card">
       <div class="identity-row">
         <div class="form-group" id="loginBox" style="flex: 1; min-width: 200px;">
+          <!-- Zach, 2026-10-23: a student's own device can remember them. -->
+          <div id="rememberedBox" class="hidden" style="margin-bottom:12px;">
+            <button class="btn btn-primary" onclick="continueRemembered()">Continue as <span id="rememberedName"></span></button>
+            <button class="btn btn-secondary" onclick="forgetRemembered()">Not me</button>
+          </div>
           <label for="studentName">Student Name:</label>
           <div class="login-row">
             <input type="text" id="studentName" placeholder="e.g., Alex Smith" autocomplete="off"
@@ -1680,6 +1685,16 @@
         </details>
 
         <details class="help-q">
+          <summary>Can my device remember my login?</summary>
+          <p>Yes, if it is <strong>your own</strong> phone or Chromebook. After you log in, it asks
+          &ldquo;Is this your own device?&rdquo; Tap <strong>Yes</strong>, then <strong>Save my login</strong>,
+          and next time you just tap <strong>Continue as</strong> your name. Your PIN is not saved.</p>
+          <p>On a shared Chromebook, always answer <strong>No</strong>, or the next student could open your
+          account. <strong>Log Out</strong> makes the device forget you, and <strong>Not me</strong> on the
+          login screen does too.</p>
+        </details>
+
+        <details class="help-q">
           <summary>Is my phone saving this, or is it on the internet?</summary>
           <p>The internet &mdash; so you can log in on any device and everything is there. Watch the bottom of the
           screen: <strong>&#9989; Saved</strong> means it went through. If you ever see a red
@@ -2164,6 +2179,17 @@
           <strong>Their entire workout history comes with them</strong> &mdash; nothing is lost.</p>
           <p>Nobody, including you, can look up an existing PIN. That is deliberate: it is what stops one
           student opening another's account. Resetting is the only route, and it is fine.</p>
+          <p>A device that remembered the student stops working after a reset; it tells them so and they
+          log in once with the new PIN.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>A student taps &ldquo;Continue as&rdquo; and never types a PIN.</summary>
+          <p>Their own device remembered them. After logging in, students are asked whether the device is
+          their own and, only if it is, whether to save their login. The PIN itself is never saved on the
+          device. <strong>Log Out</strong> or <strong>Not me</strong> makes it forget them.</p>
+          <p>If a student said Yes on a shared Chromebook, the next student sees their name on the button:
+          tap <strong>Not me</strong> and log in as normal.</p>
         </details>
 
         <details class="help-q">
@@ -3181,6 +3207,62 @@
     } catch(e) { /* nothing to do; the modal just shows again next load */ }
   }
 
+  // Zach, 2026-10-23: "is this your own device?" -> "save your login?". What is
+  // kept is the record address, never the PIN: kids reuse PINs, and the address
+  // opens nothing outside this site. Logging out forgets it.
+  const REMEMBER_KEY = "peRememberedLogin";
+  let rememberOfferPending = false;
+
+  function readRemembered() {
+    try {
+      let r = JSON.parse(localStorage.getItem(REMEMBER_KEY) || "null");
+      return r && typeof r.id === "string" && typeof r.name === "string" ? r : null;
+    } catch(e) { return null; }
+  }
+
+  function forgetRemembered() {
+    try { localStorage.removeItem(REMEMBER_KEY); } catch(e) { /* nothing stored */ }
+    renderSignedInState();
+  }
+
+  function continueRemembered() {
+    let r = readRemembered();
+    if(r) loginStudent(r.id);
+  }
+
+  function askYesNo(title, msg, yes, no) {
+    return new Promise(resolve => {
+      let modal = document.getElementById('yesNoModal');
+      let y = document.getElementById('yesNoYes'), n = document.getElementById('yesNoNo');
+      document.getElementById('yesNoTitle').innerText = title;
+      document.getElementById('yesNoBody').innerText = msg;
+      y.innerText = yes; n.innerText = no;
+      let done = v => { modal.classList.add('hidden'); y.onclick = n.onclick = null; resolve(v); };
+      y.onclick = () => done(true);
+      n.onclick = () => done(false);
+      modal.classList.remove('hidden');
+      n.focus();
+    });
+  }
+
+  // Runs once the class picker is out of the way, before any queued notice.
+  async function offerRemember() {
+    if(!rememberOfferPending || !currentDocId) return;
+    rememberOfferPending = false;
+    let own = await askYesNo("Is this your own device?",
+      "Answer Yes only if this phone or Chromebook is yours and no other student uses it.",
+      "Yes, it's mine", "No");
+    if(!own) return;
+    let save = await askYesNo("Save your login on this device?",
+      "Next time, just tap \"Continue as " + currentUser + "\". Your PIN is not saved. "
+      + "Logging out makes this device forget you.", "Save my login", "No thanks");
+    if(!save) return;
+    try {
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify({ id: currentDocId, name: currentUser }));
+      toast("This device will remember you.", "good");
+    } catch(e) { toast("This browser won't let the site save your login.", "warn"); }
+  }
+
   function maybeShowTargetModal() {
     if(shouldShowTarget(Date.now(), readTargetSeen(), currentLearningTarget)) {
       showTargetModal();
@@ -3303,7 +3385,8 @@
     document.getElementById('navTeacherBtn').classList.remove('active');
   }
 
-  async function loginStudent() {
+  async function loginStudent(rememberedId) {
+    if(typeof rememberedId === "string") return loginWithId(rememberedId, null, null, null);
     let nameInput = document.getElementById('studentName').value.trim();
     let pinInput = document.getElementById('studentPin').value.trim();
     if(!nameInput) {
@@ -3331,13 +3414,26 @@
       return;
     }
 
+    return loginWithId(docId, nKey, nameInput, pinInput);
+  }
+
+  // A remembered device arrives here with only the address (nKey null): no
+  // names lookup, and no account creation -- a miss means the record moved.
+  async function loginWithId(docId, nKey, nameInput, pinInput) {
     let ref = fbDoc(db, "students", docId);
     let snap, nameSnap;
     try {
       snap = await fbGetDoc(ref);
-      nameSnap = await fbGetDoc(fbDoc(db, "names", nKey));
+      nameSnap = nKey ? await fbGetDoc(fbDoc(db, "names", nKey)) : null;
     } catch(err) {
       notice("Couldn't reach the server — check your internet connection and try again.");
+      return;
+    }
+
+    if(!nKey && !snap.exists()) {
+      forgetRemembered();
+      notice("This device's saved login doesn't work any more (your PIN may have been reset).\n\n"
+        + "Log in with your name and PIN.");
       return;
     }
 
@@ -3372,7 +3468,7 @@
         return;
       }
       toast("Welcome back, " + currentUser + "!", "good");
-    } else if(nameSnap.exists()) {
+    } else if(nameSnap && nameSnap.exists()) {
       // The name is claimed but this PIN does not lead to that record. Creating
       // an account here is exactly how a student silently ends up with a second,
       // empty one and loses their history, so refuse and send them to the teacher.
@@ -3409,6 +3505,8 @@
            + `You will need your name and that PIN to log in on any device, and nobody can look it up for you.` };
     }
 
+    let saved = readRemembered();
+    rememberOfferPending = !(saved && saved.id === currentDocId);
     renderSignedInState();
     document.getElementById('workoutDate').value = todayLocal();
     renderDateWarning();
@@ -3426,6 +3524,7 @@
     renderTodayCard();
     // Only once the class picker is out of the way, or the two overlays stack.
     if(document.getElementById('classPickerModal').classList.contains('hidden')) {
+      await offerRemember();
       flushPendingNotice();
     }
   }
@@ -4809,6 +4908,8 @@
     myRoutinesRev = 0;
     myDayOverride = null;
     sizeWarned = false;
+    rememberOfferPending = false;
+    try { localStorage.removeItem(REMEMBER_KEY); } catch(e) { /* nothing stored */ }
     document.getElementById('studentName').value = "";
     document.getElementById('studentPin').value = "";
     renderSignedInState();
@@ -5931,6 +6032,9 @@
     login.classList.toggle('hidden', !!currentUser);
     box.classList.toggle('hidden', !currentUser);
     if(currentUser) document.getElementById('signedInName').innerText = currentUser;
+    let r = readRemembered();
+    document.getElementById('rememberedBox').classList.toggle('hidden', !r);
+    if(r) document.getElementById('rememberedName').innerText = r.name;
   }
 
   // A date that is not today is almost always a mis-tap, and the cost of not
@@ -5992,6 +6096,7 @@
     applyTeacherDay();
     renderTodayCard();
     document.getElementById('classPickerModal').classList.add('hidden');
+    await offerRemember();
     flushPendingNotice();
     return true;
   }
@@ -6953,6 +7058,17 @@
     <div style="text-align:right;">
       <button class="btn btn-secondary" id="inputCancel">Cancel</button>
       <button class="btn btn-primary" id="inputOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="yesNoModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="yesNoTitle">
+  <div class="modal-content">
+    <h3 id="yesNoTitle" style="margin-top:0; color:var(--primary);"></h3>
+    <p id="yesNoBody" style="white-space:pre-wrap; line-height:1.55; margin:0; color:var(--text);"></p>
+    <div style="text-align:right; margin-top:20px;">
+      <button class="btn btn-secondary" id="yesNoNo"></button>
+      <button class="btn btn-primary" id="yesNoYes"></button>
     </div>
   </div>
 </div>
