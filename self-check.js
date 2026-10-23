@@ -60,6 +60,7 @@ eval([
   grab('function teacherLogPlan(entries, date, day, history, subId) {'),
   grab('function setsProgress(routines, day, date, history) {'),
   grab('function setsColor(done, total) {'),
+  grab('function setsSoFar(routines, day, date, history) {'),
   grab('function daySetsText(rows) {'),
   grab('function reflectionProblem(rating, text) {'),
   grab('function reflectionList(students, classId, since) {'),
@@ -651,6 +652,23 @@ eval([
     assert.strictEqual(setsColor(0, 0), 'hsl(0, 70%, 42%)');
     assert.strictEqual(daySetsText([{ sets: 3, setsDone: 2 }, { sets: '3', setsDone: 3 }]), '5/6 sets');
     assert.strictEqual(daySetsText([{ sets: 3, setsDone: 2 }, { sets: 3 }]), '\u2014 (before per-set tracking)', 'a pre-10-06 row means no guess');
+
+    // Zach, 2026-10-23: which sets, not just how many -- and it must add up to the bar.
+    const sf = setsSoFar(rs, 'A', D, th);
+    assert.deepStrictEqual(sf.map(x => x.name), ['Squat', 'Lunge', 'Crunch', 'Bench'], 'all of A, plus B because it was started');
+    assert.deepStrictEqual(sf[0].boxes, [true, true, false], 'the actual ticks, not a count');
+    assert.deepStrictEqual(sf[1].boxes, [true, true, true], 'a teacher log fills the boxes');
+    assert.ok(sf[1].byTeacher && !sf[0].byTeacher, 'teacher rows tagged');
+    assert.deepStrictEqual(sf[2].boxes, [false, false], 'yesterday\'s ticks are not today\'s');
+    const sum = list => list.filter(x => x.day === 'A').reduce((n, x) => n + x.boxes.filter(Boolean).length, 0);
+    for (const h of [[], th, [{ date: D, exercise: 'Crunch', sets: 2 }], [{ date: D, exercise: 'Lunge', sets: 5, setsDone: 5 }],
+                     [{ date: D, exercise: 'Squat', sets: 3, setsDone: 3 }]])
+      assert.strictEqual(sum(setsSoFar(rs, 'A', D, h)), setsProgress(rs, 'A', D, h).done, 'list and bar agree');
+    assert.deepStrictEqual(setsSoFar(rs, 'A', D, []).map(x => x.name), ['Squat', 'Lunge', 'Crunch', 'Bench']);
+    const gap = [{ name: 'Row', day: 'A', sets: 3, setTicks: [false, false, true], setTicksDate: D }];
+    const gh = [{ date: D, exercise: 'Row', sets: 3, setsDone: 2 }];
+    assert.strictEqual(sum(setsSoFar(gap, 'A', D, gh)), setsProgress(gap, 'A', D, gh).done, 'a gap in the ticks still matches the bar');
+    assert.deepStrictEqual(setsSoFar(rs.slice(0, 3), 'B', D, []).map(x => x.name), ['Squat'], 'an untouched other-day exercise stays out');
   }
   {
     // Zach, 2026-10-08: reflection before submit.
@@ -670,6 +688,7 @@ eval([
     assert.deepStrictEqual(reflectionList(st, '__none', '').map(r => r.name), ['Cy'], 'unassigned uses the dashboard key');
   }
   console.log('reflect-check  OK - rating 1-10 + an answer required; teacher list filters by class/date, newest first');
+  console.log('sofar-check    OK - per-exercise set boxes for today, teacher logs fill + tag, sums match the bar');
   console.log('setbar-check   OK - bar = sets done of the day\'s program, teacher logs count, capped, red to green, old days "-"');
   console.log('tlog-check     OK - teacher log updates the same-day row in place, unticked left alone, tagged, credited like a submit');
   console.log('abday-check    OK - student beats class beats school, every level expires by date, cleared falls through');

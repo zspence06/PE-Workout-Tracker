@@ -643,6 +643,12 @@
     .program-box th, .program-box td { padding: 6px 5px; }
     /* Five narrow columns fit a phone; the 620px floor the history tables need does not apply. */
     .program-box .table-scroll table { min-width: 0; }
+    /* Today so far (Zach, 2026-10-23): read-only, so pips rather than checkboxes. */
+    .sofar-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
+    .sofar-name { flex: 1 1 140px; min-width: 0; }
+    .set-pip { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em;
+      margin-right: 3px; border: 2px solid var(--border); border-radius: 4px; font-size: .75rem; color: var(--subtle); }
+    .set-pip.on { background: var(--success); border-color: var(--success); color: #FFFFFF; font-weight: 700; }
     .last-note { display: block; margin-top: 4px; font-size: 0.8rem; color: var(--text); font-style: italic; }
     .note-btn { display: block; margin-top: 6px; background: none; border: 1px solid var(--border);
       border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; color: var(--subtle); cursor: pointer; }
@@ -1648,8 +1654,9 @@
 
         <details class="help-q">
           <summary>Does Mr.&nbsp;Spencer see each set I check?</summary>
-          <p>Yes. His dashboard shows how many of today's sets you have done and how many are left, so every
-          box counts, even on an exercise you have not finished.</p>
+          <p>Yes. His dashboard shows how many of today's sets you have done and how many are left, and
+          which exercises and sets they are, so every box counts, even on an exercise you have not
+          finished.</p>
         </details>
 
         <details class="help-q">
@@ -2096,6 +2103,16 @@
           <p>In a student's history, and on the printout, each day has a line with that day's sets, like
           &ldquo;4/6 sets&rdquo;. That counts the exercises they logged that day. Days from before the per-set
           boxes (October&nbsp;6) did not record sets done and show &ldquo;&mdash;&rdquo;.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>Can I see which exercises and sets a student has done so far?</summary>
+          <p>Yes. Click the student&rsquo;s name. <strong>Today so far</strong> lists every exercise in
+          today&rsquo;s workout with a box per set: green &#10003; for done, a number for still to do. It
+          works before they press Submit, and the heading says whether they have submitted yet.</p>
+          <p>It is as fresh as your last <strong>&#8635; Refresh</strong> (the time is shown under the
+          heading), so press Refresh to see sets they have ticked since. A set shows once their phone has
+          saved it, so a student with no signal may look behind until they reconnect.</p>
         </details>
 
         <details class="help-q">
@@ -2814,6 +2831,19 @@
       done += Math.min(n, Math.max(setsDoneToday(r, date), logged));
     });
     return { done: done, total: total };
+  }
+
+  // Zach, 2026-10-23: WHICH exercises and sets, not just the bar's total. Same
+  // per-exercise count as setsProgress (ticks or the logged row, whichever is
+  // more), so the list always adds up to the bar. Today's workout in full, plus
+  // anything from the other workout they have started.
+  function setsSoFar(routines, day, date, history) {
+    return (routines || []).map(r => {
+      let ticks = setTicksToday(r, date), h = rowToday(r, date, history);
+      let logged = h ? Number(h.setsDone != null ? h.setsDone : h.sets) || 0 : 0;
+      let boxes = logged > ticks.filter(Boolean).length ? ticks.map((_, i) => i < logged) : ticks;
+      return { name: r.name, day: r.day, boxes: boxes, byTeacher: !!(h && h.loggedBy === "teacher") };
+    }).filter(x => x.day === day || x.boxes.some(Boolean));
   }
 
   // Red at none, green at all, a smooth blend between.
@@ -5019,6 +5049,28 @@
     return exerciseOptionsCache;
   }
 
+  // Ticks come from the roster read, so this is as fresh as the last Refresh --
+  // said on screen, since a teacher watching mid-class will assume it is live.
+  function soFarHtml(stu, rows) {
+    let today = todayLocal(), t = todayStats(stu, today);
+    let items = t.started && t.day ? setsSoFar(stu.routines, t.day, today, rows) : [];
+    let at = lastLoadedAt ? lastLoadedAt.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }) : "";
+    let body = items.length ? items.map(x => {
+      let n = x.boxes.filter(Boolean).length;
+      return '<div class="sofar-row"><span class="sofar-name"><strong>' + esc(x.name) + '</strong>'
+        + (x.day !== t.day ? ' <span class="rep-meta">(Workout ' + esc(x.day) + ')</span>' : "")
+        + (x.byTeacher ? ' <span class="teacher-tag">logged by teacher</span>' : "") + '</span>'
+        + '<span aria-hidden="true">' + x.boxes.map((on, i) => '<span class="set-pip' + (on ? ' on">&#10003;' : '">' + (i + 1))
+          + '</span>').join("") + '</span>'
+        + '<span class="mini-label"><strong>' + n + '/' + x.boxes.length + '</strong> sets</span></div>';
+    }).join("") : '<p class="rep-meta" style="margin:4px 0;">Nothing ticked yet today.</p>';
+    return '<details class="program-box" open style="margin:4px 4px 10px;"><summary style="cursor:pointer; font-weight:700;">'
+      + 'Today so far' + (t.day ? ' &mdash; Workout ' + esc(t.day) : "")
+      + (t.submitted ? ' &middot; submitted &#9989;' : t.started ? ' &middot; not submitted yet' : "") + '</summary>'
+      + '<p class="rep-meta" style="margin:6px 4px;">As of ' + esc(at) + '. Press <strong>&#8635; Refresh</strong> '
+      + 'to see sets ticked since.</p><div style="margin:0 4px; max-width:520px;">' + body + '</div></details>';
+  }
+
   function programHtml(stu, rows) {
     let sid = esc(stu.id);
     let day = d => {
@@ -5457,7 +5509,7 @@
       + '<button class="btn btn-danger btn-row-danger" aria-label="Delete ' + esc(stu.name) + ' and all their data" onclick="deleteStudent(\'' + esc(stu.id) + '\')">Delete</button>'
       + '</div></div>'
       + (open ? '<div id="logs-' + esc(stu.id) + '" style="border-top:1px solid var(--border); padding:6px;">'
-          + mismatch + (rows ? teacherLogHtml(stu, rows) + programHtml(stu, rows) : "") + detail + '</div>' : "")
+          + mismatch + (rows ? soFarHtml(stu, rows) + teacherLogHtml(stu, rows) + programHtml(stu, rows) : "") + detail + '</div>' : "")
       + '</div>';
   }
 
