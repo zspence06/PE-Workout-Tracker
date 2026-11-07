@@ -66,6 +66,8 @@ eval([
   grab('function reflectionList(students, classId, since) {'),
   grab('function teacherTag(h) {'),
   grab('function readRemembered() {'),
+  grab('function exerciseVideo(name) {'),
+  grab('function formLinkHtml(name) {'),
 ].join('\n'));
 
 (async () => {
@@ -704,6 +706,19 @@ eval([
     global.localStorage = { getItem: () => { throw new Error('blocked'); } };
     assert.strictEqual(readRemembered(), null, 'storage that throws reads as none');
   }
+  {
+    // Zach, 2026-11-04: the workout card links the same video the picker preview shows.
+    globalThis.exerciseDB = {
+      upper: { chest: { exercises: { 'Push-Up': { cues: 'c', video: 'https://www.youtube.com/watch?v=abc123' } } } },
+      core: { abs: { exercises: { 'Odd "Lift"': { cues: 'c', video: 'https://www.youtube.com/results?search_query=a&b' } } } },
+    };
+    assert.strictEqual(exerciseVideo('Push-Up'), 'https://www.youtube.com/watch?v=abc123', 'found in any area/group');
+    assert.strictEqual(formLinkHtml('My Custom Lift'), '', 'custom exercise: no link');
+    assert.ok(formLinkHtml('Push-Up').includes('href="https://www.youtube.com/watch?v=abc123"') && formLinkHtml('Push-Up').includes('Form video'));
+    const search = formLinkHtml('Odd "Lift"');
+    assert.ok(search.includes('Search form videos') && search.includes('&amp;b') && search.includes('rel="noopener noreferrer"'), 'search link escaped');
+  }
+  console.log('formlink-check OK - card links the library video by name, search links labelled, custom exercises get none');
   console.log('remember-check OK - a saved login is an address + name only; junk or blocked storage reads as none');
   console.log('sofar-check    OK - per-exercise set boxes for today, teacher logs fill + tag, sums match the bar');
   console.log('setbar-check   OK - bar = sets done of the day\'s program, teacher logs count, capped, red to green, old days "-"');

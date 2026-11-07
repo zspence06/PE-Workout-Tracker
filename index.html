@@ -650,6 +650,7 @@
       margin-right: 3px; border: 2px solid var(--border); border-radius: 4px; font-size: .75rem; color: var(--subtle); }
     .set-pip.on { background: var(--success); border-color: var(--success); color: #FFFFFF; font-weight: 700; }
     .last-note { display: block; margin-top: 4px; font-size: 0.8rem; color: var(--text); font-style: italic; }
+    .form-link { display: block; margin-top: 4px; font-size: 0.85rem; font-weight: 600; color: var(--primary); }
     .note-btn { display: block; margin-top: 6px; background: none; border: 1px solid var(--border);
       border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; color: var(--subtle); cursor: pointer; }
     /* 16px or iOS zooms the page on focus. */
@@ -1576,6 +1577,14 @@
           <p>It is the sets, reps and weight you did the last time you performed that exact exercise.
           <strong>That is the number to beat.</strong> Adding one rep or 5&nbsp;lbs to last time is the whole
           point of the program &mdash; that is progressive overload, and it is what makes you stronger.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>How do I check my form during a workout?</summary>
+          <p>Tap <strong>&#9654; Form video</strong> under the exercise name. It opens the same video you
+          saw in the preview when you picked the exercise, in a new tab, so your workout stays where you
+          left it. A few exercises say <strong>Search form videos</strong> instead &mdash; those open a
+          YouTube search. Exercises you typed in yourself have no video.</p>
         </details>
 
         <details class="help-q">
@@ -3661,6 +3670,23 @@
     }
   }
 
+  // Zach, 2026-11-04: the same video the picker preview shows, on the workout card,
+  // so a student can check form mid-workout. Looked up by name, so routines saved
+  // before this change get it too; a custom exercise has no entry and gets no link.
+  function exerciseVideo(name) {
+    for (let area in exerciseDB) for (let mg in exerciseDB[area]) {
+      let ex = exerciseDB[area][mg].exercises[name];
+      if (ex && ex.video) return ex.video;
+    }
+    return "";
+  }
+
+  function formLinkHtml(name) {
+    let v = exerciseVideo(name);
+    if (!v) return "";
+    return `<a class="form-link" href="${esc(v)}" target="_blank" rel="noopener noreferrer">▶ ${v.includes('/results?') ? 'Search form videos' : 'Form video'} ↗</a>`;
+  }
+
   function openModal() {
     if(!activeExercise || activeExercise === "CUSTOM") return;
     let exData = exerciseDB[activeTargetArea][activeMuscleGroup].exercises[activeExercise];
@@ -3789,6 +3815,7 @@
       tr.innerHTML = `
         <td class="done-cell" data-label="Sets done">${setBoxesHtml(r, date)}</td>
         <td class="ex-cell" data-label="Exercise"><strong>${esc(r.name)}</strong><span class="ex-comp">${esc(r.component)}</span>
+          ${formLinkHtml(r.name)}
           <button type="button" class="note-btn" onclick="openNote(${r.id})">💬 ${noteToday(r, date) ? "Edit note" : "Add note"}</button>
           ${noteToday(r, date) || openNotes.has(r.id) ? `<input type="text" class="note-input" id="note-${r.id}" maxlength="300"
             placeholder="Note for Mr. Spencer (how it felt, a swap, pain…)" value="${esc(noteToday(r, date))}"
