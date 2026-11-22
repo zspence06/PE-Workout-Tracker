@@ -762,6 +762,15 @@
       background: var(--warn-bg); border-radius: 6px; padding: 8px 10px; margin: 0 0 10px;
     }
 
+    /* Zach, 2026-11-11: the standard's rubric under the learning target, and all
+       four on their own tab. auto-fit gives four across on a laptop, two on a phone. */
+    .rubric h4 { margin: 0 0 2px; color: var(--primary); }
+    .rubric p { margin: 0 0 8px; color: var(--subtle); font-size: 0.9rem; }
+    .rubric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 14px; }
+    .rubric-grid > div { background: #FFFFFF; border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.88rem; }
+    .rubric-grid strong { display: block; color: var(--primary); }
+    #targetRubric .rubric-grid { margin-bottom: 0; }
+
     /* Help page. Native <details> so there is no JavaScript to go wrong, and it
        still works on the printed page and with a screen reader. */
     .help-loop { display: grid; gap: 12px; margin: 16px 0; }
@@ -1087,6 +1096,7 @@
   <div class="card" style="background-color: var(--accent-light); border-color: var(--border); border-left: 5px solid var(--primary);">
     <h3 style="margin-top:0; color: var(--primary);">🎯 Today's Learning Target</h3>
     <p id="activeTargetBannerText" style="margin-bottom:0; font-weight: 500; color: var(--text);">Loading target...</p>
+    <div id="targetRubric" class="rubric hidden" style="margin-top:12px;"></div>
   </div>
 
   <!-- STUDENT VIEW -->
@@ -1234,6 +1244,7 @@
       <button class="sub-tab-btn" onclick="switchStudentTab('tab3', event)">2. Do My Workout</button>
       <button class="sub-tab-btn" onclick="switchStudentTab('tab2', event)">3. Quick Log</button>
       <button class="sub-tab-btn" onclick="switchStudentTab('tab4', event)">4. My History</button>
+      <button class="sub-tab-btn" onclick="switchStudentTab('tabRubrics', event)">&#128203; Rubrics</button>
       <button class="sub-tab-btn help-tab-btn" onclick="switchStudentTab('tabHelp', event)">&#10067; Help</button>
     </div>
 
@@ -1477,6 +1488,15 @@
       </div>
     </div>
 
+    <!-- TAB RUBRICS (Zach, 2026-11-11): all four standards, for reference. -->
+    <div id="tabRubrics" class="student-tab hidden">
+      <div class="card">
+        <h3 style="margin-top:0;">&#128203; Rubrics</h3>
+        <p style="color:var(--subtle); margin-top:4px;">How each standard is graded. Today's standard is also shown under the learning target.</p>
+        <div id="allRubrics" class="rubric"></div>
+      </div>
+    </div>
+
     <!-- TAB HELP: STUDENT INSTRUCTIONS -->
     <div id="tabHelp" class="student-tab hidden">
       <div class="card">
@@ -1585,6 +1605,13 @@
           saw in the preview when you picked the exercise, in a new tab, so your workout stays where you
           left it. A few exercises say <strong>Search form videos</strong> instead &mdash; those open a
           YouTube search. Exercises you typed in yourself have no video.</p>
+        </details>
+
+        <details class="help-q">
+          <summary>What is the rubric under the learning target?</summary>
+          <p>It shows how today's standard is graded, from <strong>Emerging</strong> to
+          <strong>Advanced</strong>. To see the rubrics for all four standards, tap the
+          <strong>&#128203; Rubrics</strong> tab.</p>
         </details>
 
         <details class="help-q">
@@ -1847,6 +1874,16 @@
           <label for="newLearningTarget">New Learning Target:</label>
           <input type="text" id="newLearningTarget" placeholder="e.g., Focus on explosive power and full range of motion.">
         </div>
+        <div class="form-group">
+          <label for="newTargetStandard">Standard (its rubric shows under the target):</label>
+          <select id="newTargetStandard">
+            <option value="">No rubric</option>
+            <option value="1">Standard 1 &mdash; Skills</option>
+            <option value="2">Standard 2 &mdash; Knowledge</option>
+            <option value="3">Standard 3 &mdash; Social Skills</option>
+            <option value="4">Standard 4 &mdash; Personal Skills</option>
+          </select>
+        </div>
         <button class="btn btn-primary" id="updateTargetBtn" onclick="updateLearningTarget()">Update Target for Class</button>
         <p id="targetUpdatedAt" style="color: var(--subtle); font-size: 0.9rem; margin-top: 10px;"></p>
       </div>
@@ -1982,7 +2019,9 @@
             <div>
               <strong>Start of a period</strong>
               <p>Set the day's focus on <em>Learning Target</em>. Students see it in the banner and as a
-              pop-up the first time they open the tracker that hour.</p>
+              pop-up the first time they open the tracker that hour. Pick its <em>Standard</em> too and
+              that rubric shows under the target; <em>No rubric</em> shows none. All four are always on
+              the students' Rubrics tab.</p>
             </div>
           </div>
           <div class="help-step">
@@ -2697,6 +2736,32 @@
   const DEFAULT_REFLECTION_PROMPT = "What is one thing you want to focus on for your next workout?";
   let currentLearningTarget = DEFAULT_LEARNING_TARGET;
 
+  // Zach, 2026-11-11: the four standards' rubrics, verbatim from his email.
+  // ponytail: fixed text in the page, not Firestore -- district standards rarely change; edit here if they do.
+  const RUBRIC_LEVELS = ["Emerging", "Developing", "Proficient", "Advanced"];
+  const RUBRICS = [
+    { title: "Standard 1: Skills", desc: "Applies motor skills.", levels: [
+      "Applies motor skills through fundamental movement patterns in simple or familiar movement activities.",
+      "Applies motor skills with improving coordination, control, and confidence across a range of movement activities.",
+      "Applies motor skills, with coordination, control, and adaptability across a range of movement activities.",
+      "Applies motor skills with refined, creative, and versatile movement across complex and dynamic environments."] },
+    { title: "Standard 2: Knowledge", desc: "Applies knowledge related to movement.", levels: [
+      "Applies knowledge of movement and fitness concepts with guidance to improve participation and understanding.",
+      "Applies knowledge of movement and fitness concepts with increasing independence to enhance performance and personal fitness.",
+      "Applies knowledge of movement and fitness concepts independently to make effective decisions that support skill improvement and overall wellness.",
+      "Applies knowledge of movement and fitness concepts to refine performance, optimize fitness, and support lifelong physical activity."] },
+    { title: "Standard 3: Social Skills", desc: "Demonstrates social skills through movement.", levels: [
+      "Demonstrates social skills with support that foster positive relationships in movement activities.",
+      "Demonstrates social skills independently that foster positive relationships in movement activities.",
+      "Demonstrates social skills collaboratively that foster positive relationships in movement activities.",
+      "Demonstrates social skills that enhance group dynamics and shared outcomes in movement activities."] },
+    { title: "Standard 4: Personal Skills", desc: "Analyzes personal skills through movement.", levels: [
+      "Analyzes personal skills with support to begin identifying strengths, areas for growth, and personal interests, and makes limited or guided choices related to participation in physical activity.",
+      "Analyzes personal skills with increasing independence to identify strengths, areas for growth, and personal interests, and recognizes this understanding to make more intentional choices that support continued participation in physical activity.",
+      "Analyzes personal skills to identify strengths, areas for growth, and personal interests, and applies this understanding to make meaningful choices that support physical activity.",
+      "Analyzes personal skills to intentionally shape a physical literacy journey by setting goals, building on strengths, and choosing movement experiences that support lifelong physical activity."] },
+  ];
+
   // Students see the target pop up once an hour per device: often enough to be a
   // reminder before their class, rare enough not to nag a student who reloads.
   const TARGET_MODAL_INTERVAL_MS = 60 * 60 * 1000;
@@ -3281,14 +3346,30 @@
 
   // The target lives in one document every student reads. It does not expire —
   // whatever the teacher last set stays current until they change it.
+  // 1-4 from the saved target. Targets saved before 2026-11-11 have no standard,
+  // and anything else is junk: both mean no rubric.
+  function targetStandard(d) {
+    let n = Number(d && d.standard);
+    return Number.isInteger(n) && n >= 1 && n <= RUBRICS.length ? n : 0;
+  }
+
+  function rubricHtml(n) {
+    let r = RUBRICS[n - 1];
+    if (!r) return "";
+    return `<h4>${esc(r.title)}</h4><p>${esc(r.desc)}</p><div class="rubric-grid">`
+      + r.levels.map((t, i) => `<div><strong>${RUBRIC_LEVELS[i]}</strong>${esc(t)}</div>`).join("")
+      + `</div>`;
+  }
+
   async function loadLearningTarget() {
-    let text = DEFAULT_LEARNING_TARGET, updatedAt = null;
+    let text = DEFAULT_LEARNING_TARGET, updatedAt = null, standard = 0;
     try {
       let snap = await fbGetDoc(fbDoc(db, "settings", "learningTarget"));
       if(snap.exists()) {
         let d = snap.data();
         if(d && typeof d.text === "string" && d.text.trim()) text = d.text.trim();
         updatedAt = d && d.updatedAt ? d.updatedAt : null;
+        standard = targetStandard(d);
       }
     } catch(err) {
       // Offline, or the settings rules are not published yet. Fall back to the
@@ -3297,6 +3378,13 @@
     }
     currentLearningTarget = text;
     document.getElementById('activeTargetBannerText').innerText = text;
+    let rub = document.getElementById('targetRubric');
+    rub.innerHTML = rubricHtml(standard);
+    rub.classList.toggle('hidden', !standard);
+    let all = document.getElementById('allRubrics');
+    if(all && !all.innerHTML) all.innerHTML = RUBRICS.map((r, i) => rubricHtml(i + 1)).join("");
+    let sel = document.getElementById('newTargetStandard');
+    if(sel) sel.value = standard ? String(standard) : "";
     let stamp = document.getElementById('targetUpdatedAt');
     if(stamp) {
       stamp.innerText = updatedAt
@@ -5046,7 +5134,8 @@
     if(btn) { btn.disabled = true; btn.innerText = "Saving\u2026"; }
     try {
       await fbSetDoc(fbDoc(db, "settings", "learningTarget"),
-        { text: val, updatedAt: new Date().toISOString() });
+        { text: val, standard: targetStandard({ standard: document.getElementById('newTargetStandard').value }) || null,
+          updatedAt: new Date().toISOString() });
     } catch(err) {
       notice("Couldn't save the learning target: " + (err && err.code ? err.code : err.message)
         + "\n\nIt has NOT been sent to students.");

@@ -68,6 +68,11 @@ eval([
   grab('function readRemembered() {'),
   grab('function exerciseVideo(name) {'),
   grab('function formLinkHtml(name) {'),
+  (() => { const i = src.indexOf('const RUBRIC_LEVELS'), j = src.indexOf('\n  ];', i);
+           if (i < 0 || j < 0) throw new Error('RUBRICS not found');
+           return src.slice(i, j + 5).replace(/const (RUBRIC_LEVELS|RUBRICS)/g, 'globalThis.$1'); })(),
+  grab('function targetStandard(d) {'),
+  grab('function rubricHtml(n) {'),
 ].join('\n'));
 
 (async () => {
@@ -718,6 +723,20 @@ eval([
     const search = formLinkHtml('Odd "Lift"');
     assert.ok(search.includes('Search form videos') && search.includes('&amp;b') && search.includes('rel="noopener noreferrer"'), 'search link escaped');
   }
+  {
+    // Zach, 2026-11-11: the target's standard picks the rubric shown under it.
+    assert.strictEqual(RUBRICS.length, 4);
+    RUBRICS.forEach(r => assert.ok(r.title && r.desc && r.levels.length === 4 && r.levels.every(t => t.length > 40), r.title));
+    for (const [d, want] of [[{ standard: 2 }, 2], [{ standard: '3' }, 3], [{ standard: 4 }, 4], [{ standard: 1 }, 1],
+        [{}, 0], [{ standard: null }, 0], [{ standard: '' }, 0], [{ standard: 0 }, 0], [{ standard: 5 }, 0],
+        [{ standard: 1.5 }, 0], [{ standard: 'x' }, 0], [null, 0], [undefined, 0]]) {
+      assert.strictEqual(targetStandard(d), want, 'targetStandard ' + JSON.stringify(d));
+    }
+    const h = rubricHtml(3);
+    assert.ok(h.includes('Standard 3: Social Skills') && RUBRIC_LEVELS.every(l => h.includes(l)) && h.includes('group dynamics'));
+    assert.ok(!h.includes('Standard 1') && rubricHtml(0) === '' && rubricHtml(5) === '', 'only the asked standard, none for 0/5');
+  }
+  console.log('rubric-check   OK - standard 1-4 picks its rubric, old or junk targets show none, all four complete');
   console.log('formlink-check OK - card links the library video by name, search links labelled, custom exercises get none');
   console.log('remember-check OK - a saved login is an address + name only; junk or blocked storage reads as none');
   console.log('sofar-check    OK - per-exercise set boxes for today, teacher logs fill + tag, sums match the bar');
